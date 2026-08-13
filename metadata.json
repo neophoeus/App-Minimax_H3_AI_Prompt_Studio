@@ -1,0 +1,6 @@
+{
+  "name": "MiniMax-H3 AI Prompt Studio",
+  "description": "An intelligent prompt creation and optimization assistant tailored for MiniMax-H3 video and audio generation models, featuring one-click copying of production-ready structured prompts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
