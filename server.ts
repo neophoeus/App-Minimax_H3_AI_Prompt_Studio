@@ -1,7 +1,7 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI, Type } from "@google/genai";
+import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -28,16 +28,16 @@ const getGeminiClient = () => {
   });
 };
 
-// Call Gemini 3.6 Flash exclusively without downgrade
-async function callGeminiFlash36(ai: GoogleGenAI, requestOptions: Omit<Parameters<typeof ai.models.generateContent>[0], 'model'>) {
+// Call Gemini 3.7 Flash exclusively without downgrade
+async function callGeminiFlash37(ai: GoogleGenAI, requestOptions: Omit<Parameters<typeof ai.models.generateContent>[0], 'model'>) {
   try {
     const response = await ai.models.generateContent({
       ...requestOptions,
-      model: "gemini-3.6-flash",
+      model: "gemini-3.7-flash",
     });
     return response;
   } catch (err: any) {
-    console.error("Gemini 3.6 Flash execution error:", err?.message || err);
+    console.error("Gemini 3.7 Flash execution error:", err?.message || err);
     const errMsg = typeof err?.message === 'string' ? err.message : '';
     const isQuotaOrRateLimit =
       err?.status === 429 ||
@@ -166,7 +166,7 @@ Return JSON format:
 }
 `;
 
-    const response = await callGeminiFlash36(ai, {
+    const response = await callGeminiFlash37(ai, {
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -177,6 +177,9 @@ Return JSON format:
             sfxSuggestion: { type: Type.STRING },
           },
           required: ["dialogueEn", "sfxSuggestion"],
+        },
+        thinkingConfig: {
+          thinkingLevel: ThinkingLevel.LOW,
         },
       },
     });
@@ -215,8 +218,13 @@ app.post("/api/analyze-reference-media", async (req, res) => {
       contents = [`Provide a concise reference description for file "${fileName || 'Asset'}" with role "${role || 'character'}".`];
     }
 
-    const response = await callGeminiFlash36(ai, {
+    const response = await callGeminiFlash37(ai, {
       contents,
+      config: {
+        thinkingConfig: {
+          thinkingLevel: ThinkingLevel.LOW,
+        },
+      },
     });
 
     const text = response.text || "Analyzed visual characteristics for retention lock.";
@@ -264,7 +272,7 @@ Please synthesize all these options into the official 3-block MiniMax-H3 prompt 
 Ensure English language is used for the actual prompt text (fullPrompt, block1, block2, block3) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh and suggestions!
 `;
 
-    const response = await callGeminiFlash36(ai, {
+    const response = await callGeminiFlash37(ai, {
       contents: userPrompt,
       config: {
         systemInstruction: MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION,
@@ -307,6 +315,9 @@ Ensure English language is used for the actual prompt text (fullPrompt, block1, 
             "suggestions",
           ],
         },
+        thinkingConfig: {
+          thinkingLevel: ThinkingLevel.MEDIUM,
+        },
       },
     });
 
@@ -337,7 +348,7 @@ Suppress Music: ${suppressMusic ? "Yes" : "No"}
 Refine it with temporal brackets [0s-Xs], camera movement brackets [Camera Move], concrete visual descriptions, and audio cues.
 `;
 
-    const response = await callGeminiFlash36(ai, {
+    const response = await callGeminiFlash37(ai, {
       contents: requestText,
       config: {
         systemInstruction: MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION,
@@ -379,6 +390,9 @@ Refine it with temporal brackets [0s-Xs], camera movement brackets [Camera Move]
             "explanationZh",
             "suggestions",
           ],
+        },
+        thinkingConfig: {
+          thinkingLevel: ThinkingLevel.MEDIUM,
         },
       },
     });
