@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v1.2.0-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v1.2.1-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.7%20Flash-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -35,8 +35,9 @@
   - 完整生成標準 6 大區塊：`subject_definitions`、`summary`、`retention_analysis`、`detailed_description`、`overall_soundscape` 與 `non_diegetic_music`。
   - 精準管理角括號素材標籤（`<Subject N>`、`<Picture N>`、`<Video N>`、`<Audio N>`）。
 
-### 2. 搭載 Gemini 3.7 Flash 核心
+### 2. 搭載高彈性 Gemini 3.7 Flash 核心
 - 升級至 Google 最新一代 `gemini-3.7-flash` 模型。
+- **智能暫態重試機制**：後端實作具備隨機抖動的指數退避重試（最多 3 次），從容應對 503 高負載尖峰、429 速率限制與網路暫態斷線。
 - 透過 `ThinkingLevel` 自適應調節推理深度：
   - `ThinkingLevel.LOW`：極致低延遲，適用於即時電影級對白生成與素材標籤解析。
   - `ThinkingLevel.MEDIUM`：深度平衡推理，專門處理多鏡頭時序分鏡與 Retention Analysis。
@@ -51,6 +52,7 @@
 - 支援一鍵靜音/抑制背景音樂模式 (`non_diegetic_music: N/A`)。
 
 ### 5. 生產級 Studio 介面
+- **全域 Toast 浮動通知**：全面移除瀏覽器原生阻塞式彈窗，提供現代化的非阻塞式操作回饋。
 - **場景預設庫**：內建賽博龐克、日系動漫、暗黑奇幻、電影史詩等多種風格範本。
 - **動態時序分鏡軸 (Temporal Timeline)**：可視化呈現各鏡頭時間碼、鏡頭運鏡、畫面動作與音效節奏。
 - **一鍵導出**：支援一鍵複製完整 Prompt 或分區塊複製，即貼即用。

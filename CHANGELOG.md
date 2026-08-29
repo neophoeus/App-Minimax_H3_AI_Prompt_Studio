@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.2.1] - 2026-08-29
+
+### 🚀 Added & Improved
+
+- **Gemini API Resilience & Auto-Retry Mechanism**:
+  - Implemented an automatic retry handler (`callGeminiFlash37`) with exponential backoff and randomized jitter (up to 3 retries) in `server.ts`.
+  - Added robust error code & pattern extraction (`503` / `UNAVAILABLE` / `High Demand`, `429` / `RESOURCE_EXHAUSTED` / `Rate limit`, and transient network socket failures).
+- **Modernized Toast Notification System**:
+  - Replaced legacy browser-blocking `alert()` dialogs in `ReferenceManager.tsx` with the unified, floating `Toast` notification component.
+  - Added real-time success feedback notifications upon AI reference visual analysis.
+- **Enhanced Error Translation & UX**:
+  - Standardized friendly Traditional Chinese error formatting across the application (`App.tsx` & `ReferenceManager.tsx`), handling API key misconfigurations, high traffic demand spikes, rate limits, and network disconnects.
+
 ---
 
 ## [v1.2.0] - 2026-08-18

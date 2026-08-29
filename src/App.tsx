@@ -99,7 +99,7 @@ export default function App() {
   const [savedPrompts, setSavedPrompts] = useState<SavedPromptItem[]>([]);
   const [copiedFull, setCopiedFull] = useState<boolean>(false);
 
-  // Helper to format rate limit / quota exceeded error cleanly
+  // Helper to format rate limit / quota exceeded / high demand 503 error cleanly
   const formatErrorMessage = (rawMsg: string) => {
     if (
       rawMsg.includes('429') ||
@@ -108,7 +108,23 @@ export default function App() {
       rawMsg.includes('Quota') ||
       rawMsg.includes('Rate limit')
     ) {
-      return '⚠️ Gemini API 額度已用完，請稍等 1~2 分鐘後重試';
+      return '⚠️ Gemini API 額度已用完 (429)，請稍等 1~2 分鐘後重試';
+    }
+    if (
+      rawMsg.includes('503') ||
+      rawMsg.includes('UNAVAILABLE') ||
+      rawMsg.includes('high demand') ||
+      rawMsg.includes('Spikes in demand') ||
+      rawMsg.includes('負載') ||
+      rawMsg.includes('overloaded')
+    ) {
+      return '⚠️ Gemini 模型目前負載較高 (503)，請稍候 3~5 秒後重新點擊生成！';
+    }
+    if (rawMsg.includes('GEMINI_API_KEY')) {
+      return '⚠️ 未設定 GEMINI_API_KEY 環境變數，請確認後端 .env 設定！';
+    }
+    if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError')) {
+      return '⚠️ 網路連線中斷或伺服器未啟動，請檢查連線狀態！';
     }
     return rawMsg;
   };
@@ -541,6 +557,7 @@ export default function App() {
           <ReferenceManager
             references={config.references}
             onChange={(refs) => setConfig({ ...config, references: refs })}
+            onToast={showToast}
           />
 
           {/* Style & Atmosphere Configurator */}

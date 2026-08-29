@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v1.2.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.2.1-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.7%20Flash-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -35,8 +35,9 @@ Powered by Google's latest **Gemini 3.7 Flash (`gemini-3.7-flash`)** model and t
   - Generates the complete 6-section structure: `subject_definitions`, `summary`, `retention_analysis`, `detailed_description`, `overall_soundscape`, and `non_diegetic_music`.
   - Automatically manages angle-bracket asset labels (`<Subject N>`, `<Picture N>`, `<Video N>`, `<Audio N>`).
 
-### 2. Powered by Gemini 3.7 Flash
+### 2. Powered by Gemini 3.7 Flash with High Resilience
 - Integrates Google's latest `gemini-3.7-flash` model.
+- **Smart Transient Retry**: Built-in exponential backoff with jitter (up to 3 retries) handling 503 high-demand spikes, 429 quota bursts, and temporary network connection drops.
 - Dynamic reasoning depth via `ThinkingLevel`:
   - `ThinkingLevel.LOW`: Ultra-low latency for instant cinematic dialogue generation and image tag extraction.
   - `ThinkingLevel.MEDIUM`: Balanced, deep reasoning for complex multi-shot timeline breakdowns and retention analysis.
@@ -51,6 +52,7 @@ Powered by Google's latest **Gemini 3.7 Flash (`gemini-3.7-flash`)** model and t
 - Support for background music suppression (`non_diegetic_music: N/A`).
 
 ### 5. Production-Ready Studio UI
+- **Unified Toast Notifications**: Replaced browser popups with non-blocking, sleek floating toasts across all workflows.
 - **Preset Library**: Instant access to curated scene presets (Cyberpunk, Anime, Fantasy, Epic Cinematic).
 - **Temporal Timeline View**: Interactive visual shot timeline showing timeframes, camera movements, actions, and audio cues.
 - **One-Click Export**: Copy the full prompt or individual blocks directly ready to paste into MiniMax-H3.

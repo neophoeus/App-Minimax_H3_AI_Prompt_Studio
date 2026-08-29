@@ -28,30 +28,80 @@ const getGeminiClient = () => {
   });
 };
 
-// Call Gemini 3.7 Flash exclusively without downgrade
-async function callGeminiFlash37(ai: GoogleGenAI, requestOptions: Omit<Parameters<typeof ai.models.generateContent>[0], 'model'>) {
-  try {
-    const response = await ai.models.generateContent({
-      ...requestOptions,
-      model: "gemini-3.7-flash",
-    });
-    return response;
-  } catch (err: any) {
-    console.error("Gemini 3.7 Flash execution error:", err?.message || err);
-    const errMsg = typeof err?.message === 'string' ? err.message : '';
-    const isQuotaOrRateLimit =
-      err?.status === 429 ||
-      err?.statusCode === 429 ||
-      errMsg.includes('429') ||
-      errMsg.includes('quota') ||
-      errMsg.includes('RESOURCE_EXHAUSTED') ||
-      errMsg.includes('Rate limit');
+// Sleep helper for backoff
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-    if (isQuotaOrRateLimit) {
-      throw new Error('⚠️ Gemini API 額度已用完 (429 Rate Limit / Quota Exceeded)，請稍等 1~2 分鐘後重試！');
+// Call Gemini 3.7 Flash with automatic retry for transient 503 (high demand) / 429 errors
+async function callGeminiFlash37(
+  ai: GoogleGenAI,
+  requestOptions: Omit<Parameters<typeof ai.models.generateContent>[0], 'model'>,
+  maxRetries = 3
+) {
+  let lastError: any = null;
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await ai.models.generateContent({
+        ...requestOptions,
+        model: "gemini-3.7-flash",
+      });
+      return response;
+    } catch (err: any) {
+      lastError = err;
+      console.error(`Gemini 3.7 Flash execution attempt ${attempt}/${maxRetries} error:`, err?.message || err);
+
+      const status = err?.status || err?.statusCode || err?.response?.status || err?.code;
+      const errMsg = typeof err?.message === 'string' ? err.message : JSON.stringify(err || '');
+
+      const isUnavailableOrHighDemand =
+        status === 503 ||
+        status === '503' ||
+        errMsg.includes('503') ||
+        errMsg.includes('UNAVAILABLE') ||
+        errMsg.includes('high demand') ||
+        errMsg.includes('Spikes in demand') ||
+        errMsg.includes('overloaded');
+
+      const isQuotaOrRateLimit =
+        status === 429 ||
+        status === '429' ||
+        errMsg.includes('429') ||
+        errMsg.includes('quota') ||
+        errMsg.includes('RESOURCE_EXHAUSTED') ||
+        errMsg.includes('Rate limit');
+
+      const isTransientNetwork =
+        errMsg.includes('fetch failed') ||
+        errMsg.includes('ECONNRESET') ||
+        errMsg.includes('ETIMEDOUT') ||
+        errMsg.includes('socket hang up') ||
+        status === 500 ||
+        status === 502 ||
+        status === 504 ||
+        status === '500' ||
+        status === '502' ||
+        status === '504';
+
+      if ((isUnavailableOrHighDemand || isQuotaOrRateLimit || isTransientNetwork) && attempt < maxRetries) {
+        const delayMs = attempt * 1200 + Math.floor(Math.random() * 600);
+        console.log(`Retrying Gemini request in ${delayMs}ms due to transient status ${status || 'network'} (attempt ${attempt})...`);
+        await sleep(delayMs);
+        continue;
+      }
+
+      if (isUnavailableOrHighDemand) {
+        throw new Error('⚠️ Gemini AI 模型目前高負載繁忙 (503 High Demand)，系統已自動重試，請稍候數秒後再試一次！');
+      }
+
+      if (isQuotaOrRateLimit) {
+        throw new Error('⚠️ Gemini API 額度已用完 (429 Rate Limit / Quota Exceeded)，請稍等 1~2 分鐘後重試！');
+      }
+
+      throw err;
     }
-    throw err;
   }
+
+  throw lastError || new Error('Gemini API 請求失敗');
 }
 
 // System Instruction strictly adhering to official MiniMax-H3 h3-prompt-writing skill specifications

@@ -5,6 +5,7 @@ import { Plus, Trash2, Tag, Upload, Sparkles, Film, Image as ImageIcon, Music, L
 interface ReferenceManagerProps {
   references: ReferenceItem[];
   onChange: (refs: ReferenceItem[]) => void;
+  onToast?: (message: string, type?: 'success' | 'error' | 'info', duration?: number) => void;
 }
 
 const ROLE_OPTIONS: { role: ReferenceRole; labelZh: string; desc: string; icon: string }[] = [
@@ -67,6 +68,7 @@ const resizeImageFile = (file: File, maxDimension = 1024, quality = 0.85): Promi
 export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
   references,
   onChange,
+  onToast,
 }) => {
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
 
@@ -209,6 +211,35 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
     }
   };
 
+  const formatMediaErrorMessage = (rawMsg: string) => {
+    if (
+      rawMsg.includes('429') ||
+      rawMsg.includes('額度') ||
+      rawMsg.includes('RESOURCE_EXHAUSTED') ||
+      rawMsg.includes('Quota') ||
+      rawMsg.includes('Rate limit')
+    ) {
+      return '⚠️ Gemini API 額度已用完 (429)，請稍等 1~2 分鐘後重試！';
+    }
+    if (
+      rawMsg.includes('503') ||
+      rawMsg.includes('UNAVAILABLE') ||
+      rawMsg.includes('high demand') ||
+      rawMsg.includes('Spikes in demand') ||
+      rawMsg.includes('負載') ||
+      rawMsg.includes('overloaded')
+    ) {
+      return '⚠️ AI 模型目前負載較高 (503)，請稍候 3~5 秒後重試！';
+    }
+    if (rawMsg.includes('GEMINI_API_KEY')) {
+      return '⚠️ 未設定 GEMINI_API_KEY，請於後端環境變數中設定！';
+    }
+    if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError')) {
+      return '⚠️ 網路連線中斷或伺服器未啟動，請檢查連線狀態！';
+    }
+    return rawMsg || '分析素材失敗，請檢查檔案格式或網路連線';
+  };
+
   const analyzeReferenceMediaWithAI = async (item: ReferenceItem) => {
     setAnalyzingId(item.id);
     try {
@@ -231,12 +262,25 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
         updateReference(item.id, {
           description: json.description,
         });
+        if (onToast) {
+          onToast('已成功透過 AI 分析素材特徵並填入說明！', 'success');
+        }
       } else {
-        alert(json.error || '分析素材失敗，請再試一次');
+        const friendlyErr = formatMediaErrorMessage(json.error || '分析素材失敗');
+        if (onToast) {
+          onToast(friendlyErr, 'error', 6000);
+        } else {
+          alert(friendlyErr);
+        }
       }
     } catch (err: any) {
       console.error('Failed to analyze media:', err);
-      alert(err.message || '分析素材失敗，請檢查檔案大小或網路連線');
+      const friendlyErr = formatMediaErrorMessage(err.message || '');
+      if (onToast) {
+        onToast(friendlyErr, 'error', 6000);
+      } else {
+        alert(friendlyErr);
+      }
     } finally {
       setAnalyzingId(null);
     }
