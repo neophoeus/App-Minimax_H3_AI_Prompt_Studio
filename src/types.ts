@@ -1,5 +1,7 @@
 export type GenerationMode = 'T2VA' | 'I2VA' | 'FL2VA' | 'L2VA' | 'Ref2VA';
 
+export type EngineTier = 'pro' | 'ultra_5x' | 'ultra_20x';
+
 export type ReferenceRole = 
   | 'character' 
   | 'object' 
@@ -46,6 +48,7 @@ export interface H3PromptConfig {
   dialogueText: string;
   sfxText: string;
   suppressMusic: boolean; // non_diegetic_music: N/A
+  engineTier?: EngineTier;
   references: ReferenceItem[];
 }
 

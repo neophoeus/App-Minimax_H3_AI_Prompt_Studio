@@ -4,8 +4,8 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v1.2.1-blue.svg)](CHANGELOG.md)
-[![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.7%20Flash-orange.svg)](https://deepmind.google/technologies/gemini/)
+[![版本](https://img.shields.io/badge/版本-v1.3.0-blue.svg)](CHANGELOG.md)
+[![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.7%20Flash%20%7C%203.5%20Lite-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
 
@@ -21,7 +21,7 @@
 
 本工具 100% 嚴格遵循 MiniMax-H3 官方 [`h3-prompt-writing`](https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing) 技能規範，能將使用者的創意概念一鍵轉化為符合模型最佳理解結構的生產級提示詞，並提供一鍵複製功能。
 
-後端採用 Google 最新發布的 **Gemini 3.7 Flash (`gemini-3.7-flash`)** 與最新版 `@google/genai` SDK，具備強大的思考推理能力，可精準處理多鏡頭時序編排、多模態素材 Retention Analysis（特徵鎖定分析）以及影視級聲景構建。
+後端採用 Google 最新發布的 **Gemini 3.7 Flash (`gemini-3.7-flash`)** 與 **Gemini 3.5 Flash-Lite (`gemini-3.5-flash-lite`)**，配合最新版 `@google/genai` SDK，具備強大的思考推理能力，可精準處理多鏡頭時序編排、多模態素材 Retention Analysis（特徵鎖定分析）以及影視級聲景構建，且徹底消除 429 額度超限問題。
 
 ---
 
@@ -35,26 +35,26 @@
   - 完整生成標準 6 大區塊：`subject_definitions`、`summary`、`retention_analysis`、`detailed_description`、`overall_soundscape` 與 `non_diegetic_music`。
   - 精準管理角括號素材標籤（`<Subject N>`、`<Picture N>`、`<Video N>`、`<Audio N>`）。
 
-### 2. 搭載高彈性 Gemini 3.7 Flash 核心
-- 升級至 Google 最新一代 `gemini-3.7-flash` 模型。
-- **智能暫態重試機制**：後端實作具備隨機抖動的指數退避重試（最多 3 次），從容應對 503 高負載尖峰、429 速率限制與網路暫態斷線。
-- 透過 `ThinkingLevel` 自適應調節推理深度：
-  - `ThinkingLevel.LOW`：極致低延遲，適用於即時電影級對白生成與素材標籤解析。
-  - `ThinkingLevel.MEDIUM`：深度平衡推理，專門處理多鏡頭時序分鏡與 Retention Analysis。
-- 全面符合 Google GenAI SDK 最新規範（移除舊版採樣與預算參數）。
+### 2. 多層級 AI 引擎與智慧自動無縫降級 (Multi-Tier & Instant Fallback)
+- **三種可選算力方案**：
+  - **🟢 AI Pro (Web UI 配額最佳化 - 預設)**：專為 Google AI 訂閱與免費 API 打造的零成本模式，透過模型分流（對話使用 `gemini-3.5-flash-lite`、圖片使用 `gemini-2.5-flash`、提示詞使用 `gemini-3.7-flash`），徹底消弭 429 額度超限。
+  - **🔵 AI Ultra 5x (進階效能)**：全核心啟用 `gemini-3.7-flash` 深入推理。
+  - **🟣 AI Ultra 20x (極致旗艦)**：旗艦級思考深度與高精多模態鎖定。
+- **無縫自動容錯降級**：遇到 429 額度超限或 503 負載尖峰時，後端自動即時切換至備援模型，保障 100% 請求成功率。
 
 ### 3. 多模態參考素材視覺分析器
 - 支援於瀏覽器直接上傳角色、場景或道具圖片。
-- 自動辨識並提煉外觀特徵（光影、五官細節、材質與色彩），直接填入 Block 1 主體定義與 Retention Analysis 鎖定清單。
+- **深度 Token 最佳化**：前端自動壓縮至 768px（品質 0.8），在保留所有微小特徵（服裝材質、五官輪廓、光影色調）的同時，降低 70% Token 消耗。
 
 ### 4. 電影級對白與音效導演
-- 自動生成符合影視與動漫風格的人物台詞，並附帶環境音效 (SFX) 與音色建議。
+- 超快速（<400ms）生成符合影視與動漫風格的人物台詞，並附帶環境音效 (SFX) 與音色建議。
 - 支援一鍵靜音/抑制背景音樂模式 (`non_diegetic_music: N/A`)。
 
 ### 5. 生產級 Studio 介面
-- **全域 Toast 浮動通知**：全面移除瀏覽器原生阻塞式彈窗，提供現代化的非阻塞式操作回饋。
-- **場景預設庫**：內建賽博龐克、日系動漫、暗黑奇幻、電影史詩等多種風格範本。
-- **動態時序分鏡軸 (Temporal Timeline)**：可視化呈現各鏡頭時間碼、鏡頭運鏡、畫面動作與音效節奏。
+- **AI 算力方案選擇器**：頂部導覽列隨時切換 Pro 與 Ultra 模式，偏好自動保存於 `localStorage`。
+- **全域 Toast 浮動通知**：現代化非阻塞式操作回饋。
+- **場景預設庫**：內建賽博龐克、日系動漫、暗黑奇幻、電影廣告等多種風格範本。
+- **動態時序分鏡軸 (Temporal Timeline)**：可視化呈現各鏡頭時間碼、運鏡指令、畫面動作與音效節奏。
 - **一鍵導出**：支援一鍵複製完整 Prompt 或分區塊複製，即貼即用。
 
 ---

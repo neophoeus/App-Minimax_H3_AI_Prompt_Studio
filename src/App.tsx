@@ -11,6 +11,7 @@ import {
   PresetTemplate,
   CameraMove,
   GenerationMode,
+  EngineTier,
 } from './types';
 import { Navbar } from './components/Navbar';
 import { ReferenceManager } from './components/ReferenceManager';
@@ -81,10 +82,12 @@ const DEFAULT_CONFIG: H3PromptConfig = {
   dialogueText: '',
   sfxText: '',
   suppressMusic: false,
+  engineTier: 'pro',
   references: [],
 };
 
 export default function App() {
+  const [engineTier, setEngineTier] = useState<EngineTier>('pro');
   const [config, setConfig] = useState<H3PromptConfig>(DEFAULT_CONFIG);
   const [output, setOutput] = useState<H3PromptOutput | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -108,7 +111,7 @@ export default function App() {
       rawMsg.includes('Quota') ||
       rawMsg.includes('Rate limit')
     ) {
-      return '⚠️ Gemini API 額度已用完 (429)，請稍等 1~2 分鐘後重試';
+      return '⚠️ Gemini API 額度已用完 (429)，系統已嘗試多模型自動降級，請稍等片刻後重試！';
     }
     if (
       rawMsg.includes('503') ||
@@ -129,8 +132,29 @@ export default function App() {
     return rawMsg;
   };
 
+  const handleEngineTierChange = (tier: EngineTier) => {
+    setEngineTier(tier);
+    setConfig((prev) => ({ ...prev, engineTier: tier }));
+    try {
+      localStorage.setItem('minimax_h3_engine_tier', tier);
+    } catch (e) {
+      console.error('Failed to save engine tier to localStorage', e);
+    }
+    const label = tier === 'pro' ? 'AI Pro (Web UI 配額最佳化)' : tier === 'ultra_5x' ? 'AI Ultra 5x (進階效能)' : 'AI Ultra 20x (極致旗艦)';
+    showToast(`已切換至 ${label} 算力方案`, 'info');
+  };
+
   // Load saved options and history from localStorage on startup
   useEffect(() => {
+    try {
+      const savedTier = localStorage.getItem('minimax_h3_engine_tier') as EngineTier;
+      if (savedTier && ['pro', 'ultra_5x', 'ultra_20x'].includes(savedTier)) {
+        setEngineTier(savedTier);
+      }
+    } catch (e) {
+      console.error('Failed to load engine tier from localStorage', e);
+    }
+
     try {
       const savedOptions = localStorage.getItem('minimax_h3_saved_options');
       if (savedOptions) {
@@ -181,7 +205,6 @@ export default function App() {
     }
   }, [config]);
 
-
   const [isGeneratingDialogue, setIsGeneratingDialogue] = useState<boolean>(false);
 
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success', duration = 4500) => {
@@ -204,6 +227,7 @@ export default function App() {
           style: config.style,
           mode: config.mode,
           duration: config.duration,
+          engineTier,
         }),
       });
       const contentType = res.headers.get('content-type');
@@ -429,6 +453,8 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-purple-500/30">
       {/* Top Navigation Bar */}
       <Navbar
+        engineTier={engineTier}
+        onChangeEngineTier={handleEngineTierChange}
         onOpenPresets={() => setIsPresetOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
         onResetOptions={handleResetOptions}
@@ -558,6 +584,7 @@ export default function App() {
             references={config.references}
             onChange={(refs) => setConfig({ ...config, references: refs })}
             onToast={showToast}
+            engineTier={engineTier}
           />
 
           {/* Style & Atmosphere Configurator */}

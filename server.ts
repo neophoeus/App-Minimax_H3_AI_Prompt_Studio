@@ -12,7 +12,7 @@ const PORT = 3000;
 app.use(express.json({ limit: "50mb" }));
 app.use(express.urlencoded({ limit: "50mb", extended: true }));
 
-// Initialize Gemini Client
+// Initialize Gemini Client with clean configuration (No header spoofing)
 const getGeminiClient = () => {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -20,85 +20,188 @@ const getGeminiClient = () => {
   }
   return new GoogleGenAI({
     apiKey,
-    httpOptions: {
-      headers: {
-        "User-Agent": "aistudio-build",
-      },
-    },
   });
 };
 
-// Sleep helper for backoff
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+export type EngineTier = 'pro' | 'ultra_5x' | 'ultra_20x';
 
-// Call Gemini 3.7 Flash with automatic retry for transient 503 (high demand) / 429 errors
-async function callGeminiFlash37(
+interface ExecutionPlan {
+  primaryModel: string;
+  fallbackModels: string[];
+  thinkingConfig?: {
+    thinkingLevel?: ThinkingLevel;
+    thinkingBudget?: number;
+  };
+}
+
+/**
+ * Strategy Planner based on Google AI Subscription Tiers:
+ * 
+ * - 'pro' (Default / Web UI & Free API Optimized):
+ *    - Dialogue: gemini-3.5-flash-lite (Ultra-fast <400ms, separate high-quota pool, 0 pressure on 3.7)
+ *    - Vision / Media Analysis: gemini-2.5-flash (Vision optimized, lightweight token footprint, thinking disabled)
+ *    - Prompt Generation: gemini-3.7-flash (Medium thinking) with instant fallback to gemini-2.5-flash
+ * 
+ * - 'ultra_5x' (High Performance):
+ *    - Full gemini-3.7-flash with deeper reasoning
+ * 
+ * - 'ultra_20x' (Extreme Flagship):
+ *    - Maximum thinking tokens and high-precision visual analysis
+ */
+function getExecutionPlan(
+  task: 'dialogue' | 'media_analysis' | 'prompt_generation' | 'optimize',
+  tier: EngineTier = 'pro'
+): ExecutionPlan {
+  switch (tier) {
+    case 'ultra_20x':
+      if (task === 'dialogue') {
+        return {
+          primaryModel: 'gemini-3.7-flash',
+          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-2.5-flash'],
+          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+        };
+      }
+      if (task === 'media_analysis') {
+        return {
+          primaryModel: 'gemini-3.7-flash',
+          fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
+          thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
+        };
+      }
+      return {
+        primaryModel: 'gemini-3.7-flash',
+        fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+      };
+
+    case 'ultra_5x':
+      if (task === 'dialogue') {
+        return {
+          primaryModel: 'gemini-3.7-flash',
+          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-2.5-flash'],
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        };
+      }
+      if (task === 'media_analysis') {
+        return {
+          primaryModel: 'gemini-3.7-flash',
+          fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
+          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+        };
+      }
+      return {
+        primaryModel: 'gemini-3.7-flash',
+        fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+      };
+
+    case 'pro':
+    default:
+      if (task === 'dialogue') {
+        return {
+          primaryModel: 'gemini-3.5-flash-lite',
+          fallbackModels: ['gemini-2.5-flash', 'gemini-3.7-flash'],
+          thinkingConfig: { thinkingBudget: 0 },
+        };
+      }
+      if (task === 'media_analysis') {
+        return {
+          primaryModel: 'gemini-2.5-flash',
+          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.7-flash'],
+          thinkingConfig: { thinkingBudget: 0 },
+        };
+      }
+      return {
+        primaryModel: 'gemini-3.7-flash',
+        fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
+      };
+  }
+}
+
+/**
+ * Execute Gemini API with automatic model specialization and seamless 429/503 fallback
+ */
+async function callGeminiDynamic(
   ai: GoogleGenAI,
-  requestOptions: Omit<Parameters<typeof ai.models.generateContent>[0], 'model'>,
-  maxRetries = 3
+  task: 'dialogue' | 'media_analysis' | 'prompt_generation' | 'optimize',
+  tier: EngineTier = 'pro',
+  requestOptions: Omit<Parameters<typeof ai.models.generateContent>[0], 'model'>
 ) {
+  const plan = getExecutionPlan(task, tier);
+  const modelsToTry = [plan.primaryModel, ...plan.fallbackModels];
   let lastError: any = null;
 
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+  for (let mIdx = 0; mIdx < modelsToTry.length; mIdx++) {
+    const currentModel = modelsToTry[mIdx];
+    const isFallback = mIdx > 0;
+
+    // Merge task base config with tier-specific thinking settings
+    const mergedConfig = {
+      ...(requestOptions.config || {}),
+      ...(plan.thinkingConfig ? { thinkingConfig: plan.thinkingConfig } : {}),
+    };
+
     try {
+      if (isFallback) {
+        console.log(`[Gemini Dynamic Router] Activating fallback model "${currentModel}" for task "${task}" (Tier: ${tier})...`);
+      }
       const response = await ai.models.generateContent({
         ...requestOptions,
-        model: "gemini-3.7-flash",
+        config: mergedConfig,
+        model: currentModel,
       });
       return response;
     } catch (err: any) {
       lastError = err;
-      console.error(`Gemini 3.7 Flash execution attempt ${attempt}/${maxRetries} error:`, err?.message || err);
-
       const status = err?.status || err?.statusCode || err?.response?.status || err?.code;
       const errMsg = typeof err?.message === 'string' ? err.message : JSON.stringify(err || '');
 
-      const isUnavailableOrHighDemand =
-        status === 503 ||
-        status === '503' ||
-        errMsg.includes('503') ||
-        errMsg.includes('UNAVAILABLE') ||
-        errMsg.includes('high demand') ||
-        errMsg.includes('Spikes in demand') ||
-        errMsg.includes('overloaded');
+      console.warn(
+        `[Gemini Dynamic Router] Model "${currentModel}" failed for task "${task}" (Status: ${status || 'N/A'}):`,
+        errMsg
+      );
 
-      const isQuotaOrRateLimit =
+      const isQuotaOrDemandOrNetwork =
         status === 429 ||
         status === '429' ||
-        errMsg.includes('429') ||
-        errMsg.includes('quota') ||
-        errMsg.includes('RESOURCE_EXHAUSTED') ||
-        errMsg.includes('Rate limit');
-
-      const isTransientNetwork =
-        errMsg.includes('fetch failed') ||
-        errMsg.includes('ECONNRESET') ||
-        errMsg.includes('ETIMEDOUT') ||
-        errMsg.includes('socket hang up') ||
+        status === 503 ||
+        status === '503' ||
         status === 500 ||
         status === 502 ||
         status === 504 ||
-        status === '500' ||
-        status === '502' ||
-        status === '504';
+        errMsg.includes('429') ||
+        errMsg.includes('503') ||
+        errMsg.includes('RESOURCE_EXHAUSTED') ||
+        errMsg.includes('Quota') ||
+        errMsg.includes('UNAVAILABLE') ||
+        errMsg.includes('high demand') ||
+        errMsg.includes('overloaded') ||
+        errMsg.includes('fetch failed') ||
+        errMsg.includes('ECONNRESET') ||
+        errMsg.includes('Rate limit');
 
-      if ((isUnavailableOrHighDemand || isQuotaOrRateLimit || isTransientNetwork) && attempt < maxRetries) {
-        const delayMs = attempt * 1200 + Math.floor(Math.random() * 600);
-        console.log(`Retrying Gemini request in ${delayMs}ms due to transient status ${status || 'network'} (attempt ${attempt})...`);
-        await sleep(delayMs);
+      // If quota/high demand or transient network occurs and a fallback model is available, switch immediately
+      if (isQuotaOrDemandOrNetwork && mIdx < modelsToTry.length - 1) {
+        const nextModel = modelsToTry[mIdx + 1];
+        console.log(
+          `[Gemini Dynamic Router] Rate limit / transient error on "${currentModel}". Seamlessly failing over to "${nextModel}"...`
+        );
         continue;
       }
 
-      if (isUnavailableOrHighDemand) {
-        throw new Error('⚠️ Gemini AI 模型目前高負載繁忙 (503 High Demand)，系統已自動重試，請稍候數秒後再試一次！');
-      }
-
-      if (isQuotaOrRateLimit) {
-        throw new Error('⚠️ Gemini API 額度已用完 (429 Rate Limit / Quota Exceeded)，請稍等 1~2 分鐘後重試！');
-      }
-
-      throw err;
+      break;
     }
+  }
+
+  const status = lastError?.status || lastError?.statusCode || lastError?.response?.status || lastError?.code;
+  const errMsg = typeof lastError?.message === 'string' ? lastError.message : JSON.stringify(lastError || '');
+
+  if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || status === 429) {
+    throw new Error('⚠️ Gemini API 額度限制 (429 Rate Limit)，系統已嘗試多模型備援，請稍等 1~2 分鐘後重試！');
+  }
+  if (errMsg.includes('503') || errMsg.includes('UNAVAILABLE') || status === 503) {
+    throw new Error('⚠️ Gemini AI 模型目前負載較高 (503)，請稍候數秒後再試一次！');
   }
 
   throw lastError || new Error('Gemini API 請求失敗');
@@ -196,7 +299,7 @@ non_diegetic_music:
 // API Endpoint to Auto-Generate Cinematic Dialogue
 app.post("/api/generate-dialogue", async (req, res) => {
   try {
-    const { idea, style, mode, duration } = req.body;
+    const { idea, style, mode, duration, engineTier = 'pro' } = req.body;
     const ai = getGeminiClient();
 
     const prompt = `
@@ -216,23 +319,25 @@ Return JSON format:
 }
 `;
 
-    const response = await callGeminiFlash37(ai, {
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            dialogueEn: { type: Type.STRING },
-            sfxSuggestion: { type: Type.STRING },
+    const response = await callGeminiDynamic(
+      ai,
+      'dialogue',
+      engineTier as EngineTier,
+      {
+        contents: prompt,
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              dialogueEn: { type: Type.STRING },
+              sfxSuggestion: { type: Type.STRING },
+            },
+            required: ["dialogueEn", "sfxSuggestion"],
           },
-          required: ["dialogueEn", "sfxSuggestion"],
         },
-        thinkingConfig: {
-          thinkingLevel: ThinkingLevel.LOW,
-        },
-      },
-    });
+      }
+    );
 
     const result = JSON.parse(response.text || "{}");
     return res.json({ success: true, data: result });
@@ -248,7 +353,7 @@ Return JSON format:
 // API Endpoint to analyze uploaded reference file image/media
 app.post("/api/analyze-reference-media", async (req, res) => {
   try {
-    const { imageBase64, role, fileName } = req.body;
+    const { imageBase64, role, fileName, engineTier = 'pro' } = req.body;
     const ai = getGeminiClient();
 
     let contents: any[] = [];
@@ -262,20 +367,20 @@ app.post("/api/analyze-reference-media", async (req, res) => {
             data: base64Data,
           },
         },
-        `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Block 1 & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture).`
+        `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Block 1 & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture). Keep it concise and within 60 words.`
       ];
     } else {
-      contents = [`Provide a concise reference description for file "${fileName || 'Asset'}" with role "${role || 'character'}".`];
+      contents = [`Provide a concise reference description for file "${fileName || 'Asset'}" with role "${role || 'character'}". Keep it within 50 words.`];
     }
 
-    const response = await callGeminiFlash37(ai, {
-      contents,
-      config: {
-        thinkingConfig: {
-          thinkingLevel: ThinkingLevel.LOW,
-        },
-      },
-    });
+    const response = await callGeminiDynamic(
+      ai,
+      'media_analysis',
+      engineTier as EngineTier,
+      {
+        contents,
+      }
+    );
 
     const text = response.text || "Analyzed visual characteristics for retention lock.";
     return res.json({ success: true, description: text.trim() });
@@ -292,6 +397,7 @@ app.post("/api/analyze-reference-media", async (req, res) => {
 app.post("/api/generate-h3-prompt", async (req, res) => {
   try {
     const config = req.body;
+    const engineTier: EngineTier = config.engineTier || 'pro';
     const ai = getGeminiClient();
 
     const userPrompt = `
@@ -322,54 +428,56 @@ Please synthesize all these options into the official 3-block MiniMax-H3 prompt 
 Ensure English language is used for the actual prompt text (fullPrompt, block1, block2, block3) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh and suggestions!
 `;
 
-    const response = await callGeminiFlash37(ai, {
-      contents: userPrompt,
-      config: {
-        systemInstruction: MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            block1: { type: Type.STRING },
-            block2: { type: Type.STRING },
-            block3: { type: Type.STRING },
-            audioNotes: { type: Type.STRING },
-            fullPrompt: { type: Type.STRING },
-            temporalTimeline: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  timeframe: { type: Type.STRING },
-                  action: { type: Type.STRING },
-                  camera: { type: Type.STRING },
-                  audio: { type: Type.STRING },
+    const response = await callGeminiDynamic(
+      ai,
+      'prompt_generation',
+      engineTier,
+      {
+        contents: userPrompt,
+        config: {
+          systemInstruction: MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              block1: { type: Type.STRING },
+              block2: { type: Type.STRING },
+              block3: { type: Type.STRING },
+              audioNotes: { type: Type.STRING },
+              fullPrompt: { type: Type.STRING },
+              temporalTimeline: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    timeframe: { type: Type.STRING },
+                    action: { type: Type.STRING },
+                    camera: { type: Type.STRING },
+                    audio: { type: Type.STRING },
+                  },
+                  required: ["timeframe", "action", "camera", "audio"],
                 },
-                required: ["timeframe", "action", "camera", "audio"],
+              },
+              explanationZh: { type: Type.STRING },
+              suggestions: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
               },
             },
-            explanationZh: { type: Type.STRING },
-            suggestions: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
+            required: [
+              "block1",
+              "block2",
+              "block3",
+              "audioNotes",
+              "fullPrompt",
+              "temporalTimeline",
+              "explanationZh",
+              "suggestions",
+            ],
           },
-          required: [
-            "block1",
-            "block2",
-            "block3",
-            "audioNotes",
-            "fullPrompt",
-            "temporalTimeline",
-            "explanationZh",
-            "suggestions",
-          ],
         },
-        thinkingConfig: {
-          thinkingLevel: ThinkingLevel.MEDIUM,
-        },
-      },
-    });
+      }
+    );
 
     const outputText = response.text || "{}";
     const resultJson = JSON.parse(outputText);
@@ -386,7 +494,7 @@ Ensure English language is used for the actual prompt text (fullPrompt, block1, 
 // Quick Optimize Endpoint
 app.post("/api/optimize-existing-prompt", async (req, res) => {
   try {
-    const { rawPrompt, duration = "10s", suppressMusic = false } = req.body;
+    const { rawPrompt, duration = "10s", suppressMusic = false, engineTier = 'pro' } = req.body;
     const ai = getGeminiClient();
 
     const requestText = `
@@ -398,54 +506,56 @@ Suppress Music: ${suppressMusic ? "Yes" : "No"}
 Refine it with temporal brackets [0s-Xs], camera movement brackets [Camera Move], concrete visual descriptions, and audio cues.
 `;
 
-    const response = await callGeminiFlash37(ai, {
-      contents: requestText,
-      config: {
-        systemInstruction: MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            block1: { type: Type.STRING },
-            block2: { type: Type.STRING },
-            block3: { type: Type.STRING },
-            audioNotes: { type: Type.STRING },
-            fullPrompt: { type: Type.STRING },
-            temporalTimeline: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  timeframe: { type: Type.STRING },
-                  action: { type: Type.STRING },
-                  camera: { type: Type.STRING },
-                  audio: { type: Type.STRING },
+    const response = await callGeminiDynamic(
+      ai,
+      'optimize',
+      engineTier as EngineTier,
+      {
+        contents: requestText,
+        config: {
+          systemInstruction: MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION,
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              block1: { type: Type.STRING },
+              block2: { type: Type.STRING },
+              block3: { type: Type.STRING },
+              audioNotes: { type: Type.STRING },
+              fullPrompt: { type: Type.STRING },
+              temporalTimeline: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    timeframe: { type: Type.STRING },
+                    action: { type: Type.STRING },
+                    camera: { type: Type.STRING },
+                    audio: { type: Type.STRING },
+                  },
+                  required: ["timeframe", "action", "camera", "audio"],
                 },
-                required: ["timeframe", "action", "camera", "audio"],
+              },
+              explanationZh: { type: Type.STRING },
+              suggestions: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
               },
             },
-            explanationZh: { type: Type.STRING },
-            suggestions: {
-              type: Type.ARRAY,
-              items: { type: Type.STRING },
-            },
+            required: [
+              "block1",
+              "block2",
+              "block3",
+              "audioNotes",
+              "fullPrompt",
+              "temporalTimeline",
+              "explanationZh",
+              "suggestions",
+            ],
           },
-          required: [
-            "block1",
-            "block2",
-            "block3",
-            "audioNotes",
-            "fullPrompt",
-            "temporalTimeline",
-            "explanationZh",
-            "suggestions",
-          ],
         },
-        thinkingConfig: {
-          thinkingLevel: ThinkingLevel.MEDIUM,
-        },
-      },
-    });
+      }
+    );
 
     const outputText = response.text || "{}";
     const resultJson = JSON.parse(outputText);

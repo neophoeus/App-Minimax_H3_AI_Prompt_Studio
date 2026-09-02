@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { ReferenceItem, ReferenceRole } from '../types';
+import { ReferenceItem, ReferenceRole, EngineTier } from '../types';
 import { Plus, Trash2, Tag, Upload, Sparkles, Film, Image as ImageIcon, Music, Loader2, Check } from 'lucide-react';
 
 interface ReferenceManagerProps {
   references: ReferenceItem[];
   onChange: (refs: ReferenceItem[]) => void;
   onToast?: (message: string, type?: 'success' | 'error' | 'info', duration?: number) => void;
+  engineTier?: EngineTier;
 }
 
 const ROLE_OPTIONS: { role: ReferenceRole; labelZh: string; desc: string; icon: string }[] = [
@@ -20,8 +21,8 @@ const ROLE_OPTIONS: { role: ReferenceRole; labelZh: string; desc: string; icon: 
   { role: 'last_keyframe', labelZh: '尾幀關鍵幀 (Last Keyframe)', desc: '指定影片結尾收斂的精確尾幀圖片', icon: '🏁' },
 ];
 
-// Resize uploaded image to max dimension (e.g. 1024px) to optimize payload size & memory usage
-const resizeImageFile = (file: File, maxDimension = 1024, quality = 0.85): Promise<string> => {
+// Resize uploaded image to max dimension (e.g. 768px) to optimize payload size, memory & Gemini TPM consumption
+const resizeImageFile = (file: File, maxDimension = 768, quality = 0.8): Promise<string> => {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onerror = () => resolve('');
@@ -69,6 +70,7 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
   references,
   onChange,
   onToast,
+  engineTier = 'pro',
 }) => {
   const [analyzingId, setAnalyzingId] = useState<string | null>(null);
 
@@ -250,6 +252,7 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
           imageBase64: item.fileUrl && item.fileType === 'image' ? item.fileUrl : undefined,
           role: item.role,
           fileName: item.fileName || item.name,
+          engineTier,
         }),
       });
       const contentType = res.headers.get('content-type');

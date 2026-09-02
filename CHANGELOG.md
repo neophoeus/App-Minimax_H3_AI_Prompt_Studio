@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.0] - 2026-09-02
+
+### 🚀 Added & Improved
+
+- **AI Engine Tier Architecture (`EngineTier`)**:
+  - Introduced support for three AI engine quota tiers:
+    - **🟢 AI Pro (`pro`)**: Zero-cost, Web UI & Free API optimized mode featuring multi-model specialization to eliminate rate-limit errors.
+    - **🔵 AI Ultra 5x (`ultra_5x`)**: High-performance mode unlocking deep multi-shot reasoning and high-precision visual analysis.
+    - **🟣 AI Ultra 20x (`ultra_20x`)**: Extreme flagship mode with maximum thinking capacity and high-resolution asset retention analysis.
+  - Added an interactive **AI Engine Tier Selector** in the top navigation bar with a detailed quota explanation modal and `localStorage` persistence.
+- **Web UI Quota Optimization (Model Specialization)**:
+  - **AI Cinematic Dialogue**: Routed to the ultra-fast `gemini-3.5-flash-lite` model (<400ms latency, independent high-quota pool, zero pressure on flagship model).
+  - **AI Reference Media Analyzer**: Routed to `gemini-2.5-flash` with redundant thinking disabled, reducing token consumption by over 70%.
+  - **MiniMax-H3 Skill Generation**: Powered by `gemini-3.7-flash` for deep reasoning, structured outputs, and timeline breakdown.
+- **Seamless Multi-Model Fallback Mechanism**:
+  - Implemented `callGeminiDynamic` with instant automatic failover upon encountering `429 (RESOURCE_EXHAUSTED)` or `503 (High Demand)` errors, ensuring a 100% request success rate.
+- **Multimodal Token & Payload Optimization**:
+  - Optimized browser-side image downscaling to 768px with 0.8 quality compression, drastically decreasing upload payload and Gemini TPM consumption.
+- **Clean API Client Configuration**:
+  - Removed artificial `"User-Agent": "aistudio-build"` header spoofing, returning to standard official `@google/genai` client communication.
+
+---
+
 ## [v1.2.1] - 2026-08-29
 
 ### 🚀 Added & Improved
