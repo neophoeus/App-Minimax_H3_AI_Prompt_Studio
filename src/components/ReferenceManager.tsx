@@ -21,8 +21,8 @@ const ROLE_OPTIONS: { role: ReferenceRole; labelZh: string; desc: string; icon: 
   { role: 'last_keyframe', labelZh: '尾幀關鍵幀 (Last Keyframe)', desc: '指定影片結尾收斂的精確尾幀圖片', icon: '🏁' },
 ];
 
-// Resize uploaded image to max dimension (e.g. 768px) to optimize payload size, memory & Gemini TPM consumption
-const resizeImageFile = (file: File, maxDimension = 768, quality = 0.8): Promise<string> => {
+// Resize uploaded image to max dimension (512px) to minimize payload size and Gemini token consumption (~258 tokens)
+const resizeImageFile = (file: File, maxDimension = 512, quality = 0.75): Promise<string> => {
   return new Promise((resolve) => {
     const reader = new FileReader();
     reader.onerror = () => resolve('');
@@ -257,8 +257,8 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
     }
 
     if (fileType === 'image') {
-      // Auto-downscale uploaded images to a reasonable resolution (max 1024px)
-      const dataUrl = await resizeImageFile(file, 1024, 0.85);
+      // Auto-downscale uploaded images to ultra-light resolution (max 512px, ~258 tokens in Gemini)
+      const dataUrl = await resizeImageFile(file, 512, 0.75);
       updateReference(id, {
         fileUrl: dataUrl,
         fileName: file.name,

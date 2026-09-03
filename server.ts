@@ -430,6 +430,8 @@ app.post("/api/generate-h3-prompt", async (req, res) => {
     const engineTier: EngineTier = config.engineTier || 'pro';
     const ai = getGeminiClient();
 
+    const multimodalParts: any[] = [];
+
     const sanitizedReferences = (config.references && config.references.length > 0)
       ? config.references
           .map((r: any) => {
@@ -440,6 +442,24 @@ app.post("/api/generate-h3-prompt", async (req, res) => {
             const cleanDesc = String(r.description || '')
               .replace(/\b[\w-]+\.(?:png|jpe?g|webp|gif|mp4|mov|webm|mp3|wav)\b/gi, '')
               .trim() || 'Visual characteristics locked from reference';
+
+            // Check if this reference has an ultra-light image payload (~35KB, ~258 tokens)
+            if (r.fileUrl && typeof r.fileUrl === 'string' && r.fileUrl.startsWith('data:image/')) {
+              const mimeType = r.fileUrl.split(';')[0].split(':')[1] || 'image/jpeg';
+              const base64Data = r.fileUrl.split(',')[1];
+              if (base64Data) {
+                multimodalParts.push({
+                  inlineData: {
+                    mimeType,
+                    data: base64Data,
+                  },
+                });
+                multimodalParts.push(
+                  `[Visual reference image attached above corresponds to ${r.tag} (Role: ${r.role}, Label: ${cleanName}). Inspect its real visual characteristics (face, clothing, lighting, style, colors, materials) and describe them faithfully in subject_definitions and retention_analysis without including any file names.]`
+                );
+              }
+            }
+
             return `- ${r.tag}: Role=${r.role}, Semantic Label=${cleanName}, Description=${cleanDesc}`;
           })
           .join('\n')
@@ -465,12 +485,16 @@ CRITICAL INSTRUCTION: DO NOT write any file names, file extensions (e.g. .png, .
 Ensure English language is used for the actual prompt text (fullPrompt, block1, block2, block3) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh and suggestions!
 `;
 
+    const requestContents = multimodalParts.length > 0
+      ? [...multimodalParts, userPrompt]
+      : userPrompt;
+
     const response = await callGeminiDynamic(
       ai,
       'prompt_generation',
       engineTier,
       {
-        contents: userPrompt,
+        contents: requestContents,
         config: {
           systemInstruction: MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION,
           responseMimeType: "application/json",

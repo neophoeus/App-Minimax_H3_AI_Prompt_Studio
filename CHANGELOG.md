@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.5.1] - 2026-09-03
+
+### 🚀 Zero-Quota Multimodal Vision Architecture (零額度負擔多模態直通看圖)
+- **Single-Request Multimodal Bundling (0 Extra RPM Overhead)**:
+  - Eliminated separate, repetitive image analysis requests that previously caused frequent `429 RESOURCE_EXHAUSTED` rate-limit errors.
+  - Bundled uploaded reference image data directly into the primary `/api/generate-h3-prompt` call, reducing total API invocations to **strictly 1 request**.
+- **Ultra-Light Token Compression (~258 Tokens per image)**:
+  - Downscaled uploaded reference images in the browser to max `512px` (JPEG quality `0.75`, ~35KB payload).
+  - Consumes only ~258 tokens per image in Gemini 3.8 / 3.6 Flash, representing less than 0.03% of the free-tier per-minute token quota.
+- **Direct Visual Inspection without Filename Leaks**:
+  - Connected Gemini's native multimodal vision core to inspect real visual traits (facial features, clothing textures, color palette, lighting mood) for each `<Subject N>` / `<Picture N>` reference.
+  - Preserved strict zero-tolerance prohibitions against raw filenames or file extensions in the generated prompt.
+
+---
+
 ## [v1.5.0] - 2026-09-03
 
 ### 🗑️ Removed Features

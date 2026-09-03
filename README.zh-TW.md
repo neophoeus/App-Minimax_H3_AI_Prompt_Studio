@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v1.5.0-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v1.5.1-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%203.6%20%7C%203.5-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -44,10 +44,11 @@
   - **🟣 AI Ultra 20x (極致旗艦)**：旗艦級思考深度與高精多模態鎖定。
 - **無縫自動容錯降級**：遇到 429 額度超限或 503 負載尖峰時，後端自動即時切換至備援模型，保障 100% 請求成功率。
 
-### 3. 多模態參考素材管理 (Reference Asset Manager)
+### 3. 多模態參考素材管理 (零額度負擔直通看圖)
 - 支援直接於瀏覽器上傳角色、場景、動作或音訊素材。
+- **多模態直通看圖**：上傳圖片縮圖直接打包進生成請求，Gemini 視覺核心親自審視五官、穿著、光影，0 額外 API 呼叫。
+- **極致輕量 Token 壓縮**：自動縮放至 512px（品質 0.75，約 35KB），每張圖僅佔 ~258 Tokens，徹底杜絕 429 額度耗盡。
 - **語意標籤預設**：上傳時自動配置清晰語意名稱（如「首幀開場畫面」、「主要角色 1」），原始檔名僅作介面識別，徹底與 AI 提示詞解耦。
-- **Token 最佳化壓縮**：自動調整圖片解析度（最大 1024px，品質 0.85），兼顧特徵保真與 Token 經濟性。
 
 ### 4. 電影級對白與音效配置 (Dialogue & Soundscape)
 - 精簡直覺的對白與環境音效 (SFX) 手動配置，專為 MiniMax-H3 畫面人物嘴型口播同步設計。

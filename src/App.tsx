@@ -263,7 +263,7 @@ export default function App() {
     setIsEditing(false);
 
     try {
-      // Omit base64 fileUrl data from references before sending to reduce payload size
+      // Include compressed image base64 data (~35KB) for image references to enable direct multimodal vision
       const sanitizedConfig = {
         ...config,
         references: config.references.map((r) => ({
@@ -274,6 +274,7 @@ export default function App() {
           description: r.description,
           fileType: r.fileType,
           fileName: r.fileName,
+          fileUrl: r.fileType === 'image' && r.fileUrl && r.fileUrl.startsWith('data:image/') ? r.fileUrl : undefined,
         })),
       };
 
