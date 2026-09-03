@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v1.3.1-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v1.4.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20Flash%20%7C%203.5%20Lite-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -50,7 +50,9 @@
 - 超快速（<400ms）生成符合影視與動漫風格的人物台詞，並附帶環境音效 (SFX) 與音色建議。
 - 支援一鍵靜音/抑制背景音樂模式 (`non_diegetic_music: N/A`)。
 
-### 5. 生產級 Studio 介面
+### 5. 生產級 Studio 介面 (v1.4.0 寬版三大欄架構)
+- **三大欄寬版工作流 (`max-w-[1800px]`)**：清晰規劃左欄（輸入構想與素材）、中欄（設定調整與主生成按鈕）、右欄（提示詞輸出與一鍵複製）。
+- **創意思路自訂文字大小**：5 段字級調控（12px ~ 20px）支援步進器按鈕與 `localStorage` 記憶。
 - **AI 算力方案選擇器**：頂部導覽列隨時切換 Pro 與 Ultra 模式，偏好自動保存於 `localStorage`。
 - **全域 Toast 浮動通知**：現代化非阻塞式操作回饋。
 - **場景預設庫**：內建賽博龐克、日系動漫、暗黑奇幻、電影廣告等多種風格範本。

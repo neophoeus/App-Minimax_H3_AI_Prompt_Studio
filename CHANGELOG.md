@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.4.0] - 2026-09-03
+
+### 🚀 Added & Improved
+
+- **Three-Column Widescreen Architecture (`lg:grid-cols-3` / `max-w-[1800px]`)**:
+  - Overhauled the studio layout from a 2-column split into an intuitive, productive **3-column workflow**:
+    - **Left Column (Input Concept & References)**: Core Idea input, MiniMax Generation Mode selection (`T2VA` ~ `Ref2VA`), and Reference Asset Manager (`<ReferenceManager />`).
+    - **Middle Column (Adjust Settings & Directives)**: Visual & audio parameter configuration (duration, aspect ratio, style rendering, camera movement directives, dialogue, SFX, background music suppression) and the primary "調用 Skill 生成 MiniMax-H3 完整提示詞" generation action button.
+    - **Right Column (Output Results & Inspector)**: One-click copy master banner, full prompt syntax highlighter & inline editor, quick prompt modifiers, 3-block breakdown inspector, temporal timeline visualizer, and H3 skill guide.
+  - Expanded overall container width from `max-w-7xl` (1280px) to **`max-w-[1800px]`**, aligning the top `Navbar` and studio layout for comfortable widescreen desktop and laptop viewing.
+- **Adjustable Font Size for Core Idea Input**:
+  - Added an interactive font size controller directly in the Core Idea card header (`Type`, `[A-]` decrease, current size indicator, `[A+]` increase).
+  - Supports 5 adjustable font size steps: `12px`, `14px`, `16px`, `18px`, and `20px` with dynamic comfortable line-height (`1.6`).
+  - Persists the user's chosen font size in `localStorage` (`minimax_h3_idea_font_size`) across page reloads.
+
+---
+
 ## [v1.3.1] - 2026-09-03
 
 ### 🚀 Changed & Upgraded

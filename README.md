@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v1.3.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.4.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20Flash%20%7C%203.5%20Lite-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -50,7 +50,9 @@ Powered by Google's latest **Gemini 3.8 Flash (`gemini-3.8-flash`)** and **Gemin
 - Generates character-driven, on-screen dialogues with atmospheric sound effect (SFX) suggestions tailored for AI video models in under 400ms.
 - Support for background music suppression (`non_diegetic_music: N/A`).
 
-### 5. Production-Ready Studio UI
+### 5. Production-Ready Studio UI (v1.4.0 Widescreen Architecture)
+- **Three-Column Widescreen Layout (`max-w-[1800px]`)**: Clear, dedicated columns for Input Concept & References (Left), Parameter Configuration & Generation (Middle), and Output Inspector & One-Click Copy (Right).
+- **Adjustable Idea Font Size**: 5-step font sizing (12px ~ 20px) with quick stepper controls and `localStorage` persistence.
 - **AI Quota Switcher**: Instant switching between Pro and Ultra modes with tooltip guides and `localStorage` persistence.
 - **Unified Toast Notifications**: Non-blocking floating toasts across all workflows.
 - **Preset Library**: Instant access to curated scene presets (Cyberpunk, Anime, Fantasy, Epic Commercial).

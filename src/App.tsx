@@ -38,6 +38,9 @@ import {
   ShieldCheck,
   Clock,
   LayoutGrid,
+  Type,
+  Minus,
+  Plus,
 } from 'lucide-react';
 
 const CAMERA_PRESETS: CameraMove[] = [
@@ -101,6 +104,30 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [savedPrompts, setSavedPrompts] = useState<SavedPromptItem[]>([]);
   const [copiedFull, setCopiedFull] = useState<boolean>(false);
+
+  // Idea input font size state with localStorage persistence (12px ~ 20px)
+  const FONT_SIZE_STEPS = [12, 14, 16, 18, 20];
+  const [ideaFontSize, setIdeaFontSize] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('minimax_h3_idea_font_size');
+      return saved ? parseInt(saved, 10) || 14 : 14;
+    } catch {
+      return 14;
+    }
+  });
+
+  const handleFontSizeChange = (delta: number) => {
+    const currentIndex = FONT_SIZE_STEPS.indexOf(ideaFontSize);
+    const validIndex = currentIndex !== -1 ? currentIndex : 1;
+    const nextIndex = Math.max(0, Math.min(FONT_SIZE_STEPS.length - 1, validIndex + delta));
+    const newSize = FONT_SIZE_STEPS[nextIndex];
+    setIdeaFontSize(newSize);
+    try {
+      localStorage.setItem('minimax_h3_idea_font_size', String(newSize));
+    } catch (e) {
+      console.error('Failed to save font size', e);
+    }
+  };
 
   // Helper to format rate limit / quota exceeded / high demand 503 error cleanly
   const formatErrorMessage = (rawMsg: string) => {
@@ -461,28 +488,45 @@ export default function App() {
         savedCount={savedPrompts.length}
       />
 
-      {/* Main Studio Grid Layout */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Control Panel: MiniMax-H3 Configurator (Col 5) */}
-        <section className="lg:col-span-5 space-y-5">
+      {/* Main Studio Grid Layout - 3 大欄寬版佈局 */}
+      <main className="flex-1 max-w-[1800px] w-full mx-auto p-4 sm:p-5 lg:p-6 xl:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+        {/* Column 1: 左邊輸入構想與素材 (Left: Input Concept & References) */}
+        <section className="space-y-5 flex flex-col">
           {/* Quick Idea Input Card */}
           <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-2">
                 <Wand2 className="w-4 h-4 text-purple-400" />
                 <h2 className="text-sm font-bold text-white">核心創意思路 (Core Idea)</h2>
               </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={handleResetOptions}
-                  title="將所有拍攝選項與設定恢復為預設值"
-                  className="text-xs text-amber-400/90 hover:text-amber-300 transition-colors flex items-center gap-1"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  <span>重設所有設定</span>
-                </button>
-                <span className="text-slate-700">|</span>
+              <div className="flex items-center gap-2 flex-wrap">
+                {/* Font Size Adjuster Controls */}
+                <div className="flex items-center gap-1 bg-slate-950 px-2 py-0.5 rounded-lg border border-slate-800 text-xs shadow-inner">
+                  <Type className="w-3.5 h-3.5 text-purple-400" />
+                  <span className="text-[11px] text-slate-400">字級:</span>
+                  <button
+                    type="button"
+                    onClick={() => handleFontSizeChange(-1)}
+                    disabled={ideaFontSize <= FONT_SIZE_STEPS[0]}
+                    className="p-1 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="縮小文字大小"
+                  >
+                    <Minus className="w-3 h-3" />
+                  </button>
+                  <span className="font-mono text-[11px] font-bold text-purple-300 min-w-[28px] text-center">
+                    {ideaFontSize}px
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => handleFontSizeChange(1)}
+                    disabled={ideaFontSize >= FONT_SIZE_STEPS[FONT_SIZE_STEPS.length - 1]}
+                    className="p-1 text-slate-400 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                    title="放大文字大小"
+                  >
+                    <Plus className="w-3 h-3" />
+                  </button>
+                </div>
+                <span className="text-slate-700 hidden sm:inline">|</span>
                 <button
                   type="button"
                   onClick={() => setConfig({ ...config, idea: '' })}
@@ -497,8 +541,9 @@ export default function App() {
               value={config.idea}
               onChange={(e) => setConfig({ ...config, idea: e.target.value })}
               placeholder="請輸入您的創意思路或初步文字描述 (例如: 賽博朋克雨夜咖啡館，貓咪咖啡師為顧客調製發光咖啡...)"
-              rows={3}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-all resize-none"
+              rows={4}
+              style={{ fontSize: `${ideaFontSize}px`, lineHeight: 1.6 }}
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-all resize-y min-h-[110px]"
             />
 
             {/* Mode Selectors */}
@@ -586,12 +631,26 @@ export default function App() {
             onToast={showToast}
             engineTier={engineTier}
           />
+        </section>
 
+        {/* Column 2: 中間調整設定與生成操作 (Middle: Adjust Settings & Action) */}
+        <section className="space-y-5 flex flex-col">
           {/* Style & Atmosphere Configurator */}
           <div className="p-4 sm:p-5 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-xl space-y-4">
-            <div className="flex items-center gap-2 border-b border-slate-800 pb-2">
-              <Film className="w-4 h-4 text-cyan-400" />
-              <h3 className="text-sm font-bold text-white">視聽視覺參數配置 (Visual & Audio)</h3>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+              <div className="flex items-center gap-2">
+                <Film className="w-4 h-4 text-cyan-400" />
+                <h3 className="text-sm font-bold text-white">視聽視覺參數配置 (Visual & Audio)</h3>
+              </div>
+              <button
+                type="button"
+                onClick={handleResetOptions}
+                title="將所有拍攝選項與設定恢復為預設值"
+                className="text-xs text-amber-400/90 hover:text-amber-300 transition-colors flex items-center gap-1"
+              >
+                <RotateCcw className="w-3 h-3" />
+                <span>重設設定</span>
+              </button>
             </div>
 
             {/* Aspect Ratio & Duration */}
@@ -774,8 +833,8 @@ export default function App() {
           </button>
         </section>
 
-        {/* Right Output Panel: One-Click Copy Hub & Inspector (Col 7) */}
-        <section className="lg:col-span-7 space-y-5 flex flex-col">
+        {/* Column 3: 右邊提示詞輸出與檢視 (Right: Output Results & Inspector) */}
+        <section className="space-y-5 flex flex-col">
           {/* Master Output Header Banner with One-Click Copy */}
           <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-purple-950/40 border border-purple-500/30 shadow-2xl space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
@@ -869,7 +928,7 @@ export default function App() {
               ) : !output ? (
                 <div className="p-12 text-center text-slate-500 space-y-2">
                   <Sparkles className="w-8 h-8 text-slate-700 mx-auto" />
-                  <p className="text-sm font-medium">請點擊左側「調用 Skill 生成」按鈕</p>
+                  <p className="text-sm font-medium">請點擊中間欄「調用 Skill 生成」按鈕</p>
                 </div>
               ) : activeTab === 'full' ? (
                 /* Tab 1: Full Prompt syntax highlight or editable textarea */
