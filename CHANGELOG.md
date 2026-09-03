@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.4.1] - 2026-09-03
+
+### 🚀 Changed & Optimized
+
+- **Optimized Three-Column Proportions (35% / 25% / 40%)**:
+  - Fine-tuned the widescreen 3-column layout grid to an optimal **35% : 25% : 40%** distribution (`lg:grid-cols-[35fr_25fr_40fr]`):
+    - **Left Column (35%)**: Enhanced space for Core Idea input, font size controls, MiniMax generation modes, and the Reference Asset Manager.
+    - **Middle Column (25%)**: Compact, streamlined layout for visual & audio parameters, style selectors, and the primary Skill generation button.
+    - **Right Column (40%)**: Maximum horizontal space dedicated to the generated MiniMax-H3 prompt, syntax highlighter, editable textarea, 3-block breakdown, and temporal timeline storyboard.
+- **Significantly Expanded Core Idea Input Area**:
+  - Substantially increased the default visible height and minimum height of the Core Idea textarea (`rows={8}`, `min-h-[240px]`).
+  - Provides a deeply spacious writing canvas for complex multi-sentence narrative concepts and multimodal descriptions, even when using large font sizes (up to 20px).
+
+---
+
 ## [v1.4.0] - 2026-09-03
 
 ### 🚀 Added & Improved

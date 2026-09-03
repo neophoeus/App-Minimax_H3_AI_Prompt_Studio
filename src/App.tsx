@@ -488,8 +488,8 @@ export default function App() {
         savedCount={savedPrompts.length}
       />
 
-      {/* Main Studio Grid Layout - 3 大欄寬版佈局 */}
-      <main className="flex-1 max-w-[1800px] w-full mx-auto p-4 sm:p-5 lg:p-6 xl:p-8 grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      {/* Main Studio Grid Layout - 3 大欄寬版佈局 (35% / 25% / 40%) */}
+      <main className="flex-1 max-w-[1800px] w-full mx-auto p-4 sm:p-5 lg:p-6 xl:p-8 grid grid-cols-1 lg:grid-cols-[35fr_25fr_40fr] gap-6 items-start">
         {/* Column 1: 左邊輸入構想與素材 (Left: Input Concept & References) */}
         <section className="space-y-5 flex flex-col">
           {/* Quick Idea Input Card */}
@@ -541,9 +541,9 @@ export default function App() {
               value={config.idea}
               onChange={(e) => setConfig({ ...config, idea: e.target.value })}
               placeholder="請輸入您的創意思路或初步文字描述 (例如: 賽博朋克雨夜咖啡館，貓咪咖啡師為顧客調製發光咖啡...)"
-              rows={4}
+              rows={8}
               style={{ fontSize: `${ideaFontSize}px`, lineHeight: 1.6 }}
-              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-all resize-y min-h-[110px]"
+              className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-all resize-y min-h-[240px]"
             />
 
             {/* Mode Selectors */}
