@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v1.4.2-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v1.5.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%203.6%20%7C%203.5-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -34,6 +34,8 @@
 - **全參考模式 (Ref2VA)**：
   - 完整生成標準 6 大區塊：`subject_definitions`、`summary`、`retention_analysis`、`detailed_description`、`overall_soundscape` 與 `non_diegetic_music`。
   - 精準管理角括號素材標籤（`<Subject N>`、`<Picture N>`、`<Video N>`、`<Audio N>`）。
+- **嚴格零檔名洩漏標準 (Strict No-Filename Standard)**：
+  - 徹底杜絕生成提示詞中出現任何本地檔案名稱與副檔名（`.png`, `.jpg`, `.mp4` 等），確保提示詞完全由純淨專業的影視語意細節構成。
 
 ### 2. 多層級 AI 引擎與智慧自動無縫降級 (Multi-Tier & Instant Fallback)
 - **三種可選算力方案**：
@@ -42,21 +44,23 @@
   - **🟣 AI Ultra 20x (極致旗艦)**：旗艦級思考深度與高精多模態鎖定。
 - **無縫自動容錯降級**：遇到 429 額度超限或 503 負載尖峰時，後端自動即時切換至備援模型，保障 100% 請求成功率。
 
-### 3. 多模態參考素材視覺分析器
-- 支援於瀏覽器直接上傳角色、場景或道具圖片。
-- **深度 Token 最佳化**：前端自動壓縮至 768px（品質 0.8），在保留所有微小特徵（服裝材質、五官輪廓、光影色調）的同時，降低 70% Token 消耗。
+### 3. 多模態參考素材管理 (Reference Asset Manager)
+- 支援直接於瀏覽器上傳角色、場景、動作或音訊素材。
+- **語意標籤預設**：上傳時自動配置清晰語意名稱（如「首幀開場畫面」、「主要角色 1」），原始檔名僅作介面識別，徹底與 AI 提示詞解耦。
+- **Token 最佳化壓縮**：自動調整圖片解析度（最大 1024px，品質 0.85），兼顧特徵保真與 Token 經濟性。
 
-### 4. 電影級對白與音效導演
-- 超快速（<400ms）生成符合影視與動漫風格的人物台詞，並附帶環境音效 (SFX) 與音色建議。
-- 支援一鍵靜音/抑制背景音樂模式 (`non_diegetic_music: N/A`)。
+### 4. 電影級對白與音效配置 (Dialogue & Soundscape)
+- 精簡直覺的對白與環境音效 (SFX) 手動配置，專為 MiniMax-H3 畫面人物嘴型口播同步設計。
+- 支援一鍵靜音/抑制背景純音樂模式 (`non_diegetic_music: N/A`)。
 
-### 5. 生產級 Studio 介面 (v1.4.2 寬版三大欄架構)
+### 5. 生產級 Studio 介面 (v1.5.0 架構)
 - **三大欄寬版工作流 (`max-w-[1800px]`, 35% / 25% / 40%)**：精確配置左欄（輸入構想與素材 35%）、中欄（設定調整與主生成按鈕 25%）、右欄（提示詞輸出與一鍵複製 40%）。
+- **專屬提示詞編輯工具列**：在檢視區上方增設獨立工具列，支援「語法亮顯 / 手動微調」雙態切換、即時字元計數與一鍵還原 AI 初版生成結果。
+- **自適應生成模式網格**：自適應 `grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2`，確保各尺寸螢幕下按鈕文字清晰不截斷破折。
 - **寬裕且可調字級之創意思路畫布**：大幅加高文字框（`rows={8}`、`min-h-[240px]`），支援 5 段字級調控（12px ~ 20px）、步進按鈕與 `localStorage` 記憶。
 - **AI 算力方案選擇器**：頂部導覽列隨時切換 Pro 與 Ultra 模式，偏好自動保存於 `localStorage`。
 - **全域 Toast 浮動通知**：現代化非阻塞式操作回饋。
-- **場景預設庫**：內建賽博龐克、日系動漫、暗黑奇幻、電影廣告等多種風格範本。
-- **動態時序分鏡軸 (Temporal Timeline)**：可視化呈現各鏡頭時間碼、運鏡指令、畫面動作與音效節奏。
+- **場景預設庫與時序分鏡軸**：內建豐富場景預設與互動式可視化分鏡軸。
 - **一鍵導出**：支援一鍵複製完整 Prompt 或分區塊複製，即貼即用。
 
 ---

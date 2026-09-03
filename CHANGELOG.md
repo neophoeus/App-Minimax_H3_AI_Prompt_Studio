@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.5.0] - 2026-09-03
+
+### 🗑️ Removed Features
+- **Removed "AI 分析特徵" (AI Feature Analysis)**:
+  - Completely removed the AI analyze button and media analysis logic from `ReferenceManager.tsx`.
+  - Reference items now present a clean, uncrowded header with Tag input, Role dropdown, and direct delete action.
+- **Removed "AI 自動撰寫對話" (AI Auto-generate Dialogue)**:
+  - Removed dialogue generation button and handler from `App.tsx`.
+  - Dialogue and SFX section redesigned into a clean, dedicated manual input area with clear visual indicators for MiniMax-H3 audio-visual lip-sync capabilities.
+
+### ✨ Clean Prompt Engineering (Strict No-Filename Standard)
+- **Zero-Tolerance Filename Policy**:
+  - Enhanced `MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION` with strict prohibitions against raw filenames, file extensions (`.png`, `.jpg`, `.mp4`, `.wav`, etc.), or upload paths anywhere in the generated output.
+  - Ensured `<Subject N>` and `<Picture N>` definitions are strictly based on physical traits, clothing, lighting, and scene descriptions rather than filename labels.
+- **Input Sanitization & Semantic Defaults**:
+  - File upload workflow now assigns intuitive semantic labels (e.g., `首幀開場畫面`, `主要角色 1`) instead of injecting raw filenames into the prompt.
+  - Original file names are retained purely as supplementary UI badges (`📎 來源檔案: filename.png`).
+- **Post-Generation Output Sanitizer**:
+  - Implemented `sanitizeGeneratedPromptText` regex filter in `server.ts` across `fullPrompt`, `block1`, `block2`, `block3`, and `temporalTimeline` to eliminate any accidental filename leaks.
+
+### 🏷️ Independent Reference Asset Category Indexing
+- **Per-Category Auto Re-Indexing (`<Subject N>`, `<Picture N>`, `<Video N>`, `<Audio N>`)**:
+  - Implemented `reindexReferences` to assign independent sequence numbering per asset type.
+  - Adding or switching items between different types (e.g. Character then Motion) now generates `<Subject 1>` + `<Video 1>` instead of inheriting global indices like `<Video 2>`.
+  - Automatically re-indexes dynamically upon adding, deleting, or changing asset roles while preserving user-defined custom tags.
+
+### 🎨 UI & Ergonomic Improvements
+- **Dedicated Prompt Editor Toolbar**:
+  - Relocated the "手動微調編輯" (Manual Edit) button from the crowded output tab bar into an independent, spacious top toolbar above the prompt viewer.
+  - Added live status indicator (`語法亮顯預覽` / `手動微調編輯模式`), real-time character count, and a one-click "還原初版" (Revert to AI Initial) button when in edit mode.
+- **Responsive Generation Mode Button Grid**:
+  - Upgraded mode buttons from rigid columns to adaptive `grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2`, preventing awkward text wrapping and truncation on 1366px-1920px screens.
+- **Layout & Typography Harmonization**:
+  - Harmonized middle column title to `視聽拍攝參數配置 (Parameters)`, aligning cleanly with `重設設定` on a single line.
+  - Streamlined duration dropdown options (e.g. `20 秒 (20s) [實驗性]`).
+  - Added `shrink-0` and unified spacing to `Navbar` action buttons to prevent multi-line breaks on laptop screens.
+  - Updated web application title to `MiniMax-H3 AI Prompt Studio | 視訊提示詞生成助手`.
+
+---
+
 ## [v1.4.2] - 2026-09-03
 
 ### 🚀 Changed & Upgraded

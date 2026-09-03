@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v1.4.2-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.5.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%203.6%20%7C%203.5-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -34,29 +34,33 @@ Powered by Google's latest **Gemini 3.8 Flash (`gemini-3.8-flash`)**, **Gemini 3
 - **Full-Reference Mode (Ref2VA)**:
   - Generates the complete 6-section structure: `subject_definitions`, `summary`, `retention_analysis`, `detailed_description`, `overall_soundscape`, and `non_diegetic_music`.
   - Automatically manages angle-bracket asset labels (`<Subject N>`, `<Picture N>`, `<Video N>`, `<Audio N>`).
+- **Strict No-Filename Standard**:
+  - Automatically strips and filters all raw filenames and extensions from generated prompt output, ensuring prompts strictly adhere to MiniMax-H3 official semantic syntax.
 
 ### 2. Multi-Tier AI Engine with Instant Automatic Fallback
 - **Three Selectable Engine Tiers**:
-  - **🟢 AI Pro (Web UI Quota Optimized - Default)**: Zero-cost mode with smart model specialization (`gemini-3.5-flash-lite` for dialogues, `gemini-3.6-flash` for image analysis, and `gemini-3.8-flash` for core prompts) to guarantee smooth execution without 429 quota exhaustion.
+  - **🟢 AI Pro (Web UI Quota Optimized - Default)**: Zero-cost mode with smart model specialization (`gemini-3.5-flash-lite` for dialogues, `gemini-3.6-flash` for media assets, and `gemini-3.8-flash` for core prompts) to guarantee smooth execution without 429 quota exhaustion.
   - **🔵 AI Ultra 5x (Performance)**: Unlocks full `gemini-3.8-flash` with deeper multi-shot reasoning.
   - **🟣 AI Ultra 20x (Extreme Flagship)**: Maximum thinking capacity and high-resolution asset retention analysis.
 - **Resilient Multi-Model Fallback**: Automatically switches to backup models upon 429 / 503 errors to guarantee a 100% request success rate.
 
-### 3. Multimodal Reference Media Analyzer
-- Upload character, scene, or prop reference images directly in the browser.
-- **Deep Token Optimization**: Automatically downscales images to 768px (quality 0.8), reducing token usage by over 70% while preserving all key facial traits, clothing textures, and lighting characteristics.
+### 3. Multimodal Reference Asset Manager
+- Upload character, scene, or prop reference assets directly in the browser.
+- **Semantic Labeling**: Uploaded assets automatically receive clean semantic labels (e.g. `首幀開場畫面`, `主要角色 1`), keeping raw filenames completely decoupled from generated prompt text.
+- **Deep Token Optimization**: Automatically downscales images to 1024px (quality 0.85), optimizing token efficiency and GPU memory footprint.
 
-### 4. Cinematic Dialogue & Audio Director
-- Generates character-driven, on-screen dialogues with atmospheric sound effect (SFX) suggestions tailored for AI video models in under 400ms.
+### 4. Cinematic Dialogue & Soundscape Configuration
+- Intuitive on-screen dialogue and SFX ambient sound configuration designed for lip-sync and auditory immersion.
 - Support for background music suppression (`non_diegetic_music: N/A`).
 
-### 5. Production-Ready Studio UI (v1.4.2 Widescreen Architecture)
+### 5. Production-Ready Studio UI (v1.5.0 Architecture)
 - **Three-Column Widescreen Layout (`max-w-[1800px]`, 35% / 25% / 40%)**: Dedicated columns for Input Concept & References (Left 35%), Parameter Configuration & Generation (Middle 25%), and Output Inspector & One-Click Copy (Right 40%).
+- **Dedicated Prompt Editor Toolbar**: Independent toolbar above the prompt viewer featuring live mode status indicators (`語法亮顯預覽` / `手動微調編輯`), character counter, and a one-click "還原初版" button.
+- **Adaptive Generation Mode Grid**: Responsive `grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2` preventing text truncation across screen sizes.
 - **Spacious & Adjustable Idea Input Canvas**: Substantially expanded textarea (`rows={8}`, `min-h-[240px]`) with 5-step font sizing (12px ~ 20px), stepper controls, and `localStorage` persistence.
 - **AI Quota Switcher**: Instant switching between Pro and Ultra modes with tooltip guides and `localStorage` persistence.
 - **Unified Toast Notifications**: Non-blocking floating toasts across all workflows.
-- **Preset Library**: Instant access to curated scene presets (Cyberpunk, Anime, Fantasy, Epic Commercial).
-- **Temporal Timeline View**: Interactive visual shot timeline showing timeframes, camera movements, actions, and audio cues.
+- **Preset Library & Temporal Timeline**: Curated scene presets and interactive visual shot timeline.
 - **One-Click Export**: Copy the full prompt or individual blocks directly ready to paste into MiniMax-H3.
 
 ---

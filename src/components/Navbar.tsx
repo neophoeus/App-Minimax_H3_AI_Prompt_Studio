@@ -145,7 +145,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Preset Gallery Trigger */}
           <button
             onClick={onOpenPresets}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-medium text-slate-200 hover:text-white transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-medium text-slate-200 hover:text-white transition-all shadow-sm active:scale-95 shrink-0"
           >
             <BookOpen className="w-3.5 h-3.5 text-indigo-400" />
             <span>官方預設模板</span>
@@ -155,21 +155,21 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={onResetOptions}
             title="清空輸入並將所有拍攝參數恢復為預設值"
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-amber-950/40 border border-slate-700/80 hover:border-amber-700/50 text-xs font-medium text-amber-300 hover:text-amber-200 transition-all shadow-sm active:scale-95"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-amber-950/40 border border-slate-700/80 hover:border-amber-700/50 text-xs font-medium text-amber-300 hover:text-amber-200 transition-all shadow-sm active:scale-95 shrink-0"
           >
             <RotateCcw className="w-3.5 h-3.5 text-amber-400" />
-            <span>重設所有設定</span>
+            <span>重設設定</span>
           </button>
 
           {/* History Drawer Trigger */}
           <button
             onClick={onOpenHistory}
-            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-medium text-slate-200 hover:text-white transition-all shadow-sm active:scale-95"
+            className="relative flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-700/80 text-xs font-medium text-slate-200 hover:text-white transition-all shadow-sm active:scale-95 shrink-0"
           >
             <History className="w-3.5 h-3.5 text-cyan-400" />
             <span>歷史記錄</span>
             {savedCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full bg-purple-500 text-[10px] font-bold text-white">
+              <span className="px-1.5 py-0.5 rounded-full bg-purple-500 text-[10px] font-bold text-white leading-none">
                 {savedCount}
               </span>
             )}

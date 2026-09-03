@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { ReferenceItem, ReferenceRole, EngineTier } from '../types';
-import { Plus, Trash2, Tag, Upload, Sparkles, Film, Image as ImageIcon, Music, Loader2, Check } from 'lucide-react';
+import { Plus, Trash2, Tag, Upload, Film, Image as ImageIcon, Music, Check } from 'lucide-react';
 
 interface ReferenceManagerProps {
   references: ReferenceItem[];
@@ -66,51 +66,114 @@ const resizeImageFile = (file: File, maxDimension = 768, quality = 0.8): Promise
   });
 };
 
+export type TagCategory = 'Subject' | 'Picture' | 'Video' | 'Audio';
+
+export const getCategoryForRole = (role: ReferenceRole): TagCategory => {
+  switch (role) {
+    case 'first_keyframe':
+    case 'last_keyframe':
+    case 'keyframe':
+    case 'composition':
+      return 'Picture';
+    case 'motion':
+      return 'Video';
+    case 'audio':
+      return 'Audio';
+    case 'character':
+    case 'object':
+    case 'scene':
+    case 'style':
+    default:
+      return 'Subject';
+  }
+};
+
+export const defaultLabelForRole = (r: ReferenceRole, catIndex: number): string => {
+  switch (r) {
+    case 'first_keyframe':
+      return `首幀開場畫面`;
+    case 'last_keyframe':
+      return `尾幀收斂畫面`;
+    case 'motion':
+      return `動作參考 ${catIndex}`;
+    case 'audio':
+      return `聲音音色 ${catIndex}`;
+    case 'scene':
+      return `場景參考 ${catIndex}`;
+    case 'object':
+      return `物件參考 ${catIndex}`;
+    case 'composition':
+      return `構圖參考 ${catIndex}`;
+    case 'style':
+      return `風格參考 ${catIndex}`;
+    case 'character':
+    default:
+      return `主要角色 ${catIndex}`;
+  }
+};
+
+/**
+ * Re-indexes all reference items so that each asset category
+ * (Subject, Picture, Video, Audio) is numbered independently starting from 1.
+ */
+export const reindexReferences = (refs: ReferenceItem[]): ReferenceItem[] => {
+  const counts: Record<TagCategory, number> = {
+    Subject: 0,
+    Picture: 0,
+    Video: 0,
+    Audio: 0,
+  };
+
+  return refs.map((ref) => {
+    const category = getCategoryForRole(ref.role);
+    counts[category] += 1;
+    const catIndex = counts[category];
+    const defaultTag = `<${category} ${catIndex}>`;
+
+    // Only auto-update tag if empty or matches standard pattern <(Subject|Picture|Video|Audio) \d+>
+    const isAutoTag = !ref.tag || /^<(Subject|Picture|Video|Audio)\s+\d+>$/i.test(ref.tag.trim());
+    const newTag = isAutoTag ? defaultTag : ref.tag;
+
+    // Auto-update name if it's default generic name or empty
+    const isDefaultName =
+      !ref.name ||
+      /^(主要角色|動作參考|聲音音色|場景參考|物件參考|構圖參考|風格參考|參考素材|首幀開場畫面|尾幀收斂畫面)\s*\d*$/.test(
+        ref.name.trim()
+      );
+    const newName = isDefaultName ? defaultLabelForRole(ref.role, catIndex) : ref.name;
+
+    return {
+      ...ref,
+      tag: newTag,
+      name: newName,
+    };
+  });
+};
+
 export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
   references,
   onChange,
   onToast,
   engineTier = 'pro',
 }) => {
-  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
-
-  const getDefaultTagForRole = (role: ReferenceRole, index: number): string => {
-    switch (role) {
-      case 'first_keyframe':
-      case 'last_keyframe':
-      case 'keyframe':
-      case 'composition':
-        return `<Picture ${index}>`;
-      case 'motion':
-        return `<Video ${index}>`;
-      case 'audio':
-        return `<Audio ${index}>`;
-      case 'character':
-      case 'object':
-      case 'scene':
-      case 'style':
-      default:
-        return `<Subject ${index}>`;
-    }
-  };
-
   const addReference = () => {
-    const nextIndex = references.length + 1;
     const role: ReferenceRole = 'character';
-    const tag = getDefaultTagForRole(role, nextIndex);
     const newItem: ReferenceItem = {
       id: `ref-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
-      tag,
+      tag: '',
       role,
-      name: `參考素材 ${nextIndex}`,
-      description: '鎖定關鍵視覺特徵與細節',
+      name: '',
+      description: '鎖定關鍵視覺特徵與外觀細節',
       fileType: 'image',
     };
-    onChange([...references, newItem]);
+    const updated = reindexReferences([...references, newItem]);
+    onChange(updated);
   };
 
   const removeReference = (id: string) => {
-    onChange(references.filter((r) => r.id !== id));
+    const remaining = references.filter((r) => r.id !== id);
+    const updated = reindexReferences(remaining);
+    onChange(updated);
   };
 
   const getAcceptFileType = (role: ReferenceRole): string => {
@@ -154,24 +217,32 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
   };
 
   const updateReference = (id: string, updates: Partial<ReferenceItem>) => {
-    onChange(
-      references.map((r, idx) => {
-        if (r.id === id) {
-          const newRole = updates.role || r.role;
-          const defaultTag = getDefaultTagForRole(newRole, idx + 1);
-          const updated = {
-            ...r,
-            ...updates,
-            tag: updates.role ? defaultTag : updates.tag || r.tag,
-          };
-          if (updates.role) {
-            updated.fileType = getRoleDefaultFileType(updates.role);
+    const modified = references.map((r) => {
+      if (r.id === id) {
+        const roleChanged = updates.role && updates.role !== r.role;
+        const updated = {
+          ...r,
+          ...updates,
+        };
+        if (roleChanged) {
+          updated.fileType = getRoleDefaultFileType(updates.role!);
+          // Clear tag and auto-name so reindexReferences assigns new category index and tag
+          updated.tag = '';
+          if (
+            !r.name ||
+            /^(主要角色|動作參考|聲音音色|場景參考|物件參考|構圖參考|風格參考|參考素材|首幀開場畫面|尾幀收斂畫面)\s*\d*$/.test(
+              r.name.trim()
+            )
+          ) {
+            updated.name = '';
           }
-          return updated;
         }
-        return r;
-      })
-    );
+        return updated;
+      }
+      return r;
+    });
+    const updated = reindexReferences(modified);
+    onChange(updated);
   };
 
   const handleFileUpload = async (id: string, file: File, role: ReferenceRole) => {
@@ -185,9 +256,6 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
       return;
     }
 
-    const refIndex = references.findIndex((r) => r.id === id);
-    const autoTag = getDefaultTagForRole(role, refIndex >= 0 ? refIndex + 1 : references.length + 1);
-
     if (fileType === 'image') {
       // Auto-downscale uploaded images to a reasonable resolution (max 1024px)
       const dataUrl = await resizeImageFile(file, 1024, 0.85);
@@ -195,8 +263,6 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
         fileUrl: dataUrl,
         fileName: file.name,
         fileType,
-        tag: autoTag,
-        name: file.name.replace(/\.[^/.]+$/, ''),
       });
     } else {
       const reader = new FileReader();
@@ -206,86 +272,9 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
           fileUrl: dataUrl,
           fileName: file.name,
           fileType,
-          tag: autoTag,
-          name: file.name.replace(/\.[^/.]+$/, ''),
         });
       };
-    }
-  };
-
-  const formatMediaErrorMessage = (rawMsg: string) => {
-    if (
-      rawMsg.includes('429') ||
-      rawMsg.includes('額度') ||
-      rawMsg.includes('RESOURCE_EXHAUSTED') ||
-      rawMsg.includes('Quota') ||
-      rawMsg.includes('Rate limit')
-    ) {
-      return '⚠️ Gemini API 額度已用完 (429)，請稍等 1~2 分鐘後重試！';
-    }
-    if (
-      rawMsg.includes('503') ||
-      rawMsg.includes('UNAVAILABLE') ||
-      rawMsg.includes('high demand') ||
-      rawMsg.includes('Spikes in demand') ||
-      rawMsg.includes('負載') ||
-      rawMsg.includes('overloaded')
-    ) {
-      return '⚠️ AI 模型目前負載較高 (503)，請稍候 3~5 秒後重試！';
-    }
-    if (rawMsg.includes('GEMINI_API_KEY')) {
-      return '⚠️ 未設定 GEMINI_API_KEY，請於後端環境變數中設定！';
-    }
-    if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError')) {
-      return '⚠️ 網路連線中斷或伺服器未啟動，請檢查連線狀態！';
-    }
-    return rawMsg || '分析素材失敗，請檢查檔案格式或網路連線';
-  };
-
-  const analyzeReferenceMediaWithAI = async (item: ReferenceItem) => {
-    setAnalyzingId(item.id);
-    try {
-      const res = await fetch('/api/analyze-reference-media', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          imageBase64: item.fileUrl && item.fileType === 'image' ? item.fileUrl : undefined,
-          role: item.role,
-          fileName: item.fileName || item.name,
-          engineTier,
-        }),
-      });
-      const contentType = res.headers.get('content-type');
-      if (!contentType || !contentType.includes('application/json')) {
-        const textErr = await res.text();
-        throw new Error(`伺服器回應錯誤: ${textErr.slice(0, 100)}`);
-      }
-      const json = await res.json();
-      if (json.success && json.description) {
-        updateReference(item.id, {
-          description: json.description,
-        });
-        if (onToast) {
-          onToast('已成功透過 AI 分析素材特徵並填入說明！', 'success');
-        }
-      } else {
-        const friendlyErr = formatMediaErrorMessage(json.error || '分析素材失敗');
-        if (onToast) {
-          onToast(friendlyErr, 'error', 6000);
-        } else {
-          alert(friendlyErr);
-        }
-      }
-    } catch (err: any) {
-      console.error('Failed to analyze media:', err);
-      const friendlyErr = formatMediaErrorMessage(err.message || '');
-      if (onToast) {
-        onToast(friendlyErr, 'error', 6000);
-      } else {
-        alert(friendlyErr);
-      }
-    } finally {
-      setAnalyzingId(null);
+      reader.readAsDataURL(file);
     }
   };
 
@@ -355,31 +344,11 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {/* AI Analyze Button */}
-                  <button
-                    type="button"
-                    onClick={() => analyzeReferenceMediaWithAI(item)}
-                    disabled={analyzingId === item.id}
-                    className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-indigo-950/60 border border-indigo-500/30 text-[11px] font-medium text-indigo-300 hover:bg-indigo-900/50 hover:text-white transition-all disabled:opacity-50"
-                  >
-                    {analyzingId === item.id ? (
-                      <>
-                        <Loader2 className="w-3 h-3 animate-spin" />
-                        <span>AI 分析中...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="w-3 h-3 text-indigo-400" />
-                        <span>AI 分析特徵</span>
-                      </>
-                    )}
-                  </button>
-
                   {/* Remove action */}
                   <button
                     type="button"
                     onClick={() => removeReference(item.id)}
-                    className="p-1 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
+                    className="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 transition-colors"
                     title="刪除標籤"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -458,18 +427,21 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
 
                 {/* Text fields for Name and Description */}
                 <div className="sm:col-span-2 space-y-2">
-                  <div className="flex items-center gap-2">
+                  <div className="space-y-1">
                     <input
                       type="text"
                       value={item.name}
                       onChange={(e) => updateReference(item.id, { name: e.target.value })}
-                      placeholder="素材名稱 (例如: 賽博貓咪角色)"
+                      placeholder="素材名稱或主體語意 (例如: 賽博貓咪角色)"
                       className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500"
                     />
                     {item.fileName && (
-                      <span className="shrink-0 text-[10px] font-mono px-2 py-1 rounded bg-slate-900 border border-slate-800 text-slate-400 truncate max-w-[100px]">
-                        {item.fileName}
-                      </span>
+                      <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-mono">
+                        <span className="text-slate-500">📎 來源檔案:</span>
+                        <span className="truncate max-w-[260px] text-purple-300/80 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800">
+                          {item.fileName}
+                        </span>
+                      </div>
                     )}
                   </div>
                   <textarea

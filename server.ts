@@ -276,10 +276,14 @@ non_diegetic_music:
 - "overall_soundscape": Ambience, action sounds, voice characteristics.
 - "non_diegetic_music": "N/A" or background music style description.
 
-### 3. Output JSON Format Constraints:
+### 3. Absolute Prohibitions Regarding File Names:
+- STRICT RULE: DO NOT include any file names, file extensions (e.g. .jpg, .jpeg, .png, .webp, .mp4, .mov, .webm, .wav, .mp3), or file paths anywhere in the prompt text (neither in fullPrompt, block1, block2, block3, nor temporalTimeline).
+- In subject_definitions or reference mentions, ALWAYS define items purely by their physical appearance, role, and visual traits (e.g. "<Subject 1> is a cyberpunk female detective wearing a dark trench coat..."), NEVER by a file name (e.g. NEVER write "<Subject 1> is character.png" or "<Picture 1> is frame.jpg").
+
+### 4. Output JSON Format Constraints:
 {
   "mode": "T2VA" | "I2VA" | "FL2VA" | "L2VA" | "Ref2VA",
-  "fullPrompt": "The COMPLETE combined prompt string formatted with exact headers, blank lines, and exact field names, ready to copy into MiniMax H3",
+  "fullPrompt": "The COMPLETE combined prompt string formatted with exact headers, blank lines, and exact field names, ready to copy into MiniMax H3. Ensure NO filenames appear.",
   "block1": "Formatted Subject Definitions / Keyframe Header Instruction & First Section",
   "block2": "Formatted Summary & Retention Analysis or Integrated Multimodal Description",
   "block3": "Formatted Scene-by-Scene Detailed Timeline",
@@ -399,12 +403,47 @@ app.post("/api/analyze-reference-media", async (req, res) => {
   }
 });
 
+/**
+ * Strips raw filenames, file extensions (.jpg, .png, etc.), or accidental file paths from AI-generated prompts
+ */
+function sanitizeGeneratedPromptText(text: string): string {
+  if (!text || typeof text !== 'string') return text;
+  return text
+    // Replace patterns like "is file.png, " or "is image.jpg" with "is "
+    .replace(/\b(?:is\s+)?[\w-]+\.(?:png|jpe?g|webp|gif|mp4|mov|webm|mp3|wav|ogg)\b/gi, (match) =>
+      match.toLowerCase().startsWith('is ') ? 'is ' : ''
+    )
+    // Strip standalone file extensions or remaining filename patterns
+    .replace(/\b[\w-]+\.(?:png|jpe?g|webp|gif|mp4|mov|webm|mp3|wav|ogg)\b/gi, '')
+    // Clean up double commas, empty brackets, dangling spaces, and 'is ,'
+    .replace(/\bis\s*,\s*/gi, 'is ')
+    .replace(/,\s*,/g, ',')
+    .replace(/\(\s*\)/g, '')
+    .replace(/[ \t]{2,}/g, ' ')
+    .trim();
+}
+
 // API Endpoint to generate/refine MiniMax-H3 prompt
 app.post("/api/generate-h3-prompt", async (req, res) => {
   try {
     const config = req.body;
     const engineTier: EngineTier = config.engineTier || 'pro';
     const ai = getGeminiClient();
+
+    const sanitizedReferences = (config.references && config.references.length > 0)
+      ? config.references
+          .map((r: any) => {
+            const cleanName = String(r.name || 'Reference Asset')
+              .replace(/\.[a-zA-Z0-9]{2,5}$/i, '')
+              .replace(/\b[\w-]+\.(?:png|jpe?g|webp|gif|mp4|mov|webm|mp3|wav)\b/gi, '')
+              .trim() || 'Reference Asset';
+            const cleanDesc = String(r.description || '')
+              .replace(/\b[\w-]+\.(?:png|jpe?g|webp|gif|mp4|mov|webm|mp3|wav)\b/gi, '')
+              .trim() || 'Visual characteristics locked from reference';
+            return `- ${r.tag}: Role=${r.role}, Semantic Label=${cleanName}, Description=${cleanDesc}`;
+          })
+          .join('\n')
+      : 'No reference files provided.';
 
     const userPrompt = `
 Generate an optimal MiniMax-H3 prompt based on the following user input:
@@ -419,18 +458,10 @@ Generate an optimal MiniMax-H3 prompt based on the following user input:
 - Sound Effects / Audio: ${config.sfxText || "Ambient soundscape"}
 - Suppress Background Music: ${config.suppressMusic ? "Yes (Add non_diegetic_music: N/A)" : "No"}
 - Reference Assets (Block 1):
-${
-  config.references && config.references.length > 0
-    ? config.references
-        .map(
-          (r: any) =>
-            `- ${r.tag}: Role=${r.role}, Name=${r.name}, Description=${r.description}`
-        )
-        .join("\n")
-    : "No reference files provided."
-}
+${sanitizedReferences}
 
 Please synthesize all these options into the official 3-block MiniMax-H3 prompt format as instructed.
+CRITICAL INSTRUCTION: DO NOT write any file names, file extensions (e.g. .png, .jpg), or local upload names into the output! Define subjects using clear visual descriptions only.
 Ensure English language is used for the actual prompt text (fullPrompt, block1, block2, block3) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh and suggestions!
 `;
 
@@ -487,6 +518,21 @@ Ensure English language is used for the actual prompt text (fullPrompt, block1, 
 
     const outputText = response.text || "{}";
     const resultJson = JSON.parse(outputText);
+
+    // Sanitize any accidental file names from Gemini output
+    if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
+    if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
+    if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
+    if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
+    if (Array.isArray(resultJson.temporalTimeline)) {
+      resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
+        ...item,
+        action: sanitizeGeneratedPromptText(item.action || ''),
+        camera: sanitizeGeneratedPromptText(item.camera || ''),
+        audio: sanitizeGeneratedPromptText(item.audio || ''),
+      }));
+    }
+
     return res.json({ success: true, data: resultJson });
   } catch (error: any) {
     console.error("Error generating MiniMax H3 prompt:", error);
@@ -510,6 +556,7 @@ Duration: ${duration}
 Suppress Music: ${suppressMusic ? "Yes" : "No"}
 
 Refine it with temporal brackets [0s-Xs], camera movement brackets [Camera Move], concrete visual descriptions, and audio cues.
+DO NOT include any file names or file extensions in the generated prompt!
 `;
 
     const response = await callGeminiDynamic(
@@ -565,6 +612,20 @@ Refine it with temporal brackets [0s-Xs], camera movement brackets [Camera Move]
 
     const outputText = response.text || "{}";
     const resultJson = JSON.parse(outputText);
+
+    if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
+    if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
+    if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
+    if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
+    if (Array.isArray(resultJson.temporalTimeline)) {
+      resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
+        ...item,
+        action: sanitizeGeneratedPromptText(item.action || ''),
+        camera: sanitizeGeneratedPromptText(item.camera || ''),
+        audio: sanitizeGeneratedPromptText(item.audio || ''),
+      }));
+    }
+
     return res.json({ success: true, data: resultJson });
   } catch (error: any) {
     console.error("Error optimizing raw prompt:", error);
