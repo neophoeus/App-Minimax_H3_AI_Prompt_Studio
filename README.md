@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v1.5.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v1.5.2-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%203.6%20%7C%203.5-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -37,12 +37,15 @@ Powered by Google's latest **Gemini 3.8 Flash (`gemini-3.8-flash`)**, **Gemini 3
 - **Strict No-Filename Standard**:
   - Automatically strips and filters all raw filenames and extensions from generated prompt output, ensuring prompts strictly adhere to MiniMax-H3 official semantic syntax.
 
-### 2. Multi-Tier AI Engine with Instant Automatic Fallback
+### 2. Multi-Tier AI Engine with Exponential Backoff Retry & Instant Fallback
 - **Three Selectable Engine Tiers**:
   - **🟢 AI Pro (Web UI Quota Optimized - Default)**: Zero-cost mode with smart model specialization (`gemini-3.5-flash-lite` for dialogues, `gemini-3.6-flash` for media assets, and `gemini-3.8-flash` for core prompts) to guarantee smooth execution without 429 quota exhaustion.
   - **🔵 AI Ultra 5x (Performance)**: Unlocks full `gemini-3.8-flash` with deeper multi-shot reasoning.
   - **🟣 AI Ultra 20x (Extreme Flagship)**: Maximum thinking capacity and high-resolution asset retention analysis.
-- **Resilient Multi-Model Fallback**: Automatically switches to backup models upon 429 / 503 errors to guarantee a 100% request success rate.
+- **Exponential Backoff Retry with Jitter (1s ➔ 2s)**: Automatically catches transient `429 RESOURCE_EXHAUSTED` and `503 UNAVAILABLE` errors, retrying up to 2 times with randomized jitter before failover to smooth out burst rate limits.
+- **Resilient Multi-Model Fallback**: Automatically switches to backup models (`gemini-3.8-flash` ➔ `gemini-3.6-flash` ➔ `gemini-3.5-flash-lite`) if a model's quota is exhausted. Automatically skips retries for permanent errors (e.g. 404).
+- **Ultra-Relaxed Safety Policy (`HarmBlockThreshold.BLOCK_NONE`)**: Configured `BLOCK_NONE` across all core harm categories (harassment, hate speech, sexually explicit, dangerous content, civic integrity) to maximize creative storytelling freedom.
+- **Real-Time Safety Block Notification System**: Dual-layer detection inspecting both prompt-level and candidate-level safety filters (`SAFETY`, `PROHIBITED_CONTENT`, `BLOCKLIST`, `IMAGE_SAFETY`), providing actionable guidance toasts in the UI when sensitive content is flagged.
 
 ### 3. Multimodal Reference Asset Manager (Zero-Quota Direct Vision)
 - Upload character, scene, or prop reference assets directly in the browser.

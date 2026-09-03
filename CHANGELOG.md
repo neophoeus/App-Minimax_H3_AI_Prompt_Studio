@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.5.2] - 2026-09-03
+
+### 🛡️ Exponential Backoff Retry & Ultra-Relaxed Safety Architecture
+- **Exponential Backoff with Jitter (指數退避與隨機抖動重試)**:
+  - Integrated automatic retry loops (up to 2 retries per model, 1s ➔ 2s with +0~500ms randomized jitter) for transient `429 RESOURCE_EXHAUSTED` and `503 UNAVAILABLE` errors.
+  - Prevents transient burst rate limits from failing user requests while protecting API quota pools.
+  - Automatically skips retries on permanent fatal model errors (such as `404 NOT_FOUND` or deprecated models) to immediately execute failover routing.
+- **Ultra-Relaxed Safety Settings (`HarmBlockThreshold.BLOCK_NONE`)**:
+  - Configured `HarmBlockThreshold.BLOCK_NONE` across all 5 core harm categories (`HARM_CATEGORY_HARASSMENT`, `HARM_CATEGORY_HATE_SPEECH`, `HARM_CATEGORY_SEXUALLY_EXPLICIT`, `HARM_CATEGORY_DANGEROUS_CONTENT`, `HARM_CATEGORY_CIVIC_INTEGRITY`).
+  - Maximizes cinematic storytelling freedom for dark sci-fi, intense action, suspenseful drama, and creative visual scripts.
+- **Safety Block Notification System (即時安全性審查阻擋通知)**:
+  - Implemented dual-layer interception in `server.ts` inspecting `promptFeedback.blockReason` and `candidates[0].finishReason` (`SAFETY`, `PROHIBITED_CONTENT`, `BLOCKLIST`, `IMAGE_SAFETY`).
+  - Provides clear, actionable Traditional Chinese warning toasts in the frontend (`🛡️【內容安全性阻擋通知】...`) with extended duration (8s) guiding creators on adjustments.
+
+---
+
 ## [v1.5.1] - 2026-09-03
 
 ### 🚀 Zero-Quota Multimodal Vision Architecture (零額度負擔多模態直通看圖)

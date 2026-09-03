@@ -129,8 +129,16 @@ export default function App() {
     }
   };
 
-  // Helper to format rate limit / quota exceeded / high demand 503 error cleanly
+  // Helper to format rate limit / quota exceeded / safety block / high demand 503 error cleanly
   const formatErrorMessage = (rawMsg: string) => {
+    if (
+      rawMsg.includes('安全性阻擋') ||
+      rawMsg.includes('SAFETY') ||
+      rawMsg.includes('PROHIBITED_CONTENT') ||
+      rawMsg.includes('BLOCKLIST')
+    ) {
+      return rawMsg;
+    }
     if (
       rawMsg.includes('429') ||
       rawMsg.includes('額度') ||
@@ -138,7 +146,9 @@ export default function App() {
       rawMsg.includes('Quota') ||
       rawMsg.includes('Rate limit')
     ) {
-      return '⚠️ Gemini API 額度已用完 (429)，系統已嘗試多模型自動降級，請稍等片刻後重試！';
+      return rawMsg.includes('冷卻')
+        ? rawMsg
+        : '⚠️ Gemini API 額度限制 (429 Rate Limit)，系統已自動執行同模型退避重試與跨模型降級備援，請稍等片刻後重試！';
     }
     if (
       rawMsg.includes('503') ||
@@ -148,7 +158,9 @@ export default function App() {
       rawMsg.includes('負載') ||
       rawMsg.includes('overloaded')
     ) {
-      return '⚠️ Gemini 模型目前負載較高 (503)，請稍候 3~5 秒後重新點擊生成！';
+      return rawMsg.includes('多次退避')
+        ? rawMsg
+        : '⚠️ Gemini 模型目前負載較高 (503)，系統已嘗試退避重試，請稍候 3~5 秒後再試！';
     }
     if (rawMsg.includes('GEMINI_API_KEY')) {
       return '⚠️ 未設定 GEMINI_API_KEY 環境變數，請確認後端 .env 設定！';
@@ -339,12 +351,14 @@ export default function App() {
         showToast('已成功為您生成 MiniMax-H3 完整三段式提示詞！', 'success');
       } else {
         const errStr = formatErrorMessage(data.error || '生成失敗');
-        showToast(errStr, 'error', 6000);
+        const toastDuration = errStr.includes('安全性阻擋') ? 8000 : 6000;
+        showToast(errStr, 'error', toastDuration);
       }
     } catch (err: any) {
       console.error('Generation Error:', err);
       const errStr = formatErrorMessage(err.message || '請稍後再試');
-      showToast(errStr, 'error', 6000);
+      const toastDuration = errStr.includes('安全性阻擋') ? 8000 : 6000;
+      showToast(errStr, 'error', toastDuration);
     } finally {
       setLoading(false);
     }

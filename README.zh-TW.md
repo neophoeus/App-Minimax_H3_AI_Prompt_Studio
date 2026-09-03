@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v1.5.1-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v1.5.2-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%203.6%20%7C%203.5-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -37,12 +37,15 @@
 - **嚴格零檔名洩漏標準 (Strict No-Filename Standard)**：
   - 徹底杜絕生成提示詞中出現任何本地檔案名稱與副檔名（`.png`, `.jpg`, `.mp4` 等），確保提示詞完全由純淨專業的影視語意細節構成。
 
-### 2. 多層級 AI 引擎與智慧自動無縫降級 (Multi-Tier & Instant Fallback)
+### 2. 多層級 AI 引擎與指數退避重試 (Exponential Backoff with Jitter & Instant Fallback)
 - **三種可選算力方案**：
   - **🟢 AI Pro (Web UI 配額最佳化 - 預設)**：專為 Google AI 訂閱與免費 API 打造的零成本模式，透過模型分流（對話使用 `gemini-3.5-flash-lite`、圖片使用 `gemini-3.6-flash`、提示詞使用 `gemini-3.8-flash`），徹底消弭 429 額度超限。
   - **🔵 AI Ultra 5x (進階效能)**：全核心啟用 `gemini-3.8-flash` 深入推理。
   - **🟣 AI Ultra 20x (極致旗艦)**：旗艦級思考深度與高精多模態鎖定。
-- **無縫自動容錯降級**：遇到 429 額度超限或 503 負載尖峰時，後端自動即時切換至備援模型，保障 100% 請求成功率。
+- **指數退避重試與隨機抖動 (1s ➔ 2s)**：針對短暫的 `429 RESOURCE_EXHAUSTED` 或 `503 UNAVAILABLE` 暫態限流，自動執行最多 2 次指數退避重試（含隨機微小抖動），有效平抑瞬間爆發請求（Burst）。
+- **無縫自動容錯降級**：重試耗盡或遇配額瓶頸時，後端自動切換至備援模型鏈（`gemini-3.8-flash` ➔ `gemini-3.6-flash` ➔ `gemini-3.5-flash-lite`）；若遇 404 等永久錯誤則自動快切跳過重試，保障 100% 請求成功率。
+- **最寬鬆安全性門檻 (`HarmBlockThreshold.BLOCK_NONE`)**：全面解除五大危害類別（騷擾、仇恨、性暗示、危險內容、誠信）的常規過濾限制，極致釋放影視劇作、暗黑科幻、動作衝突的分鏡創作自由度。
+- **即時安全性審查阻擋通知系統**：雙重安全攔截（檢查提示詞 `promptFeedback` 與生成結果 `finishReason`），一旦觸發不可避之敏感審查，前端即刻彈出 8 秒指引 Toast 告知創作者具體原因與調整建議。
 
 ### 3. 多模態參考素材管理 (零額度負擔直通看圖)
 - 支援直接於瀏覽器上傳角色、場景、動作或音訊素材。
