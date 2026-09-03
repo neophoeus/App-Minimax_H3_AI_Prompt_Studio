@@ -38,12 +38,12 @@ interface ExecutionPlan {
  * Strategy Planner based on Google AI Subscription Tiers:
  * 
  * - 'pro' (Default / Web UI & Free API Optimized):
- *    - Dialogue: gemini-3.5-flash-lite (Ultra-fast <400ms, separate high-quota pool, 0 pressure on 3.7)
+ *    - Dialogue: gemini-3.5-flash-lite (Ultra-fast <400ms, separate high-quota pool, 0 pressure on 3.8)
  *    - Vision / Media Analysis: gemini-2.5-flash (Vision optimized, lightweight token footprint, thinking disabled)
- *    - Prompt Generation: gemini-3.7-flash (Medium thinking) with instant fallback to gemini-2.5-flash
+ *    - Prompt Generation: gemini-3.8-flash (Medium thinking) with instant fallback to gemini-2.5-flash
  * 
  * - 'ultra_5x' (High Performance):
- *    - Full gemini-3.7-flash with deeper reasoning
+ *    - Full gemini-3.8-flash with deeper reasoning
  * 
  * - 'ultra_20x' (Extreme Flagship):
  *    - Maximum thinking tokens and high-precision visual analysis
@@ -56,20 +56,20 @@ function getExecutionPlan(
     case 'ultra_20x':
       if (task === 'dialogue') {
         return {
-          primaryModel: 'gemini-3.7-flash',
+          primaryModel: 'gemini-3.8-flash',
           fallbackModels: ['gemini-3.5-flash-lite', 'gemini-2.5-flash'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         };
       }
       if (task === 'media_analysis') {
         return {
-          primaryModel: 'gemini-3.7-flash',
+          primaryModel: 'gemini-3.8-flash',
           fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         };
       }
       return {
-        primaryModel: 'gemini-3.7-flash',
+        primaryModel: 'gemini-3.8-flash',
         fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
       };
@@ -77,20 +77,20 @@ function getExecutionPlan(
     case 'ultra_5x':
       if (task === 'dialogue') {
         return {
-          primaryModel: 'gemini-3.7-flash',
+          primaryModel: 'gemini-3.8-flash',
           fallbackModels: ['gemini-3.5-flash-lite', 'gemini-2.5-flash'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         };
       }
       if (task === 'media_analysis') {
         return {
-          primaryModel: 'gemini-3.7-flash',
+          primaryModel: 'gemini-3.8-flash',
           fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         };
       }
       return {
-        primaryModel: 'gemini-3.7-flash',
+        primaryModel: 'gemini-3.8-flash',
         fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
       };
@@ -100,19 +100,19 @@ function getExecutionPlan(
       if (task === 'dialogue') {
         return {
           primaryModel: 'gemini-3.5-flash-lite',
-          fallbackModels: ['gemini-2.5-flash', 'gemini-3.7-flash'],
+          fallbackModels: ['gemini-2.5-flash', 'gemini-3.8-flash'],
           thinkingConfig: { thinkingBudget: 0 },
         };
       }
       if (task === 'media_analysis') {
         return {
           primaryModel: 'gemini-2.5-flash',
-          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.7-flash'],
+          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
           thinkingConfig: { thinkingBudget: 0 },
         };
       }
       return {
-        primaryModel: 'gemini-3.7-flash',
+        primaryModel: 'gemini-3.8-flash',
         fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
         thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
       };

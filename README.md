@@ -4,8 +4,8 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v1.3.0-blue.svg)](CHANGELOG.md)
-[![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.7%20Flash%20%7C%203.5%20Lite-orange.svg)](https://deepmind.google/technologies/gemini/)
+[![Version](https://img.shields.io/badge/version-v1.3.1-blue.svg)](CHANGELOG.md)
+[![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20Flash%20%7C%203.5%20Lite-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
 
@@ -21,7 +21,7 @@
 
 Adhering 100% to the official MiniMax-H3 [`h3-prompt-writing`](https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing) skill specification, the studio transforms high-level creative concepts into production-ready, perfectly formatted prompts with one-click copy functionality.
 
-Powered by Google's latest **Gemini 3.7 Flash (`gemini-3.7-flash`)** and **Gemini 3.5 Flash-Lite (`gemini-3.5-flash-lite`)** via the modern `@google/genai` SDK, it delivers deep reasoning capabilities for multi-shot timeline planning, multimodal asset retention analysis, and cinematic audio-visual soundscape composition with zero rate-limit interruptions.
+Powered by Google's latest **Gemini 3.8 Flash (`gemini-3.8-flash`)** and **Gemini 3.5 Flash-Lite (`gemini-3.5-flash-lite`)** via the modern `@google/genai` SDK, it delivers deep reasoning capabilities for multi-shot timeline planning, multimodal asset retention analysis, and cinematic audio-visual soundscape composition with zero rate-limit interruptions.
 
 ---
 
@@ -37,8 +37,8 @@ Powered by Google's latest **Gemini 3.7 Flash (`gemini-3.7-flash`)** and **Gemin
 
 ### 2. Multi-Tier AI Engine with Instant Automatic Fallback
 - **Three Selectable Engine Tiers**:
-  - **🟢 AI Pro (Web UI Quota Optimized - Default)**: Zero-cost mode with smart model specialization (`gemini-3.5-flash-lite` for dialogues, `gemini-2.5-flash` for image analysis, and `gemini-3.7-flash` for core prompts) to guarantee smooth execution without 429 quota exhaustion.
-  - **🔵 AI Ultra 5x (Performance)**: Unlocks full `gemini-3.7-flash` with deeper multi-shot reasoning.
+  - **🟢 AI Pro (Web UI Quota Optimized - Default)**: Zero-cost mode with smart model specialization (`gemini-3.5-flash-lite` for dialogues, `gemini-2.5-flash` for image analysis, and `gemini-3.8-flash` for core prompts) to guarantee smooth execution without 429 quota exhaustion.
+  - **🔵 AI Ultra 5x (Performance)**: Unlocks full `gemini-3.8-flash` with deeper multi-shot reasoning.
   - **🟣 AI Ultra 20x (Extreme Flagship)**: Maximum thinking capacity and high-resolution asset retention analysis.
 - **Resilient Multi-Model Fallback**: Automatically switches to backup models upon 429 / 503 errors to guarantee a 100% request success rate.
 
@@ -64,7 +64,7 @@ Powered by Google's latest **Gemini 3.7 Flash (`gemini-3.7-flash`)** and **Gemin
 - **Frontend**: React 19, TypeScript, Vite 6, Lucide Icons, Motion
 - **Styling**: Tailwind CSS v4
 - **Backend / API**: Express 4, TypeScript, `tsx`
-- **AI SDK**: `@google/genai` (v2.17.0+), Google Gemini 3.7 Flash
+- **AI SDK**: `@google/genai` (v2.17.0+), Google Gemini 3.8 Flash
 
 ---
 
@@ -131,11 +131,11 @@ App-Minimax_H3_AI_Prompt_Studio/
 │   ├── App.tsx           # Main application state and layout
 │   ├── main.tsx          # React application entry point
 │   └── index.css         # Tailwind CSS styles
-├── server.ts             # Express backend with Gemini 3.7 Flash API integration
+├── server.ts             # Express backend with Gemini 3.8 Flash API integration
 ├── CHANGELOG.md          # Release history and migration notes
 ├── README.md             # English documentation
 ├── README.zh-TW.md       # Traditional Chinese documentation
-├── package.json          # Project dependencies and metadata (v1.2.0)
+├── package.json          # Project dependencies and metadata (v1.3.1)
 └── tsconfig.json         # TypeScript configuration
 ```
 

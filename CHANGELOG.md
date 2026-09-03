@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.3.1] - 2026-09-03
+
+### 🚀 Changed & Upgraded
+
+- **Gemini 3.8 Flash Upgrade**:
+  - Upgraded core frontier reasoning model from `gemini-3.7-flash` to the newly released **`gemini-3.8-flash`** (Gemini 3.8 Flash).
+  - Integrated `gemini-3.8-flash` across all engine tier plans (`pro`, `ultra_5x`, `ultra_20x`) in `server.ts` for deep temporal shot reasoning, multimodal prompt writing, and rapid keyframe deduction.
+  - Enhanced fallback chain routing and latency responsiveness.
+- **UI & Documentation Sync**:
+  - Updated AI engine tier descriptions and tooltips in `Navbar.tsx` reflecting `gemini-3.8-flash`.
+  - Updated project badges and documentation specifications in `README.md` and `README.zh-TW.md`.
+
+---
+
 ## [v1.3.0] - 2026-09-02
 
 ### 🚀 Added & Improved
