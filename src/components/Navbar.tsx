@@ -132,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
                 <div className="space-y-1.5 leading-relaxed text-[11px]">
                   <p>
-                    <strong className="text-emerald-400">🟢 AI Pro (Web UI 最佳化 - 推薦)</strong>：專為使用 Google AI 訂閱與免費 API 打造，對話使用極速 <code className="text-cyan-300">gemini-3.5-flash-lite</code>，圖片使用 <code className="text-purple-300">gemini-2.5-flash</code>，核心生成使用 <code className="text-amber-300">gemini-3.8-flash</code>，零超額且具備自動降級保護。
+                    <strong className="text-emerald-400">🟢 AI Pro (Web UI 最佳化 - 推薦)</strong>：專為使用 Google AI 訂閱與免費 API 打造，對話使用極速 <code className="text-cyan-300">gemini-3.5-flash-lite</code>，圖片使用 <code className="text-purple-300">gemini-3.6-flash</code>，核心生成使用 <code className="text-amber-300">gemini-3.8-flash</code>，零超額且具備自動降級保護。
                   </p>
                   <p>
                     <strong className="text-blue-400">🔵 AI Ultra 5x / 20x</strong>：適合已在 Google Cloud 綁定 Ultra 附贈 US$100 抵免額的進階用戶，全模組開啟旗艦深度思考與高精特徵分析。

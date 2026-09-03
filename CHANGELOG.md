@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.4.2] - 2026-09-03
+
+### 🚀 Changed & Upgraded
+
+- **Upgraded to `gemini-3.6-flash` (Resolved Google AI 404 NOT_FOUND Error)**:
+  - Replaced deprecated `gemini-2.5-flash` with Google's officially recommended `gemini-3.6-flash` across all execution plans, media analysis endpoints, and fallback chains.
+  - Retained dedicated model specialization in **🟢 AI Pro (Default Tier)**: `gemini-3.6-flash` handles multimodal media and image reference extraction to protect `gemini-3.8-flash` quota from 429 rate limit exhaustion.
+- **Enhanced Dynamic Router Failover Resilience**:
+  - Extended failover detection in `callGeminiDynamic` to intercept HTTP 404, `NOT_FOUND`, and model obsolescence responses, ensuring instant automatic switchover to healthy models without interrupting user workflow.
+- **Version Bump & Documentation Synchronization**:
+  - Synchronized project version to `v1.4.2` in `package.json`, `package-lock.json`, `README.md`, and `README.zh-TW.md`.
+
+---
+
 ## [v1.4.1] - 2026-09-03
 
 ### 🚀 Changed & Optimized

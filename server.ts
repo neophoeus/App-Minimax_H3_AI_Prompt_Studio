@@ -39,8 +39,8 @@ interface ExecutionPlan {
  * 
  * - 'pro' (Default / Web UI & Free API Optimized):
  *    - Dialogue: gemini-3.5-flash-lite (Ultra-fast <400ms, separate high-quota pool, 0 pressure on 3.8)
- *    - Vision / Media Analysis: gemini-2.5-flash (Vision optimized, lightweight token footprint, thinking disabled)
- *    - Prompt Generation: gemini-3.8-flash (Medium thinking) with instant fallback to gemini-2.5-flash
+ *    - Vision / Media Analysis: gemini-3.6-flash (Vision optimized, lightweight token footprint, thinking disabled)
+ *    - Prompt Generation: gemini-3.8-flash (Medium thinking) with instant fallback to gemini-3.6-flash
  * 
  * - 'ultra_5x' (High Performance):
  *    - Full gemini-3.8-flash with deeper reasoning
@@ -57,20 +57,20 @@ function getExecutionPlan(
       if (task === 'dialogue') {
         return {
           primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-2.5-flash'],
+          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.6-flash'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         };
       }
       if (task === 'media_analysis') {
         return {
           primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
+          fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         };
       }
       return {
         primaryModel: 'gemini-3.8-flash',
-        fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
+        fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
       };
 
@@ -78,20 +78,20 @@ function getExecutionPlan(
       if (task === 'dialogue') {
         return {
           primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-2.5-flash'],
+          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.6-flash'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         };
       }
       if (task === 'media_analysis') {
         return {
           primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
+          fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         };
       }
       return {
         primaryModel: 'gemini-3.8-flash',
-        fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
+        fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
       };
 
@@ -100,20 +100,20 @@ function getExecutionPlan(
       if (task === 'dialogue') {
         return {
           primaryModel: 'gemini-3.5-flash-lite',
-          fallbackModels: ['gemini-2.5-flash', 'gemini-3.8-flash'],
+          fallbackModels: ['gemini-3.6-flash', 'gemini-3.8-flash'],
           thinkingConfig: { thinkingBudget: 0 },
         };
       }
       if (task === 'media_analysis') {
         return {
-          primaryModel: 'gemini-2.5-flash',
+          primaryModel: 'gemini-3.6-flash',
           fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
           thinkingConfig: { thinkingBudget: 0 },
         };
       }
       return {
         primaryModel: 'gemini-3.8-flash',
-        fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite'],
+        fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
         thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
       };
   }
@@ -170,8 +170,14 @@ async function callGeminiDynamic(
         status === 500 ||
         status === 502 ||
         status === 504 ||
+        status === 404 ||
+        status === '404' ||
         errMsg.includes('429') ||
         errMsg.includes('503') ||
+        errMsg.includes('404') ||
+        errMsg.includes('NOT_FOUND') ||
+        errMsg.includes('not found') ||
+        errMsg.includes('no longer available') ||
         errMsg.includes('RESOURCE_EXHAUSTED') ||
         errMsg.includes('Quota') ||
         errMsg.includes('UNAVAILABLE') ||

@@ -4,8 +4,8 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v1.4.1-blue.svg)](CHANGELOG.md)
-[![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20Flash%20%7C%203.5%20Lite-orange.svg)](https://deepmind.google/technologies/gemini/)
+[![Version](https://img.shields.io/badge/version-v1.4.2-blue.svg)](CHANGELOG.md)
+[![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%203.6%20%7C%203.5-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
 
@@ -21,7 +21,7 @@
 
 Adhering 100% to the official MiniMax-H3 [`h3-prompt-writing`](https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing) skill specification, the studio transforms high-level creative concepts into production-ready, perfectly formatted prompts with one-click copy functionality.
 
-Powered by Google's latest **Gemini 3.8 Flash (`gemini-3.8-flash`)** and **Gemini 3.5 Flash-Lite (`gemini-3.5-flash-lite`)** via the modern `@google/genai` SDK, it delivers deep reasoning capabilities for multi-shot timeline planning, multimodal asset retention analysis, and cinematic audio-visual soundscape composition with zero rate-limit interruptions.
+Powered by Google's latest **Gemini 3.8 Flash (`gemini-3.8-flash`)**, **Gemini 3.6 Flash (`gemini-3.6-flash`)**, and **Gemini 3.5 Flash-Lite (`gemini-3.5-flash-lite`)** via the modern `@google/genai` SDK, it delivers deep reasoning capabilities for multi-shot timeline planning, multimodal asset retention analysis, and cinematic audio-visual soundscape composition with zero rate-limit interruptions.
 
 ---
 
@@ -37,7 +37,7 @@ Powered by Google's latest **Gemini 3.8 Flash (`gemini-3.8-flash`)** and **Gemin
 
 ### 2. Multi-Tier AI Engine with Instant Automatic Fallback
 - **Three Selectable Engine Tiers**:
-  - **🟢 AI Pro (Web UI Quota Optimized - Default)**: Zero-cost mode with smart model specialization (`gemini-3.5-flash-lite` for dialogues, `gemini-2.5-flash` for image analysis, and `gemini-3.8-flash` for core prompts) to guarantee smooth execution without 429 quota exhaustion.
+  - **🟢 AI Pro (Web UI Quota Optimized - Default)**: Zero-cost mode with smart model specialization (`gemini-3.5-flash-lite` for dialogues, `gemini-3.6-flash` for image analysis, and `gemini-3.8-flash` for core prompts) to guarantee smooth execution without 429 quota exhaustion.
   - **🔵 AI Ultra 5x (Performance)**: Unlocks full `gemini-3.8-flash` with deeper multi-shot reasoning.
   - **🟣 AI Ultra 20x (Extreme Flagship)**: Maximum thinking capacity and high-resolution asset retention analysis.
 - **Resilient Multi-Model Fallback**: Automatically switches to backup models upon 429 / 503 errors to guarantee a 100% request success rate.
@@ -50,7 +50,7 @@ Powered by Google's latest **Gemini 3.8 Flash (`gemini-3.8-flash`)** and **Gemin
 - Generates character-driven, on-screen dialogues with atmospheric sound effect (SFX) suggestions tailored for AI video models in under 400ms.
 - Support for background music suppression (`non_diegetic_music: N/A`).
 
-### 5. Production-Ready Studio UI (v1.4.1 Widescreen Architecture)
+### 5. Production-Ready Studio UI (v1.4.2 Widescreen Architecture)
 - **Three-Column Widescreen Layout (`max-w-[1800px]`, 35% / 25% / 40%)**: Dedicated columns for Input Concept & References (Left 35%), Parameter Configuration & Generation (Middle 25%), and Output Inspector & One-Click Copy (Right 40%).
 - **Spacious & Adjustable Idea Input Canvas**: Substantially expanded textarea (`rows={8}`, `min-h-[240px]`) with 5-step font sizing (12px ~ 20px), stepper controls, and `localStorage` persistence.
 - **AI Quota Switcher**: Instant switching between Pro and Ultra modes with tooltip guides and `localStorage` persistence.

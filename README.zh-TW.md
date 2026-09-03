@@ -4,8 +4,8 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v1.4.1-blue.svg)](CHANGELOG.md)
-[![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20Flash%20%7C%203.5%20Lite-orange.svg)](https://deepmind.google/technologies/gemini/)
+[![版本](https://img.shields.io/badge/版本-v1.4.2-blue.svg)](CHANGELOG.md)
+[![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%203.6%20%7C%203.5-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
 
@@ -21,7 +21,7 @@
 
 本工具 100% 嚴格遵循 MiniMax-H3 官方 [`h3-prompt-writing`](https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing) 技能規範，能將使用者的創意概念一鍵轉化為符合模型最佳理解結構的生產級提示詞，並提供一鍵複製功能。
 
-後端採用 Google 最新發布的 **Gemini 3.8 Flash (`gemini-3.8-flash`)** 與 **Gemini 3.5 Flash-Lite (`gemini-3.5-flash-lite`)**，配合最新版 `@google/genai` SDK，具備強大的思考推理能力，可精準處理多鏡頭時序編排、多模態素材 Retention Analysis（特徵鎖定分析）以及影視級聲景構建，且徹底消除 429 額度超限問題。
+後端採用 Google 最新發布的 **Gemini 3.8 Flash (`gemini-3.8-flash`)**、**Gemini 3.6 Flash (`gemini-3.6-flash`)** 與 **Gemini 3.5 Flash-Lite (`gemini-3.5-flash-lite`)**，配合最新版 `@google/genai` SDK，具備強大的思考推理能力，可精準處理多鏡頭時序編排、多模態素材 Retention Analysis（特徵鎖定分析）以及影視級聲景構建，且徹底消除 429 額度超限問題。
 
 ---
 
@@ -37,7 +37,7 @@
 
 ### 2. 多層級 AI 引擎與智慧自動無縫降級 (Multi-Tier & Instant Fallback)
 - **三種可選算力方案**：
-  - **🟢 AI Pro (Web UI 配額最佳化 - 預設)**：專為 Google AI 訂閱與免費 API 打造的零成本模式，透過模型分流（對話使用 `gemini-3.5-flash-lite`、圖片使用 `gemini-2.5-flash`、提示詞使用 `gemini-3.8-flash`），徹底消弭 429 額度超限。
+  - **🟢 AI Pro (Web UI 配額最佳化 - 預設)**：專為 Google AI 訂閱與免費 API 打造的零成本模式，透過模型分流（對話使用 `gemini-3.5-flash-lite`、圖片使用 `gemini-3.6-flash`、提示詞使用 `gemini-3.8-flash`），徹底消弭 429 額度超限。
   - **🔵 AI Ultra 5x (進階效能)**：全核心啟用 `gemini-3.8-flash` 深入推理。
   - **🟣 AI Ultra 20x (極致旗艦)**：旗艦級思考深度與高精多模態鎖定。
 - **無縫自動容錯降級**：遇到 429 額度超限或 503 負載尖峰時，後端自動即時切換至備援模型，保障 100% 請求成功率。
@@ -50,7 +50,7 @@
 - 超快速（<400ms）生成符合影視與動漫風格的人物台詞，並附帶環境音效 (SFX) 與音色建議。
 - 支援一鍵靜音/抑制背景音樂模式 (`non_diegetic_music: N/A`)。
 
-### 5. 生產級 Studio 介面 (v1.4.1 寬版三大欄架構)
+### 5. 生產級 Studio 介面 (v1.4.2 寬版三大欄架構)
 - **三大欄寬版工作流 (`max-w-[1800px]`, 35% / 25% / 40%)**：精確配置左欄（輸入構想與素材 35%）、中欄（設定調整與主生成按鈕 25%）、右欄（提示詞輸出與一鍵複製 40%）。
 - **寬裕且可調字級之創意思路畫布**：大幅加高文字框（`rows={8}`、`min-h-[240px]`），支援 5 段字級調控（12px ~ 20px）、步進按鈕與 `localStorage` 記憶。
 - **AI 算力方案選擇器**：頂部導覽列隨時切換 Pro 與 Ultra 模式，偏好自動保存於 `localStorage`。
