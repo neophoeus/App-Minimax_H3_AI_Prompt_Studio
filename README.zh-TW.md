@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v1.5.2-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v2.0.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%203.6%20%7C%203.5-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -27,13 +27,23 @@
 
 ## ✨ 核心特色
 
-### 1. 完整相容 MiniMax-H3 官方規範
+### 1. 完整相容 MiniMax-H3 官方規範 (v2.0.0 全量對齊)
+- **官方三維度運鏡控制體系 (運動類型 + 幅度 + 速度)**：
+  - 完整支援官方 12 類標準運動類型：`Zoom In/Out`（焦距縮放）、`Push In/Pull Out`（實體推拉）、`Pan Left/Right`（水平旋轉）、`Truck Left/Right`（水平平移）、`Tilt Up/Down`（垂直俯仰）、`Pedestal Up/Down`（垂直升降）、`Arc Shot`（環繞）、`Tracking Shot`（跟拍）、`Static Shot`（固定靜態）、`Shake Slightly/Strongly`（晃動）、`POV`（主觀視角）、`Roll Clockwise/Counterclockwise`（光軸旋轉）。
+  - 支援幅度（`with small/large amplitude`）與速度（`at slow/fast speed`）微調，生成時嚴格組裝為自然英文動作融入分鏡敘述，徹底告別句末標籤堆疊。
+- **時長標準化 (4s–15s) 與長影片續寫架構 (Video Continuation)**：
+  - 全面移除實驗性時長，精準對齊官方原生單次 4–15 秒生成規格。
+  - 支援官方長影片工作流：透過 Ref2VA 任務前綴 `[video continuation]` 綁定前置片段（`<Video 1>`），實現多鏡頭無縫續寫長影片。
+- **官方語音對白與說話者 ID 規範**：
+  - 角色台詞嚴格採用 `<d>[Language] ...</d>` 標籤，保留原始文字與標點 verbatim；指派穩定之說話者 ID（`(S1)`, `(S2)`）。
+  - 畫外音遵循 `says in an off-screen voiceover: <d>...</d> while his lips remain completely closed.` 嘴唇閉合約定；跨鏡頭台詞支援 `<scenetrans>` 與 `<cutoff>`。
+  - 雙引號 `""` 嚴格限定用於畫面上實際出現的文字看板（On-Screen Text），不與對白混淆。
 - **基礎模式 (T2VA, I2VA, FL2VA, L2VA)**：
   - 嚴格遵守首尾關鍵影格（Keyframe）的標準首行對齊指令模板。
-  - 自動生成 3 大核心欄位：`integrated_multimodal_description`（整合多模態描述）、`overall_soundscape`（整體聲景）與 `non_diegetic_music`（非敘事音樂）。
+  - 自動生成 3 大核心欄位：`integrated_multimodal_description`、`overall_soundscape` 與 `non_diegetic_music`。
 - **全參考模式 (Ref2VA)**：
   - 完整生成標準 6 大區塊：`subject_definitions`、`summary`、`retention_analysis`、`detailed_description`、`overall_soundscape` 與 `non_diegetic_music`。
-  - 精準管理角括號素材標籤（`<Subject N>`、`<Picture N>`、`<Video N>`、`<Audio N>`）。
+  - 嚴格鎖定官方關係標記（`fully_preserved`、`attribute_transfer`、`fully_copy`、`reference` 等）。
 - **嚴格零檔名洩漏標準 (Strict No-Filename Standard)**：
   - 徹底杜絕生成提示詞中出現任何本地檔案名稱與副檔名（`.png`, `.jpg`, `.mp4` 等），確保提示詞完全由純淨專業的影視語意細節構成。
 

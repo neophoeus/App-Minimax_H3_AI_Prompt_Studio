@@ -368,24 +368,34 @@ overall_soundscape: ...
 
 non_diegetic_music: ...
 
-- "integrated_multimodal_description": Begins with [Shot 1] (setting visual style, initial composition, subjects, lighting). Do not add a timestamp to Shot 1. Subsequent shots use strictly increasing cut timecodes: "[Shot 2] At 00:03.500, the camera cuts to..." or "[Shot 2] At 00:05.000, the shot transitions to...". Incorporate character movement, dialogue in quotes "...", and camera motion (type, amplitude, speed).
-- "overall_soundscape": Explicit summary of ambient sound, physical action sounds, environmental noise, and voice timbre.
-- "non_diegetic_music": Set to "N/A" if music is suppressed/disabled, or specify non-diegetic background music style.
+- "integrated_multimodal_description":
+  - Begins with [Shot 1] (setting visual style and initial composition at the start). Do NOT add a timestamp to Shot 1.
+  - Subsequent shots use strictly increasing cut timecodes: "[Shot 2] At 00:03.500, the camera cuts to..." or "[Shot 2] At 00:05.000, the shot transitions to...".
+  - Standard cut verbs: "the camera cuts to", "the shot cuts to", "the shot transitions to", "the shot changes to", "the shot switches to".
+  - Camera motion MUST be written as a natural English action within the shot (see Section 3 below).
+  - Dialogue MUST use <d>[Language] ...</d> tags with speaker IDs (see Section 4 below).
+- "overall_soundscape": 1–4 English sentences summarizing ambient sound, physical action sounds, and non-verbal human sounds across the entire video. Set to "N/A" only if complete silence is requested.
+- "non_diegetic_music": 1–3 English sentences describing audience-only background music (instrumentation, tempo, dynamics). Set to "N/A" if music is suppressed/disabled.
 
 **For Full-Reference Mode (Ref2VA):**
 The prompt MUST consist of six sections in this exact order:
 subject_definitions:
 <Subject 1> is ...
 <Picture 1> is ...
+<Video 1> is ...
+<Audio 1> is ...
 
 summary:
-[reference generation] ...
+[task type] ...
 
 retention_analysis:
-- <Subject 1>: preserved/transferred ...
+<Subject 1> (appears in [Shot 1]): fully_preserved - ...
+<Audio 1>: reference - ...
 
 detailed_description:
+[Overall visual style in 1-2 English sentences before Shot 1]
 [Shot 1] ...
+[Shot 2] At 00:03.500, the camera cuts to...
 
 overall_soundscape:
 ...
@@ -394,21 +404,82 @@ non_diegetic_music:
 ...
 
 - "subject_definitions": Define reusable assets using angle-bracket labels:
-  - <Subject N>: reusable people, animals, objects, scenes, costumes, actions.
+  - <Subject N>: reusable people, animals, objects, scenes, costumes, styles, actions.
   - <Picture N>: reference image used as concrete target frame/shot anchor.
-  - <Video N>: reference video providing editing source, continuation, or temporal structure.
+  - <Video N>: reference video providing continuation starting point, editing source, or temporal structure.
   - <Audio N>: audio track or voice reference. For speaker voice timbre: <Subject N> (Sx) (e.g. <Subject 1> (S1)).
-- "summary": MUST begin with a square-bracketed task type prefix, e.g. [reference generation], [keyframe completion], [video editing + reference generation + audio reuse].
-- "retention_analysis": Explicitly list features preserved/locked vs dynamically generated for each reference label.
-- "detailed_description": Full timeline starting with [Shot 1] and subsequent shots with cut timecodes ([Shot 2] At 00:03.500...).
-- "overall_soundscape": Ambience, action sounds, voice characteristics.
-- "non_diegetic_music": "N/A" or background music style description.
+- "summary": MUST begin with a square-bracketed task type prefix using only official task types combined with " + ":
+  - [keyframe completion]
+  - [reference generation]
+  - [video editing]
+  - [video continuation]
+  - [audio reuse]
+  - [audio reference]
+  (e.g. [reference generation + audio reference], or [video continuation + reference generation] for continuing an existing video).
+- "retention_analysis": MUST strictly use official English relationship markers:
+  - For visible content (<Subject N>, <Picture N>, <Video N>): "fully_preserved", "partially_preserved", "attribute_transfer", "weak_reference".
+  - For audio content (<Audio N>): "fully_copy", "partially_copy", "reference", "weak_reference".
+- "detailed_description": Establish overall visual style in 1-2 English sentences before [Shot 1]. Then shot-by-shot timeline starting with [Shot 1] and subsequent shots with cut timecodes ([Shot 2] At 00:03.500...).
+- "overall_soundscape": 1-4 English sentences.
+- "non_diegetic_music": 1-3 English sentences, or "N/A".
 
-### 3. Absolute Prohibitions Regarding File Names:
-- STRICT RULE: DO NOT include any file names, file extensions (e.g. .jpg, .jpeg, .png, .webp, .mp4, .mov, .webm, .wav, .mp3), or file paths anywhere in the prompt text (neither in fullPrompt, block1, block2, block3, nor temporalTimeline).
-- In subject_definitions or reference mentions, ALWAYS define items purely by their physical appearance, role, and visual traits (e.g. "<Subject 1> is a cyberpunk female detective wearing a dark trench coat..."), NEVER by a file name (e.g. NEVER write "<Subject 1> is character.png" or "<Picture 1> is frame.jpg").
+### 3. Camera Motion Three-Dimension Specification:
+A complete camera-motion expression has three dimensions: Motion Type + Amplitude + Speed.
+Medium amplitude and normal speed are usually omitted.
 
-### 4. Output JSON Format Constraints:
+**12 Official Motion Types:**
+1. "Zoom In / Zoom Out": The focal length changes while the camera body remains stationary.
+2. "Push In / Pull Out": The camera body moves forward / backward.
+3. "Pan Left / Pan Right": The camera remains in place while the lens pivots horizontally.
+4. "Truck Left / Truck Right": The camera translates horizontally.
+5. "Tilt Up / Tilt Down": The camera remains in place while the lens pivots vertically.
+6. "Pedestal Up / Pedestal Down": The entire camera moves upward / downward.
+7. "Arc Shot": The camera moves in an arc around the subject.
+8. "Tracking Shot": The camera follows a moving subject.
+9. "Static Shot": The camera position and lens remain still.
+10. "Shake Slightly / Shake Strongly": Slight / strong camera shake.
+11. "POV": The subject's point of view.
+12. "Roll Clockwise / Roll Counterclockwise": The camera rolls clockwise / counterclockwise around the lens axis.
+
+**Amplitude Dimension:**
+- "with small amplitude" (Small-range change)
+- "with large amplitude" (Large-range change)
+
+**Speed Dimension:**
+- "at slow speed" (Slow movement)
+- "at fast speed" (Fast movement)
+
+**CRITICAL CAMERA GRAMMAR RULE:**
+Camera motion MUST be written as a natural English action within the shot narrative, NEVER stacked as separate labels or brackets (e.g. NEVER write "[Push In]" or "[Camera: Arc shot]").
+Examples of correct phrasing:
+- "The camera pushes in with small amplitude at slow speed toward the folded letter in her hands."
+- "The camera pans right with large amplitude at fast speed, revealing the open doorway."
+- "The camera holds a static shot as the runner exits the frame."
+- "The camera rolls clockwise with small amplitude at slow speed as the fighter tumbles through the air."
+
+### 4. Speakers, Dialogue, Voiceover & Visible Text Rules:
+- Speakers who vocalize receive stable IDs: (S1), (S2), or compound (S1,S2). Non-vocalizing characters receive no speaker ID.
+- Dialogue MUST be formatted using <d>[Language] ...</d> tags:
+  - Example: "The young woman with a quiet, breathy voice (S1) says: <d>[English] I get off at the next station.</d>"
+  - Example: "The middle-aged baker (S1) says: <d>[Chinese] 這是今天剛出爐的第一批麵包。</d>"
+  - Dialogue words and punctuation MUST be preserved verbatim from user input; NEVER translate dialogue!
+- Voiceover MUST use the exact phrase:
+  "says in an off-screen voiceover: <d>[Language] ...</d> while his lips remain completely closed."
+- Dialogue continuity across cuts: Use <scenetrans> at connecting points ("continues seamlessly across the cut").
+- Truncated dialogue at the end of the video: Use <cutoff>.
+- On-Screen visible text (neon signs, banners, logos): Place strictly in English double quotes "" (e.g. 'A red neon sign reading "营业中" glows above the doorway.'). Do NOT use double quotes for spoken dialogue!
+
+### 5. Official Duration & Long Video Continuation Architecture:
+- Official native single-generation duration is strictly 4 to 15 seconds.
+- For long videos exceeding 15 seconds, the official H3 standard is to chain clips via [video continuation]:
+  - Use Ref2VA with task type "[video continuation]" in summary.
+  - The preceding clip is labeled as <Video 1> (the continuation starting point), and Shot 1 resumes seamlessly from the end state of <Video 1>.
+
+### 6. Absolute Prohibitions Regarding File Names:
+- STRICT RULE: DO NOT include any file names, file extensions (.jpg, .png, .mp4, .wav, etc.), or upload paths anywhere in the generated prompt text (neither in fullPrompt, block1, block2, block3, nor temporalTimeline).
+- In subject_definitions, define items purely by their physical appearance, role, and visual traits (e.g. "<Subject 1> is a cyberpunk detective..."), NEVER by a filename.
+
+### 7. Output JSON Format Constraints:
 {
   "mode": "T2VA" | "I2VA" | "FL2VA" | "L2VA" | "Ref2VA",
   "fullPrompt": "The COMPLETE combined prompt string formatted with exact headers, blank lines, and exact field names, ready to copy into MiniMax H3. Ensure NO filenames appear.",
@@ -418,17 +489,17 @@ non_diegetic_music:
   "audioNotes": "Formatted overall_soundscape and non_diegetic_music",
   "temporalTimeline": [
     {
-      "timeframe": "Shot 1 / [00:03.500]",
+      "timeframe": "[Shot 1] / [Shot 2] At 00:03.500",
       "action": "Description of action...",
-      "camera": "Camera movement description...",
-      "audio": "Audio description..."
+      "camera": "Natural camera movement description (e.g. The camera pushes in with small amplitude at slow speed...)",
+      "audio": "Audio and dialogue with <d>[Language] ...</d> tags..."
     }
   ],
-  "explanationZh": "繁體中文解析：說明選用模式的結構編排優勢與 Retention Analysis 鎖定特徵",
+  "explanationZh": "繁體中文解析：說明選用模式的結構編排優勢、三維度運鏡與 Retention Analysis 鎖定特徵",
   "suggestions": [
-    "解析度與畫幅建議",
-    "MiniMax-H3 實用生成技巧 1",
-    "MiniMax-H3 實用生成技巧 2"
+    "畫幅與鏡頭節奏建議",
+    "MiniMax-H3 官方實用技巧 1",
+    "MiniMax-H3 官方實用技巧 2"
   ]
 }
 `;
@@ -601,15 +672,23 @@ Generate an optimal MiniMax-H3 prompt based on the following user input:
 - Aspect Ratio: ${config.aspectRatio || "16:9"}
 - Visual Style: ${config.style || "Cinematic Photorealistic"}
 - Lighting & Atmosphere: ${config.lightingMood || "Cinematic volumetric lighting"}
-- Preferred Camera Movements: ${config.cameraMoves ? config.cameraMoves.join(", ") : "Push in, Arc shot"}
-- On-Screen Dialogue: ${config.dialogueText ? `"${config.dialogueText}"` : "None"}
+- Preferred Camera Movements (Motion types): ${config.cameraMoves && config.cameraMoves.length > 0 ? config.cameraMoves.join(", ") : "Push In, Arc Shot"}
+- Camera Motion Amplitude: ${config.cameraAmplitude && config.cameraAmplitude !== 'default' ? config.cameraAmplitude : "medium / default (omit)"}
+- Camera Motion Speed: ${config.cameraSpeed && config.cameraSpeed !== 'default' ? config.cameraSpeed : "normal / default (omit)"}
+- Spoken Dialogue to be voiced by character (MUST format inside <d>[Language] ...</d>): ${config.dialogueText ? config.dialogueText : "None"}
 - Sound Effects / Audio: ${config.sfxText || "Ambient soundscape"}
 - Suppress Background Music: ${config.suppressMusic ? "Yes (Add non_diegetic_music: N/A)" : "No"}
 - Reference Assets (Block 1):
 ${sanitizedReferences}
 
-Please synthesize all these options into the official 3-block MiniMax-H3 prompt format as instructed.
-CRITICAL INSTRUCTION: DO NOT write any file names, file extensions (e.g. .png, .jpg), or local upload names into the output! Define subjects using clear visual descriptions only.
+Please synthesize all these options into the official MiniMax-H3 prompt format strictly adhering to the system instructions.
+CRITICAL CAMERA RULES:
+- Integrate camera movements as natural English actions within each shot (e.g. "The camera pushes in with small amplitude at slow speed toward..."), NEVER as bracketed labels like "[Push In]".
+- If amplitude or speed was specified above, naturally include them in the camera sentence.
+CRITICAL DIALOGUE RULES:
+- Any character spoken dialogue MUST be placed inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>). Keep the exact user dialogue verbatim.
+- Double quotes "" are strictly reserved for text visibly seen on-screen (e.g. signs, logos).
+CRITICAL PROHIBITION: DO NOT write any file names, file extensions (e.g. .png, .jpg), or local upload names into the output! Define subjects using clear visual descriptions only.
 Ensure English language is used for the actual prompt text (fullPrompt, block1, block2, block3) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh and suggestions!
 `;
 
@@ -702,12 +781,16 @@ app.post("/api/optimize-existing-prompt", async (req, res) => {
     const ai = getGeminiClient();
 
     const requestText = `
-Take the user's rough prompt or idea below and optimize/rewrite it into the official MiniMax-H3 3-block prompt standard:
+Take the user's rough prompt or idea below and optimize/rewrite it into the official MiniMax-H3 prompt standard:
 Rough Prompt: "${rawPrompt}"
 Duration: ${duration}
 Suppress Music: ${suppressMusic ? "Yes" : "No"}
 
-Refine it with temporal brackets [0s-Xs], camera movement brackets [Camera Move], concrete visual descriptions, and audio cues.
+Refine it strictly following official MiniMax-H3 specifications:
+- Divide into shots starting with [Shot 1] (setting style/composition, no timestamp), and subsequent shots with cut timecodes: "[Shot 2] At MM:SS.mmm, the camera cuts to...".
+- Express camera motion as natural English actions within the shot (e.g. "The camera pushes in with small amplitude at slow speed toward..."). DO NOT use bracketed camera tags like "[Push In]".
+- Format spoken dialogue inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>), and reserve double quotes "" strictly for visible on-screen text.
+- Formulate complete overall_soundscape and non_diegetic_music sections according to the guide.
 DO NOT include any file names or file extensions in the generated prompt!
 `;
 

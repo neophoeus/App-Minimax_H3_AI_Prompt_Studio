@@ -12,11 +12,12 @@ export type ReferenceRole =
   | 'composition' 
   | 'first_keyframe'
   | 'last_keyframe'
-  | 'keyframe';
+  | 'keyframe'
+  | 'continuation';
 
 export interface ReferenceItem {
   id: string;
-  tag: string; // e.g. @image1, @video1, @audio1
+  tag: string; // e.g. <Subject 1>, <Picture 1>, <Video 1>, <Audio 1>
   role: ReferenceRole;
   name: string;
   description: string;
@@ -25,25 +26,42 @@ export interface ReferenceItem {
   fileName?: string;
 }
 
-export type CameraMove = 
-  | 'Push in' 
-  | 'Pull out' 
-  | 'Pan left' 
-  | 'Pan right' 
-  | 'Tilt up' 
-  | 'Tilt down' 
-  | 'Arc shot' 
-  | 'FPV drone' 
-  | 'Tracking shot' 
-  | 'Static';
+export type CameraMotionType =
+  | 'Zoom In'
+  | 'Zoom Out'
+  | 'Push In'
+  | 'Pull Out'
+  | 'Pan Left'
+  | 'Pan Right'
+  | 'Truck Left'
+  | 'Truck Right'
+  | 'Tilt Up'
+  | 'Tilt Down'
+  | 'Pedestal Up'
+  | 'Pedestal Down'
+  | 'Arc Shot'
+  | 'Tracking Shot'
+  | 'Static Shot'
+  | 'Shake Slightly'
+  | 'Shake Strongly'
+  | 'POV'
+  | 'Roll Clockwise'
+  | 'Roll Counterclockwise';
+
+export type CameraMove = CameraMotionType;
+
+export type CameraAmplitude = 'default' | 'with small amplitude' | 'with large amplitude';
+export type CameraSpeed = 'default' | 'at slow speed' | 'at fast speed';
 
 export interface H3PromptConfig {
   idea: string;
   mode: GenerationMode;
-  duration: '5s' | '10s' | '15s' | '20s' | '25s' | '30s';
+  duration: '4s' | '5s' | '6s' | '8s' | '10s' | '12s' | '15s';
   aspectRatio: '16:9' | '9:16' | '1:1' | '21:9' | '4:3';
   style: string;
   cameraMoves: CameraMove[];
+  cameraAmplitude?: CameraAmplitude;
+  cameraSpeed?: CameraSpeed;
   lightingMood: string;
   dialogueText: string;
   sfxText: string;
@@ -53,9 +71,9 @@ export interface H3PromptConfig {
 }
 
 export interface TemporalSegment {
-  timeframe: string; // e.g. [0s-3s]
+  timeframe: string; // e.g. [Shot 1] or [Shot 2] At 00:03.500
   action: string;
-  camera: string; // e.g. [Push in]
+  camera: string; // e.g. The camera pushes in with small amplitude at slow speed
   audio: string;
 }
 

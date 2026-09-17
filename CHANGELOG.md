@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.0.0] - 2026-09-17
+
+### 🎬 MiniMax-H3 Official Prompt Engineering Specification 100% Alignment (官方規範全量對齊重構)
+
+#### 🎥 1. Complete 3-Dimension Camera Motion Architecture (全三維度官方運鏡體系)
+- **12 Official Camera Motion Types (12 類標準運動類型)**:
+  - Categorized into intuitive studio groups:
+    - **推進與縮放 (Push & Zoom)**: `Push In`, `Pull Out`, `Zoom In`, `Zoom Out` (strictly distinguishes optical focal zoom vs physical dolly push/pull).
+    - **搖鏡與平移 (Pan & Truck)**: `Pan Left`, `Pan Right`, `Truck Left`, `Truck Right` (strictly distinguishes stationary pan vs horizontal dolly tracking).
+    - **俯仰與升降 (Tilt & Pedestal)**: `Tilt Up`, `Tilt Down`, `Pedestal Up`, `Pedestal Down` (strictly distinguishes stationary tilt vs vertical jib crane movement).
+    - **環繞、跟拍與主觀 (Arc, Tracking & POV)**: `Arc Shot`, `Tracking Shot`, `Static Shot`, `POV`.
+    - **晃動與旋轉 (Shake & Roll)**: `Shake Slightly`, `Shake Strongly`, `Roll Clockwise`, `Roll Counterclockwise`.
+  - Thoroughly eliminated non-standard experimental types (such as `FPV drone`) and corrected `Static` to standard `Static Shot`.
+- **Amplitude Dimension (幅度微調維度)**: Added selector for `with small amplitude` and `with large amplitude` (medium amplitude omitted by default per official guidelines).
+- **Speed Dimension (速度微調維度)**: Added selector for `at slow speed` and `at fast speed` (normal speed omitted by default per official guidelines).
+- **Natural English Action Integration (自然句式組織語法)**:
+  - Eliminated trailing bracketed camera tags (e.g. `[Push In]`).
+  - Instructs prompt synthesis engine to formulate seamless English actions within each shot (e.g. *"The camera pushes in with small amplitude at slow speed toward the folded letter in her hands."*).
+
+#### ⏱️ 2. Official Duration Standardization & Video Continuation Architecture (時長標準化與長影片續寫)
+- **Removed Experimental Single-Shot Durations**: Completely removed ungrounded 20s, 25s, and 30s options.
+- **Native Single-Shot Durations**: Standardized to official native range of 4–15 seconds (`4s`, `5s`, `6s`, `8s`, `10s`, `12s`, `15s`, default recommended: `10s`).
+- **Official Long-Video Workflow (`video continuation`)**:
+  - Supported official H3 multi-shot chaining via `Ref2VA` using task type prefix `[video continuation]`.
+  - Added `continuation` (接續來源影片) reference role in `ReferenceManager.tsx` to bind `<Video 1>` as the continuation starting point.
+  - Added dedicated preset template: **「長影片分鏡續寫接續 (Ref2VA Video Continuation)」**.
+
+#### 💬 3. Spoken Dialogue & Speech Syntax Overhaul (對白與說話者規範全面修正)
+- **Official `<d>[Language] ...</d>` Tags**: Spoken lines are strictly formatted inside `<d>` with language tags (e.g. `<d>[English] ...</d>`, `<d>[Chinese] ...</d>`), preserving user words and punctuation verbatim without translation.
+- **Speaker IDs**: Assigned stable IDs (`(S1)`, `(S2)`, `(S1,S2)`) to all vocalizing characters.
+- **Off-Screen Voiceover Convention**: Enforced exact official syntax: `says in an off-screen voiceover: <d>[Language] ...</d> while his lips remain completely closed.`
+- **Dialogue Continuity & Truncation**: Supported `<scenetrans>` for lines carrying across cuts and `<cutoff>` for speech truncated at the video's conclusion.
+- **Strict Separation of Dialogue vs On-Screen Text**: Double quotation marks `""` are strictly reserved for visible signage, neon text, and on-screen graphics, never confused with spoken dialogue.
+
+#### 🔒 4. Ref2VA Sections & Retention Analysis Strict Lock (Ref2VA 六大區塊與枚舉標記全面鎖定)
+- **Official Summary Task Type Prefixes**: Restricted to `[keyframe completion]`, `[reference generation]`, `[video editing]`, `[video continuation]`, `[audio reuse]`, `[audio reference]`, combined with ` + `.
+- **Official Relationship Markers**: Strictly enforced `fully_preserved`, `partially_preserved`, `attribute_transfer`, and `weak_reference` for visual assets, and `fully_copy`, `partially_copy`, `reference`, and `weak_reference` for audio assets.
+- **Opening Style Declaration**: Positioned 1–2 sentences of overall visual style before `[Shot 1]` in `detailed_description`.
+
+#### 🎨 5. Syntax Highlighter & Storyboard Visualizer Upgrades (語法亮顯與故事板升級)
+- **Enhanced Syntax Highlighter**: Added vivid multi-color tokenization for `<d>...</d>`, `(S1)`, `<scenetrans>`, `<cutoff>`, alignment headers, retention markers, and on-screen text quotes.
+- **Enhanced Storyboard Visualizer**: Displays official shot timecodes (`[Shot 1]`, `[Shot 2] At 00:03.500`) alongside natural camera motion sentences and verbatim dialogue.
+- **Updated Quick Modifiers**: Replaced bracketed labels with official natural phrasing snippets (e.g. 慢速微推, 快速橫移, 環繞鏡頭, 畫外音閉嘴約定).
+
+---
+
 ## [v1.5.2] - 2026-09-03
 
 ### 🛡️ Exponential Backoff Retry & Ultra-Relaxed Safety Architecture

@@ -10,6 +10,8 @@ import {
   SavedPromptItem,
   PresetTemplate,
   CameraMove,
+  CameraAmplitude,
+  CameraSpeed,
   GenerationMode,
   EngineTier,
 } from './types';
@@ -43,17 +45,27 @@ import {
   Plus,
 } from 'lucide-react';
 
-const CAMERA_PRESETS: CameraMove[] = [
-  'Push in',
-  'Pull out',
-  'Pan left',
-  'Pan right',
-  'Tilt up',
-  'Tilt down',
-  'Arc shot',
-  'FPV drone',
-  'Tracking shot',
-  'Static',
+const CAMERA_PRESET_GROUPS: { groupName: string; moves: CameraMove[] }[] = [
+  {
+    groupName: '推進與縮放 (Push & Zoom)',
+    moves: ['Push In', 'Pull Out', 'Zoom In', 'Zoom Out'],
+  },
+  {
+    groupName: '搖鏡與平移 (Pan & Truck)',
+    moves: ['Pan Left', 'Pan Right', 'Truck Left', 'Truck Right'],
+  },
+  {
+    groupName: '俯仰與升降 (Tilt & Pedestal)',
+    moves: ['Tilt Up', 'Tilt Down', 'Pedestal Up', 'Pedestal Down'],
+  },
+  {
+    groupName: '環繞、跟拍與主觀 (Arc, Tracking & POV)',
+    moves: ['Arc Shot', 'Tracking Shot', 'Static Shot', 'POV'],
+  },
+  {
+    groupName: '晃動與旋轉 (Shake & Roll)',
+    moves: ['Shake Slightly', 'Shake Strongly', 'Roll Clockwise', 'Roll Counterclockwise'],
+  },
 ];
 
 const STYLE_PRESETS = [
@@ -81,6 +93,8 @@ const DEFAULT_CONFIG: H3PromptConfig = {
   aspectRatio: '16:9',
   style: 'Cinematic 8K Photorealistic, Anamorphic Lens',
   cameraMoves: [],
+  cameraAmplitude: 'default',
+  cameraSpeed: 'default',
   lightingMood: '',
   dialogueText: '',
   sfxText: '',
@@ -640,13 +654,17 @@ export default function App() {
                   }
                   className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-purple-500"
                 >
-                  <option value="5s">5 秒 (5s)</option>
-                  <option value="10s">10 秒 (10s) [推薦]</option>
-                  <option value="15s">15 秒 (15s) [極限]</option>
-                  <option value="20s">20 秒 (20s) [實驗性]</option>
-                  <option value="25s">25 秒 (25s) [實驗性]</option>
-                  <option value="30s">30 秒 (30s) [實驗性]</option>
+                  <option value="4s">4 秒 (4s) [精煉特寫]</option>
+                  <option value="5s">5 秒 (5s) [快速鏡頭]</option>
+                  <option value="6s">6 秒 (6s) [標準短片]</option>
+                  <option value="8s">8 秒 (8s) [敘事展開]</option>
+                  <option value="10s">10 秒 (10s) [官方標準推薦]</option>
+                  <option value="12s">12 秒 (12s) [多鏡切換]</option>
+                  <option value="15s">15 秒 (15s) [官方原生上限]</option>
                 </select>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  💡 官方支援 4~15s。超過 15 秒請切換至 Ref2VA 綁定前段影片使用「影片續寫 (Video Continuation)」。
+                </p>
               </div>
 
               <div>
@@ -697,36 +715,91 @@ export default function App() {
               />
             </div>
 
-            {/* Camera Movement Multi-selector */}
-            <div>
-              <label className="text-xs font-medium text-slate-300 flex items-center justify-between mb-1.5">
-                <span className="flex items-center gap-1">
+            {/* Camera Motion Three-Dimension System */}
+            <div className="space-y-3 pt-1 border-t border-slate-800/60">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
                   <Camera className="w-3.5 h-3.5 text-cyan-400" />
-                  鏡頭運動語言 (Camera Directives)
+                  <span>官方三維度運鏡控制 (Camera Motion Directives)</span>
+                </label>
+                <span className="text-[10px] text-cyan-400 font-mono">
+                  {config.cameraMoves.length} 項運動已選取
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">
-                  {config.cameraMoves.length} 選取
-                </span>
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {CAMERA_PRESETS.map((cam) => {
-                  const active = config.cameraMoves.includes(cam);
-                  return (
-                    <button
-                      key={cam}
-                      type="button"
-                      onClick={() => toggleCameraMove(cam)}
-                      className={`px-2.5 py-1 rounded-lg text-xs font-mono transition-all ${
-                        active
-                          ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50 shadow-sm'
-                          : 'bg-slate-950 text-slate-400 border border-slate-800 hover:text-slate-200'
-                      }`}
-                    >
-                      [{cam}]
-                    </button>
-                  );
-                })}
               </div>
+
+              {/* Dimension 1: Motion Type Presets by Group */}
+              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
+                {CAMERA_PRESET_GROUPS.map((grp, gIdx) => (
+                  <div key={gIdx} className="space-y-1">
+                    <span className="text-[10px] text-slate-400 font-medium">{grp.groupName}</span>
+                    <div className="flex flex-wrap gap-1">
+                      {grp.moves.map((cam) => {
+                        const active = config.cameraMoves.includes(cam);
+                        return (
+                          <button
+                            key={cam}
+                            type="button"
+                            onClick={() => toggleCameraMove(cam)}
+                            className={`px-2 py-0.5 rounded-lg text-xs font-mono transition-all ${
+                              active
+                                ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/60 shadow-sm font-bold'
+                                : 'bg-slate-950 text-slate-400 border border-slate-800/90 hover:text-slate-200'
+                            }`}
+                          >
+                            {cam}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Dimensions 2 & 3: Amplitude & Speed Selectors */}
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
+                <div>
+                  <span className="text-[11px] font-medium text-slate-300 block mb-1">
+                    運鏡幅度 (Amplitude)
+                  </span>
+                  <select
+                    value={config.cameraAmplitude || 'default'}
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        cameraAmplitude: e.target.value as CameraAmplitude,
+                      })
+                    }
+                    className="w-full px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="default">預設中等幅度 (官方省略)</option>
+                    <option value="with small amplitude">小幅度 (with small amplitude)</option>
+                    <option value="with large amplitude">大幅度 (with large amplitude)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <span className="text-[11px] font-medium text-slate-300 block mb-1">
+                    運鏡速度 (Speed)
+                  </span>
+                  <select
+                    value={config.cameraSpeed || 'default'}
+                    onChange={(e) =>
+                      setConfig({
+                        ...config,
+                        cameraSpeed: e.target.value as CameraSpeed,
+                      })
+                    }
+                    className="w-full px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
+                  >
+                    <option value="default">預設正常速度 (官方省略)</option>
+                    <option value="at slow speed">慢速移動 (at slow speed)</option>
+                    <option value="at fast speed">快速移動 (at fast speed)</option>
+                  </select>
+                </div>
+              </div>
+              <p className="text-[10px] text-slate-500">
+                💡 官方語法規範：運鏡將被組裝為自然英文動作（如 "The camera pushes in with small amplitude at slow speed toward..."），禁止句末堆疊標籤。
+              </p>
             </div>
 
             {/* Audio & Dialogue controls */}
@@ -743,11 +816,11 @@ export default function App() {
                   type="text"
                   value={config.dialogueText}
                   onChange={(e) => setConfig({ ...config, dialogueText: e.target.value })}
-                  placeholder='對白台詞 (例如: "We must reach the summit before dawn.")'
+                  placeholder="角色台詞 (例如: We must reach the safehouse before dawn.)"
                   className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500"
                 />
                 <p className="text-[10px] text-slate-500">
-                  💡 角色對白與台詞。MiniMax-H3 會在畫面上自動同步生成人物對嘴口播與即時語音。
+                  💡 官方規範：對白嚴格格式化為 <code className="text-emerald-400 font-mono">&lt;d&gt;[Language] ...&lt;/d&gt;</code>，由發聲主體 (S1) 嘴唇同步開口；雙引號 "" 僅保留於畫面上看板文字。
                 </p>
               </div>
 
@@ -949,9 +1022,10 @@ export default function App() {
                     <span className="text-slate-400">⚡ 一鍵附加修飾詞:</span>
                     <div className="flex flex-wrap gap-1.5">
                       {[
-                        { label: '+ 立體氛圍光', text: '[Cinematic volumetric ray light, 8k anamorphic flare]' },
-                        { label: '+ 環繞鏡頭', text: '[Arc shot revolving around subject]' },
-                        { label: '+ 雙耳 3D 音效', text: 'audio_mix: 3D binaural spatial stereo soundscape' },
+                        { label: '+ 慢速微推', text: 'The camera pushes in with small amplitude at slow speed toward the subject.' },
+                        { label: '+ 快速橫移', text: 'The camera trucks right with large amplitude at fast speed, revealing the environment.' },
+                        { label: '+ 環繞鏡頭', text: 'The camera moves in an arc shot around the subject.' },
+                        { label: '+ 畫外音閉嘴約定', text: 'says in an off-screen voiceover: <d>[English] ...</d> while his lips remain completely closed.' },
                         { label: '+ 禁用純音樂', text: 'non_diegetic_music: N/A' },
                       ].map((m, idx) => (
                         <button

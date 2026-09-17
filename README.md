@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v1.5.2-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v2.0.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%203.6%20%7C%203.5-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -27,13 +27,22 @@ Powered by Google's latest **Gemini 3.8 Flash (`gemini-3.8-flash`)**, **Gemini 3
 
 ## ✨ Key Features
 
-### 1. Complete MiniMax-H3 Specification Compliance
+### 1. Complete MiniMax-H3 Specification Compliance (v2.0.0)
+- **Official 3-Dimension Camera Motion (Motion Type + Amplitude + Speed)**:
+  - Supports all 12 official motion types: `Zoom In/Out`, `Push In/Pull Out`, `Pan Left/Right`, `Truck Left/Right`, `Tilt Up/Down`, `Pedestal Up/Down`, `Arc Shot`, `Tracking Shot`, `Static Shot`, `Shake Slightly/Strongly`, `POV`, `Roll Clockwise/Counterclockwise`.
+  - Configurable amplitude (`with small/large amplitude`) and speed (`at slow/fast speed`), seamlessly composed as natural English actions inside shots without bracketed tag clutter.
+- **Official Duration (4s–15s) & Long Video Continuation Architecture**:
+  - Eliminates experimental durations and enforces official native 4s–15s single-generation durations.
+  - Supports official long-video workflows via Ref2VA `[video continuation]` multi-shot chaining, binding preceding clips (`<Video 1>`) to extend narrative sequences seamlessly.
+- **Verbatim Spoken Dialogue & Speaker IDs**:
+  - Implements official `<d>[Language] ...</d>` dialogue tags with stable `(S1)`, `(S2)` speaker IDs, off-screen voiceover lip-closure conventions, and across-cut `<scenetrans>` / `<cutoff>` tags.
+  - Double quotes `""` strictly reserved for visible on-screen text (signage, neon displays).
 - **Base Modes (T2VA, I2VA, FL2VA, L2VA)**:
   - Implements exact header alignment instruction lines for First/Last Keyframes.
   - Generates the standard 3 core fields: `integrated_multimodal_description`, `overall_soundscape`, and `non_diegetic_music`.
 - **Full-Reference Mode (Ref2VA)**:
   - Generates the complete 6-section structure: `subject_definitions`, `summary`, `retention_analysis`, `detailed_description`, `overall_soundscape`, and `non_diegetic_music`.
-  - Automatically manages angle-bracket asset labels (`<Subject N>`, `<Picture N>`, `<Video N>`, `<Audio N>`).
+  - Strictly locks official relationship markers (`fully_preserved`, `attribute_transfer`, `fully_copy`, `reference`, etc.).
 - **Strict No-Filename Standard**:
   - Automatically strips and filters all raw filenames and extensions from generated prompt output, ensuring prompts strictly adhere to MiniMax-H3 official semantic syntax.
 

@@ -19,6 +19,7 @@ const ROLE_OPTIONS: { role: ReferenceRole; labelZh: string; desc: string; icon: 
   { role: 'composition', labelZh: '構圖參考 (Composition Ref)', desc: '鎖定畫面鏡頭佈局與透視', icon: '📐' },
   { role: 'first_keyframe', labelZh: '首幀關鍵幀 (First Keyframe)', desc: '指定影片開場的精確首幀圖片', icon: '🖼️' },
   { role: 'last_keyframe', labelZh: '尾幀關鍵幀 (Last Keyframe)', desc: '指定影片結尾收斂的精確尾幀圖片', icon: '🏁' },
+  { role: 'continuation', labelZh: '影片續寫接續 (Continuation Ref)', desc: '接續前置影片的結尾 (官方長影片工作流)', icon: '🎞️' },
 ];
 
 // Resize uploaded image to max dimension (512px) to minimize payload size and Gemini token consumption (~258 tokens)
@@ -76,6 +77,7 @@ export const getCategoryForRole = (role: ReferenceRole): TagCategory => {
     case 'composition':
       return 'Picture';
     case 'motion':
+    case 'continuation':
       return 'Video';
     case 'audio':
       return 'Audio';
@@ -94,6 +96,8 @@ export const defaultLabelForRole = (r: ReferenceRole, catIndex: number): string 
       return `首幀開場畫面`;
     case 'last_keyframe':
       return `尾幀收斂畫面`;
+    case 'continuation':
+      return `接續前置影片 ${catIndex}`;
     case 'motion':
       return `動作參考 ${catIndex}`;
     case 'audio':
@@ -137,7 +141,7 @@ export const reindexReferences = (refs: ReferenceItem[]): ReferenceItem[] => {
     // Auto-update name if it's default generic name or empty
     const isDefaultName =
       !ref.name ||
-      /^(主要角色|動作參考|聲音音色|場景參考|物件參考|構圖參考|風格參考|參考素材|首幀開場畫面|尾幀收斂畫面)\s*\d*$/.test(
+      /^(主要角色|動作參考|聲音音色|場景參考|物件參考|構圖參考|風格參考|參考素材|首幀開場畫面|尾幀收斂畫面|接續前置影片)\s*\d*$/.test(
         ref.name.trim()
       );
     const newName = isDefaultName ? defaultLabelForRole(ref.role, catIndex) : ref.name;
@@ -179,6 +183,7 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
   const getAcceptFileType = (role: ReferenceRole): string => {
     switch (role) {
       case 'motion':
+      case 'continuation':
         return 'video/*,video/mp4,video/quicktime,video/webm';
       case 'audio':
         return 'audio/*,audio/mpeg,audio/wav,audio/mp3,audio/aac,audio/m4a';
@@ -196,15 +201,17 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
   };
 
   const getRoleDefaultFileType = (role: ReferenceRole): 'image' | 'video' | 'audio' => {
-    if (role === 'motion') return 'video';
+    if (role === 'motion' || role === 'continuation') return 'video';
     if (role === 'audio') return 'audio';
     return 'image';
   };
 
   const getRoleUploadHint = (role: ReferenceRole): string => {
     switch (role) {
+      case 'continuation':
+        return '僅限上傳長影片接續來源影片 (MP4, MOV, WebM)';
       case 'motion':
-        return '僅限上傳影片檔 (MP4, MOV, WebM)';
+        return '僅限上傳影片動作參考檔 (MP4, MOV, WebM)';
       case 'audio':
         return '僅限上傳音訊檔 (MP3, WAV, AAC)';
       case 'first_keyframe':
