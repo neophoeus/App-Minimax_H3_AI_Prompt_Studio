@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.0.1] - 2026-09-17
+
+### 🎨 Studio Layout Polish & Camera Motion Directives UI Overhaul (版面視覺與運鏡控制深度重構)
+
+#### 🖥️ 1. Studio Grid Three-Column Rebalancing (三欄空間重調)
+- **Balanced Proportions**: Rebalanced the 3-column Studio Grid from `35% / 25% / 40%` (`lg:grid-cols-[35fr_25fr_40fr]`) to `31% / 33% / 36%` (`lg:grid-cols-[31fr_33fr_36fr]`).
+- **32% More Width for Controls**: Expanded Column 2 (the configuration panel) horizontal width by approximately **32%**, completely eliminating cramped layouts, truncated option texts, and button stacking.
+
+#### 🎥 2. Camera Motion Directives UI Redesign (運鏡控制面板重構)
+- **Category Tabs Navigation (分類分頁標籤)**:
+  - Added 5 category tabs (`推拉縮放`, `搖移平移`, `俯仰升降`, `跟拍主觀`, `晃動旋轉`) with dynamic badge counters indicating active movements per category.
+  - Added quick toggle between **「分頁檢視 (Tabbed View)」** and **「展開全部 (Expand All)」**.
+- **Symmetrical 2x2 Grid Layout (對齊雙欄網格)**:
+  - Structured all 4 movements in each category into an aligned `grid grid-cols-2 gap-1.5`.
+  - Rich bilingual button content: English command (e.g. `Push In`), directional icon hint (`↗`), Chinese intent annotation (`推進 (聚焦前進)`), and active checkmark.
+  - Completely prevented orphaned single buttons (e.g. `Truck Right` or `Pedestal Down` forced alone onto next lines).
+- **Active Motion Tag Chips (已選運鏡標籤晶片列)**:
+  - Centrally displays all active movements across categories with one-click `✕` removal buttons.
+- **Segmented Pill Controls for Amplitude & Speed (分段膠囊控制器)**:
+  - Replaced native HTML `<select>` dropdowns with responsive 3-key segmented pill buttons:
+    - **Amplitude (幅度)**: `預設 (Default)` | `小幅 (Small)` | `大幅 (Large)`
+    - **Speed (速度)**: `預設 (Default)` | `慢速 (Slow)` | `快速 (Fast)`
+- **Header Anti-Wrapping & Quick Clear**:
+  - Shortened panel title and enforced `shrink-0 whitespace-nowrap` on counter badges.
+  - Added quick **「清空 (Clear All)」** text button when movements are active.
+
+#### 🖌️ 3. Modern Sleek Dark Micro-Scrollbar (全域現代深色微型捲軸)
+- Added global 6px translucent dark micro-scrollbar styles in `src/index.css` (`::-webkit-scrollbar`), replacing thick, clunky OS scrollbars across the entire application on Windows.
+
 ## [v2.0.0] - 2026-09-17
 
 ### 🎬 MiniMax-H3 Official Prompt Engineering Specification 100% Alignment (官方規範全量對齊重構)

@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v2.0.0-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v2.0.1-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%203.6%20%7C%203.5-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -27,7 +27,14 @@
 
 ## ✨ 核心特色
 
-### 1. 完整相容 MiniMax-H3 官方規範 (v2.0.0 全量對齊)
+### 1. 完整相容 MiniMax-H3 官方規範與版面視覺重構 (v2.0.1)
+- **Studio 三欄版面空間重配比**：將三欄比例調整為 `31% / 33% / 36%`（`lg:grid-cols-[31fr_33fr_36fr]`），中央控制欄寬度實質增長約 32%，徹底解決按鈕擠壓與文字折行。
+- **全新重構之官方運鏡控制面板 (Camera Motion Panel)**：
+  - 直覺分類分頁標籤（`推拉縮放`、`搖移平移`、`俯仰升降`、`跟拍主觀`、`晃動旋轉`），搭配即時選取計數徽章與「展開全部 / 分頁檢視」切換。
+  - 對齊對稱之雙欄網格（2x2 Grid），並陳英文指令、中文意圖註釋、動作箭頭圖示與勾選標記，完全杜絕單顆按鈕落單。
+  - 已選運鏡標籤晶片列，支援隨時點擊 `✕` 一鍵移除與全量一鍵清空。
+  - 幅度（`預設` / `小幅` / `大幅`）與速度（`預設` / `慢速` / `快速`）分段膠囊控制器，取代傳統下拉選單。
+  - 全域 6px 半透明現代微型深色捲軸，告別 Windows 原生厚重灰捲軸。
 - **官方三維度運鏡控制體系 (運動類型 + 幅度 + 速度)**：
   - 完整支援官方 12 類標準運動類型：`Zoom In/Out`（焦距縮放）、`Push In/Pull Out`（實體推拉）、`Pan Left/Right`（水平旋轉）、`Truck Left/Right`（水平平移）、`Tilt Up/Down`（垂直俯仰）、`Pedestal Up/Down`（垂直升降）、`Arc Shot`（環繞）、`Tracking Shot`（跟拍）、`Static Shot`（固定靜態）、`Shake Slightly/Strongly`（晃動）、`POV`（主觀視角）、`Roll Clockwise/Counterclockwise`（光軸旋轉）。
   - 支援幅度（`with small/large amplitude`）與速度（`at slow/fast speed`）微調，生成時嚴格組裝為自然英文動作融入分鏡敘述，徹底告別句末標籤堆疊。

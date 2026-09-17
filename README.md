@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v2.0.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v2.0.1-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%203.6%20%7C%203.5-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -27,7 +27,14 @@ Powered by Google's latest **Gemini 3.8 Flash (`gemini-3.8-flash`)**, **Gemini 3
 
 ## ✨ Key Features
 
-### 1. Complete MiniMax-H3 Specification Compliance (v2.0.0)
+### 1. Complete MiniMax-H3 Specification Compliance & Studio Layout (v2.0.1)
+- **Studio Layout Polish & 3-Column Rebalancing**: Rebalanced studio grid to `31% / 33% / 36%` (`lg:grid-cols-[31fr_33fr_36fr]`), expanding the middle control column by ~32% to completely eliminate cramped controls and text clipping.
+- **Redesigned Camera Motion Directives Panel**:
+  - Intuitive category tabs (`Push & Zoom`, `Pan & Truck`, `Tilt & Pedestal`, `Arc & Track`, `Shake & Roll`) with live badge counters and an "Expand All" toggle.
+  - Symmetrical 2x2 grid pairing every camera movement with Chinese intent descriptions, direction icons, and active checkmarks (no orphaned buttons).
+  - Selected movement tag chips with one-click `✕` removal and quick clear all.
+  - Segmented 3-button pill controls for Amplitude (`default`, `small`, `large`) and Speed (`default`, `slow`, `fast`).
+  - Global 6px translucent dark micro-scrollbar replacing Windows native scrollbars.
 - **Official 3-Dimension Camera Motion (Motion Type + Amplitude + Speed)**:
   - Supports all 12 official motion types: `Zoom In/Out`, `Push In/Pull Out`, `Pan Left/Right`, `Truck Left/Right`, `Tilt Up/Down`, `Pedestal Up/Down`, `Arc Shot`, `Tracking Shot`, `Static Shot`, `Shake Slightly/Strongly`, `POV`, `Roll Clockwise/Counterclockwise`.
   - Configurable amplitude (`with small/large amplitude`) and speed (`at slow/fast speed`), seamlessly composed as natural English actions inside shots without bracketed tag clutter.

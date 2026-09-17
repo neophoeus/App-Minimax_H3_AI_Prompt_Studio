@@ -43,28 +43,77 @@ import {
   Type,
   Minus,
   Plus,
+  X,
 } from 'lucide-react';
 
-const CAMERA_PRESET_GROUPS: { groupName: string; moves: CameraMove[] }[] = [
+interface CameraMoveDetail {
+  move: CameraMove;
+  zh: string;
+  hint: string;
+}
+
+interface CameraGroup {
+  id: string;
+  groupName: string;
+  shortName: string;
+  items: CameraMoveDetail[];
+}
+
+const CAMERA_PRESET_GROUPS: CameraGroup[] = [
   {
+    id: 'push_zoom',
     groupName: '推進與縮放 (Push & Zoom)',
-    moves: ['Push In', 'Pull Out', 'Zoom In', 'Zoom Out'],
+    shortName: '推拉縮放',
+    items: [
+      { move: 'Push In', zh: '推進 (聚焦前進)', hint: '↗' },
+      { move: 'Pull Out', zh: '拉遠 (視角後退)', hint: '↘' },
+      { move: 'Zoom In', zh: '變焦放大 (視角收窄)', hint: '⊕' },
+      { move: 'Zoom Out', zh: '變焦縮小 (視角拓寬)', hint: '⊖' },
+    ],
   },
   {
+    id: 'pan_truck',
     groupName: '搖鏡與平移 (Pan & Truck)',
-    moves: ['Pan Left', 'Pan Right', 'Truck Left', 'Truck Right'],
+    shortName: '搖移平移',
+    items: [
+      { move: 'Pan Left', zh: '向左搖鏡 (軸心轉動)', hint: '↶' },
+      { move: 'Pan Right', zh: '向右搖鏡 (軸心轉動)', hint: '↷' },
+      { move: 'Truck Left', zh: '向左平移 (水平橫移)', hint: '←' },
+      { move: 'Truck Right', zh: '向右平移 (水平橫移)', hint: '→' },
+    ],
   },
   {
+    id: 'tilt_pedestal',
     groupName: '俯仰與升降 (Tilt & Pedestal)',
-    moves: ['Tilt Up', 'Tilt Down', 'Pedestal Up', 'Pedestal Down'],
+    shortName: '俯仰升降',
+    items: [
+      { move: 'Tilt Up', zh: '向上俯仰 (仰角抬鏡)', hint: '↑' },
+      { move: 'Tilt Down', zh: '向下俯仰 (俯角壓鏡)', hint: '↓' },
+      { move: 'Pedestal Up', zh: '鏡頭垂直升 (機位升高)', hint: '⇈' },
+      { move: 'Pedestal Down', zh: '鏡頭垂直降 (機位降低)', hint: '⇊' },
+    ],
   },
   {
+    id: 'arc_track',
     groupName: '環繞、跟拍與主觀 (Arc, Tracking & POV)',
-    moves: ['Arc Shot', 'Tracking Shot', 'Static Shot', 'POV'],
+    shortName: '跟拍主觀',
+    items: [
+      { move: 'Arc Shot', zh: '環繞運鏡 (360°弧形)', hint: '↻' },
+      { move: 'Tracking Shot', zh: '跟隨拍攝 (動態追蹤)', hint: '🏃' },
+      { move: 'Static Shot', zh: '固定鏡頭 (靜止穩定)', hint: '⏺' },
+      { move: 'POV', zh: '主觀視角 (第一人稱)', hint: '👁' },
+    ],
   },
   {
+    id: 'shake_roll',
     groupName: '晃動與旋轉 (Shake & Roll)',
-    moves: ['Shake Slightly', 'Shake Strongly', 'Roll Clockwise', 'Roll Counterclockwise'],
+    shortName: '晃動旋轉',
+    items: [
+      { move: 'Shake Slightly', zh: '微幅手持 (呼吸感晃動)', hint: '〰️' },
+      { move: 'Shake Strongly', zh: '劇烈震顫 (撞擊震撼感)', hint: '⚡' },
+      { move: 'Roll Clockwise', zh: '順時針旋轉 (傾側滾轉)', hint: '↷' },
+      { move: 'Roll Counterclockwise', zh: '逆時針旋轉 (傾側滾轉)', hint: '↶' },
+    ],
   },
 ];
 
@@ -118,6 +167,10 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [savedPrompts, setSavedPrompts] = useState<SavedPromptItem[]>([]);
   const [copiedFull, setCopiedFull] = useState<boolean>(false);
+
+  // Camera Motion tabs & view mode state
+  const [cameraTabIdx, setCameraTabIdx] = useState<number>(0);
+  const [cameraViewMode, setCameraViewMode] = useState<'tabs' | 'all'>('tabs');
 
   // Idea input font size state with localStorage persistence (12px ~ 20px)
   const FONT_SIZE_STEPS = [12, 14, 16, 18, 20];
@@ -473,8 +526,8 @@ export default function App() {
         savedCount={savedPrompts.length}
       />
 
-      {/* Main Studio Grid Layout - 3 大欄寬版佈局 (35% / 25% / 40%) */}
-      <main className="flex-1 max-w-[1800px] w-full mx-auto p-4 sm:p-5 lg:p-6 xl:p-8 grid grid-cols-1 lg:grid-cols-[35fr_25fr_40fr] gap-6 items-start">
+      {/* Main Studio Grid Layout - 3 大欄寬版佈局 (31% / 33% / 36%) */}
+      <main className="flex-1 max-w-[1800px] w-full mx-auto p-4 sm:p-5 lg:p-6 xl:p-8 grid grid-cols-1 lg:grid-cols-[31fr_33fr_36fr] gap-6 items-start">
         {/* Column 1: 左邊輸入構想與素材 (Left: Input Concept & References) */}
         <section className="space-y-5 flex flex-col">
           {/* Quick Idea Input Card */}
@@ -716,87 +769,265 @@ export default function App() {
             </div>
 
             {/* Camera Motion Three-Dimension System */}
-            <div className="space-y-3 pt-1 border-t border-slate-800/60">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5">
-                  <Camera className="w-3.5 h-3.5 text-cyan-400" />
-                  <span>官方三維度運鏡控制 (Camera Motion Directives)</span>
+            <div className="space-y-3 pt-2 border-t border-slate-800/60">
+              {/* Header: Title + Counter + Quick Clear */}
+              <div className="flex items-center justify-between gap-2">
+                <label className="text-xs font-semibold text-slate-200 flex items-center gap-1.5 min-w-0">
+                  <Camera className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
+                  <span className="truncate">運鏡指令控制 (Camera Motion)</span>
                 </label>
-                <span className="text-[10px] text-cyan-400 font-mono">
-                  {config.cameraMoves.length} 項運動已選取
-                </span>
+                <div className="flex items-center gap-2 shrink-0">
+                  {config.cameraMoves.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, cameraMoves: [] })}
+                      className="text-[10px] text-slate-400 hover:text-red-400 transition-colors underline decoration-dotted"
+                      title="清除所有已選運鏡"
+                    >
+                      清空
+                    </button>
+                  )}
+                  <span className="text-[10px] text-cyan-300 font-mono bg-cyan-950/80 border border-cyan-800/60 px-2 py-0.5 rounded-md whitespace-nowrap shrink-0">
+                    {config.cameraMoves.length} 項已選
+                  </span>
+                </div>
               </div>
 
-              {/* Dimension 1: Motion Type Presets by Group */}
-              <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                {CAMERA_PRESET_GROUPS.map((grp, gIdx) => (
-                  <div key={gIdx} className="space-y-1">
-                    <span className="text-[10px] text-slate-400 font-medium">{grp.groupName}</span>
-                    <div className="flex flex-wrap gap-1">
-                      {grp.moves.map((cam) => {
-                        const active = config.cameraMoves.includes(cam);
-                        return (
+              {/* Dimension 1: Category Tabs / View Mode Toggle */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-1 pb-1 border-b border-slate-800/50">
+                  {/* Category Pill Tabs */}
+                  <div className="flex items-center gap-1 overflow-x-auto py-0.5 max-w-full flex-1 min-w-0">
+                    {CAMERA_PRESET_GROUPS.map((grp, gIdx) => {
+                      const selectedCount = grp.items.filter((item) => config.cameraMoves.includes(item.move)).length;
+                      const isCurrentTab = cameraViewMode === 'tabs' && cameraTabIdx === gIdx;
+                      return (
+                        <button
+                          key={grp.id}
+                          type="button"
+                          onClick={() => {
+                            setCameraTabIdx(gIdx);
+                            setCameraViewMode('tabs');
+                          }}
+                          className={`px-2 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1 shrink-0 ${
+                            isCurrentTab
+                              ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/60 shadow-sm font-bold'
+                              : 'text-slate-400 hover:text-slate-200 hover:bg-slate-900/60'
+                          }`}
+                        >
+                          <span>{grp.shortName}</span>
+                          {selectedCount > 0 && (
+                            <span className="w-3.5 h-3.5 rounded-full bg-cyan-500/20 text-cyan-300 text-[9px] font-mono font-bold flex items-center justify-center">
+                              {selectedCount}
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Toggle between Tabs and All */}
+                  <button
+                    type="button"
+                    onClick={() => setCameraViewMode(cameraViewMode === 'tabs' ? 'all' : 'tabs')}
+                    className="text-[10px] text-slate-400 hover:text-slate-200 px-2 py-1 rounded-lg bg-slate-950 border border-slate-800 shrink-0 whitespace-nowrap transition-colors"
+                    title={cameraViewMode === 'tabs' ? '展開全部 20 種運鏡一覽' : '切換為分類分頁標籤'}
+                  >
+                    {cameraViewMode === 'tabs' ? '展開全部' : '分頁檢視'}
+                  </button>
+                </div>
+
+                {/* Motion Type Presets: Tabbed Mode or All Mode */}
+                {cameraViewMode === 'tabs' ? (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {CAMERA_PRESET_GROUPS[cameraTabIdx]?.items.map((item) => {
+                      const active = config.cameraMoves.includes(item.move);
+                      return (
+                        <button
+                          key={item.move}
+                          type="button"
+                          onClick={() => toggleCameraMove(item.move)}
+                          className={`p-2 rounded-xl text-left transition-all border flex items-center justify-between ${
+                            active
+                              ? 'bg-cyan-950/80 border-cyan-500 text-cyan-200 shadow-sm shadow-cyan-950/50'
+                              : 'bg-slate-950/70 border-slate-800/80 text-slate-300 hover:border-slate-700 hover:bg-slate-900/60'
+                          }`}
+                        >
+                          <div className="min-w-0 flex-1">
+                            <div className="text-xs font-mono font-bold flex items-center gap-1.5">
+                              <span className="text-cyan-400 text-sm leading-none shrink-0 font-sans">{item.hint}</span>
+                              <span className="truncate">{item.move}</span>
+                            </div>
+                            <div className="text-[10px] text-slate-400 truncate mt-0.5">{item.zh}</div>
+                          </div>
+                          {active && <Check className="w-3.5 h-3.5 text-cyan-400 shrink-0 ml-1.5" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="space-y-3 max-h-[320px] overflow-y-auto pr-1">
+                    {CAMERA_PRESET_GROUPS.map((grp) => (
+                      <div key={grp.id} className="space-y-1">
+                        <span className="text-[10px] text-slate-400 font-medium">{grp.groupName}</span>
+                        <div className="grid grid-cols-2 gap-1.5">
+                          {grp.items.map((item) => {
+                            const active = config.cameraMoves.includes(item.move);
+                            return (
+                              <button
+                                key={item.move}
+                                type="button"
+                                onClick={() => toggleCameraMove(item.move)}
+                                className={`px-2 py-1.5 rounded-lg text-left transition-all border flex items-center justify-between ${
+                                  active
+                                    ? 'bg-cyan-950/80 border-cyan-500 text-cyan-200 shadow-sm'
+                                    : 'bg-slate-950/60 border-slate-800/80 text-slate-300 hover:border-slate-700 hover:bg-slate-900/60'
+                                }`}
+                              >
+                                <div className="min-w-0 flex-1">
+                                  <div className="text-xs font-mono font-bold flex items-center gap-1">
+                                    <span className="text-cyan-400 text-xs leading-none shrink-0 font-sans">{item.hint}</span>
+                                    <span className="truncate">{item.move}</span>
+                                  </div>
+                                  <div className="text-[9px] text-slate-400 truncate">{item.zh}</div>
+                                </div>
+                                {active && <Check className="w-3 h-3 text-cyan-400 shrink-0 ml-1" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Selected Camera Moves Tag Chips (Click to remove) */}
+                {config.cameraMoves.length > 0 && (
+                  <div className="space-y-1 pt-1">
+                    <span className="text-[10px] text-slate-400 font-medium">已啟用運鏡指令 (點擊移除)：</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {config.cameraMoves.map((cam) => (
+                        <span
+                          key={cam}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-cyan-950/80 border border-cyan-700/60 text-cyan-300 text-xs font-mono"
+                        >
+                          <span>{cam}</span>
                           <button
-                            key={cam}
                             type="button"
                             onClick={() => toggleCameraMove(cam)}
-                            className={`px-2 py-0.5 rounded-lg text-xs font-mono transition-all ${
-                              active
-                                ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/60 shadow-sm font-bold'
-                                : 'bg-slate-950 text-slate-400 border border-slate-800/90 hover:text-slate-200'
-                            }`}
+                            className="text-cyan-400 hover:text-white transition-colors p-0.5"
+                            title="移除此運鏡"
                           >
-                            {cam}
+                            <X className="w-3 h-3" />
                           </button>
-                        );
-                      })}
+                        </span>
+                      ))}
                     </div>
                   </div>
-                ))}
+                )}
               </div>
 
-              {/* Dimensions 2 & 3: Amplitude & Speed Selectors */}
-              <div className="grid grid-cols-2 gap-2.5 pt-1">
+              {/* Dimensions 2 & 3: Amplitude & Speed Segmented Button Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 border-t border-slate-800/40">
+                {/* Dimension 2: Amplitude Control */}
                 <div>
-                  <span className="text-[11px] font-medium text-slate-300 block mb-1">
-                    運鏡幅度 (Amplitude)
-                  </span>
-                  <select
-                    value={config.cameraAmplitude || 'default'}
-                    onChange={(e) =>
-                      setConfig({
-                        ...config,
-                        cameraAmplitude: e.target.value as CameraAmplitude,
-                      })
-                    }
-                    className="w-full px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-                  >
-                    <option value="default">預設中等幅度 (官方省略)</option>
-                    <option value="with small amplitude">小幅度 (with small amplitude)</option>
-                    <option value="with large amplitude">大幅度 (with large amplitude)</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-medium text-slate-300">運鏡幅度 (Amplitude)</span>
+                    <span className="text-[10px] text-cyan-400 font-mono">
+                      {config.cameraAmplitude === 'with small amplitude'
+                        ? '小幅度'
+                        : config.cameraAmplitude === 'with large amplitude'
+                        ? '大幅度'
+                        : '預設 (省略)'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800/90 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, cameraAmplitude: 'default' })}
+                      className={`py-1 rounded-lg text-[11px] font-medium transition-all ${
+                        !config.cameraAmplitude || config.cameraAmplitude === 'default'
+                          ? 'bg-slate-800 text-white shadow-sm font-semibold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      預設
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, cameraAmplitude: 'with small amplitude' })}
+                      className={`py-1 rounded-lg text-[11px] font-medium transition-all ${
+                        config.cameraAmplitude === 'with small amplitude'
+                          ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50 shadow-sm font-semibold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      小幅
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, cameraAmplitude: 'with large amplitude' })}
+                      className={`py-1 rounded-lg text-[11px] font-medium transition-all ${
+                        config.cameraAmplitude === 'with large amplitude'
+                          ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50 shadow-sm font-semibold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      大幅
+                    </button>
+                  </div>
                 </div>
 
+                {/* Dimension 3: Speed Control */}
                 <div>
-                  <span className="text-[11px] font-medium text-slate-300 block mb-1">
-                    運鏡速度 (Speed)
-                  </span>
-                  <select
-                    value={config.cameraSpeed || 'default'}
-                    onChange={(e) =>
-                      setConfig({
-                        ...config,
-                        cameraSpeed: e.target.value as CameraSpeed,
-                      })
-                    }
-                    className="w-full px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-cyan-500"
-                  >
-                    <option value="default">預設正常速度 (官方省略)</option>
-                    <option value="at slow speed">慢速移動 (at slow speed)</option>
-                    <option value="at fast speed">快速移動 (at fast speed)</option>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-[11px] font-medium text-slate-300">運鏡速度 (Speed)</span>
+                    <span className="text-[10px] text-cyan-400 font-mono">
+                      {config.cameraSpeed === 'at slow speed'
+                        ? '慢速移動'
+                        : config.cameraSpeed === 'at fast speed'
+                        ? '快速移動'
+                        : '預設 (省略)'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1 bg-slate-950 p-1 rounded-xl border border-slate-800/90 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, cameraSpeed: 'default' })}
+                      className={`py-1 rounded-lg text-[11px] font-medium transition-all ${
+                        !config.cameraSpeed || config.cameraSpeed === 'default'
+                          ? 'bg-slate-800 text-white shadow-sm font-semibold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      預設
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, cameraSpeed: 'at slow speed' })}
+                      className={`py-1 rounded-lg text-[11px] font-medium transition-all ${
+                        config.cameraSpeed === 'at slow speed'
+                          ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50 shadow-sm font-semibold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      慢速
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, cameraSpeed: 'at fast speed' })}
+                      className={`py-1 rounded-lg text-[11px] font-medium transition-all ${
+                        config.cameraSpeed === 'at fast speed'
+                          ? 'bg-cyan-950 text-cyan-300 border border-cyan-500/50 shadow-sm font-semibold'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      快速
+                    </button>
+                  </div>
                 </div>
               </div>
+
               <p className="text-[10px] text-slate-500">
                 💡 官方語法規範：運鏡將被組裝為自然英文動作（如 "The camera pushes in with small amplitude at slow speed toward..."），禁止句末堆疊標籤。
               </p>
