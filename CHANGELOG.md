@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.1.0] - 2026-09-20
+
+### 🚀 Three-Mode Operating Architecture & Local Ollama Dynamic Discovery (三模式運行架構與本機 Ollama 深度整合)
+
+#### 🌐 1. Three Dedicated Operating Modes & Priority Auto-Detection (三模式運作與優先級自動判定)
+- **Three Dedicated Operating Environments (三大專屬運行模式)**:
+  - **🏢 AI Studio 訂閱制度內運行版 (`ai_studio`, Priority 1)**:
+    - Engineered specifically for Google AI Studio applets and Cloud Run subscription environments.
+    - Integrated multi-tier subscription quotas (**AI Pro**, **AI Ultra 5x**, **AI Ultra 20x**) with smart Web UI quota-optimized routing (`gemini-3.5-flash-lite` for dialogues, `gemini-3.6-flash` for media analysis, and `gemini-3.8-flash` for core prompts) to guarantee zero 429 quota exhaustion with automatic fallback.
+  - **💻 本地 Ollama 離線版 (`ollama`, Priority 2)**:
+    - Connects directly to local Ollama service (`http://127.0.0.1:11434`), consuming 0 API quota with 100% offline privacy protection.
+    - Native support for multimodal reference image vision analysis and deep reasoning token (`<think>...</think>`) filtering.
+  - **🔑 本地 Paid API 版 (`paid_api`, Priority 3)**:
+    - Runs locally with user's own paid Google Gemini API key (Pay-as-you-go).
+    - Unconstrained by Google subscription quotas, directly unlocks full-core flagship `gemini-3.8-flash` deep reasoning across all modules without downscaling to lite models.
+- **Priority-Based Auto-Detection & Selection (嚴格優先級自動偵測與裁定)**:
+  - Active runtime environment and service probe via `/api/system/mode-status`.
+  - Automatically recommends and selects the highest-priority available mode: **AI Studio (Priority 1) > Local Ollama (Priority 2) > Local Paid API (Priority 3)**.
+  - Fully preserves user freedom to manually toggle between all three modes via the top navigation pill switcher, persisting preferences to `localStorage` (`minimax_h3_app_mode`).
+
+#### 🔍 2. Dynamic Ollama Model Discovery & Flagship Qwen3.8 Support (本地模型動態探索與旗艦支援)
+- **Zero-Hardcoding Dynamic Scanning (動態探測拒絕寫死)**:
+  - Eliminates hardcoded model lists by querying local Ollama (`/api/tags`) in real-time.
+  - Dynamically parses model name, parameter size (e.g. `27.3B`), quantization level (e.g. `Q8_0`, `Q6_K`, `Q5_K_M`), and context capabilities.
+- **Native Support for Qwen3.8-27B-Uncensored (旗艦模型原生適配)**:
+  - Fully compatible with `orcarouter/Qwen3.8-27B-Uncensored` (27.3B parameters, 256k context window).
+  - Smart default selection preferring Qwen3.8 models (or the first installed model), with one-click re-scan button for freshly downloaded models.
+- **Multimodal Vision & Deep Thinking Pipeline (多模態視覺看圖與深層思考清洗)**:
+  - Base64 reference images are automatically converted and passed into Ollama's native `images` array for direct visual retention analysis.
+  - Cleanses `<think>...</think>` reasoning tokens and validates JSON schema compliance, guaranteeing 100% parsing success for 3-block MiniMax-H3 prompt outputs.
+
+#### ⚡ 3. One-Click Windows Startup Launcher (`start.bat`) (Windows 一鍵啟動腳本)
+- Added dedicated Windows batch launcher `start.bat` in pure ASCII format, preventing Windows CMD byte-offset decoding anomalies.
+- Automated pre-flight checks: Node.js runtime verification (Node.js v18+), `.env` auto-initialization from `.env.example`, and `node_modules` automatic installation via `npm install`.
+- Automatic local Ollama health probe on startup (`http://127.0.0.1:11434`).
+- Automatically launches the application and opens `http://localhost:3000` in the default web browser.
+
 ## [v2.0.1] - 2026-09-17
 
 ### 🎨 Studio Layout Polish & Camera Motion Directives UI Overhaul (版面視覺與運鏡控制深度重構)

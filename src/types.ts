@@ -1,6 +1,49 @@
 export type GenerationMode = 'T2VA' | 'I2VA' | 'FL2VA' | 'L2VA' | 'Ref2VA';
 
-export type EngineTier = 'pro' | 'ultra_5x' | 'ultra_20x';
+export type AiProvider = 'gemini' | 'ollama';
+
+export type AppMode = 'ai_studio' | 'ollama' | 'paid_api';
+
+export type EngineTier = 'pro' | 'ultra_5x' | 'ultra_20x'; // AI Studio 訂閱制階梯方案 (AI Pro / Ultra 5x / Ultra 20x)
+
+export interface OllamaModelItem {
+  name: string;
+  model: string;
+  size?: number;
+  details?: {
+    parameter_size?: string;
+    quantization_level?: string;
+    context_length?: number;
+    family?: string;
+  };
+  capabilities?: string[];
+}
+
+export interface OllamaStatus {
+  online: boolean;
+  baseUrl: string;
+  models: OllamaModelItem[];
+  error?: string;
+}
+
+export interface SystemModeStatus {
+  detectedModes: {
+    ai_studio: boolean;
+    ollama: boolean;
+    paid_api: boolean;
+  };
+  details: {
+    isAiStudioEnv: boolean;
+    hasGeminiApiKey: boolean;
+    ollamaOnline: boolean;
+    ollamaBaseUrl: string;
+    ollamaModelCount: number;
+  };
+  recommendedMode: AppMode;
+  ollamaModels: OllamaModelItem[];
+  defaultOllamaModel?: string;
+  error?: string;
+}
 
 export type ReferenceRole = 
   | 'character' 
@@ -67,6 +110,9 @@ export interface H3PromptConfig {
   sfxText: string;
   suppressMusic: boolean; // non_diegetic_music: N/A
   engineTier?: EngineTier;
+  provider?: AiProvider;
+  appMode?: AppMode;
+  ollamaModel?: string;
   references: ReferenceItem[];
 }
 

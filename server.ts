@@ -23,7 +23,156 @@ const getGeminiClient = () => {
   });
 };
 
-export type EngineTier = 'pro' | 'ultra_5x' | 'ultra_20x';
+export type EngineTier = 'pro' | 'ultra_5x' | 'ultra_20x' | 'paid_direct';
+export type AiProvider = 'gemini' | 'ollama';
+export type AppMode = 'ai_studio' | 'ollama' | 'paid_api';
+
+const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
+const DEFAULT_OLLAMA_MODEL = process.env.DEFAULT_OLLAMA_MODEL || "orcarouter/Qwen3.8-27B-Uncensored:q6_K";
+
+/**
+ * Detect runtime environment: AI Studio (Cloud Run/Applet/Subscription) vs Local
+ */
+function detectEnvironment() {
+  const isCloudRun = Boolean(process.env.K_SERVICE || process.env.K_REVISION || process.env.K_CONFIGURATION);
+  const appUrl = (process.env.APP_URL || "").trim();
+  const isAppUrlCloud = appUrl !== "" && appUrl !== "MY_APP_URL" && (
+    appUrl.includes(".run.app") ||
+    appUrl.includes("googleusercontent.com") ||
+    appUrl.includes("aistudio.google.com")
+  );
+  const isExplicitAiStudio = process.env.AI_STUDIO_MODE === "true" || process.env.IS_AI_STUDIO === "true";
+  const isAiStudioEnv = isCloudRun || isAppUrlCloud || isExplicitAiStudio;
+
+  const rawKey = (process.env.GEMINI_API_KEY || "").trim();
+  const hasGeminiApiKey = rawKey.length > 5 && rawKey !== "MY_GEMINI_API_KEY";
+
+  return {
+    isAiStudioEnv,
+    hasGeminiApiKey,
+  };
+}
+
+/**
+ * Priority Order:
+ * 1. 訂閱制度 AI Studio 內運行版 (ai_studio)
+ * 2. 本地 Ollama 版 (ollama)
+ * 3. 本地 Paid API 版 (paid_api)
+ */
+function calculateRecommendedMode(modes: { ai_studio: boolean; ollama: boolean; paid_api: boolean }): AppMode {
+  if (modes.ai_studio) {
+    return 'ai_studio';
+  }
+  if (modes.ollama) {
+    return 'ollama';
+  }
+  if (modes.paid_api) {
+    return 'paid_api';
+  }
+  return 'ai_studio'; // 預設回退
+}
+
+/**
+ * Strips reasoning tokens (<think>...</think>) and markdown code fences from AI output
+ */
+function cleanModelOutput(rawText: string): string {
+  if (!rawText || typeof rawText !== 'string') return "";
+  let text = rawText;
+  // Remove <think>...</think> reasoning blocks from thinking models (e.g. Qwen / DeepSeek)
+  text = text.replace(/<think>[\s\S]*?<\/think>/gi, "");
+  // Remove markdown json fences if any
+  text = text.trim();
+  if (text.startsWith("```json")) {
+    text = text.replace(/^```json\s*/i, "").replace(/\s*```$/i, "");
+  } else if (text.startsWith("```")) {
+    text = text.replace(/^```\s*/, "").replace(/\s*```$/, "");
+  }
+  return text.trim();
+}
+
+function parseJsonSafely(raw: string): any {
+  const cleaned = cleanModelOutput(raw);
+  try {
+    return JSON.parse(cleaned);
+  } catch (e) {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (match) {
+      try {
+        return JSON.parse(match[0]);
+      } catch (innerErr) {
+        // fall through
+      }
+    }
+    throw new Error(`無法解析模型輸出的 JSON 結構: ${cleaned.slice(0, 150)}`);
+  }
+}
+
+/**
+ * Call Local Ollama Chat API
+ */
+async function callOllamaChat(params: {
+  model: string;
+  systemPrompt?: string;
+  userPrompt: string;
+  images?: string[];
+  formatJson?: boolean;
+}): Promise<string> {
+  const modelToUse = params.model || DEFAULT_OLLAMA_MODEL;
+  const messages: any[] = [];
+  if (params.systemPrompt) {
+    messages.push({ role: "system", content: params.systemPrompt });
+  }
+  const userMsg: any = { role: "user", content: params.userPrompt };
+  if (params.images && params.images.length > 0) {
+    userMsg.images = params.images;
+  }
+  messages.push(userMsg);
+
+  const payload: any = {
+    model: modelToUse,
+    messages,
+    stream: false,
+    options: {
+      temperature: 0.7,
+      num_ctx: 32768,
+    },
+  };
+  if (params.formatJson) {
+    payload.format = "json";
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3-minute timeout
+
+  try {
+    const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Ollama API 錯誤 (${response.status}): ${errText.slice(0, 200)}`);
+    }
+
+    const data: any = await response.json();
+    const rawContent = data?.message?.content || "";
+    return cleanModelOutput(rawContent);
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === "AbortError") {
+      throw new Error(`本機 Ollama 請求超時（超過 180 秒）。請確認模型 "${modelToUse}" 是否正在載入或記憶體/顯存負載是否過高。`);
+    }
+    if (err.code === "ECONNREFUSED" || err.message?.includes("fetch failed") || err.message?.includes("ECONNREFUSED")) {
+      throw new Error(`無法連線至本機 Ollama 服務 (${OLLAMA_BASE_URL})。請確認 Ollama 已啟動，且終端或服務正在運行中。`);
+    }
+    throw err;
+  }
+}
 
 interface ExecutionPlan {
   primaryModel: string;
@@ -53,6 +202,14 @@ function getExecutionPlan(
   tier: EngineTier = 'pro'
 ): ExecutionPlan {
   switch (tier) {
+    case 'paid_direct':
+      // Paid API Mode: Direct Flagship Gemini 3.8 Flash for all tasks with High reasoning, no subscription quota throttling
+      return {
+        primaryModel: 'gemini-3.8-flash',
+        fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+      };
+
     case 'ultra_20x':
       if (task === 'dialogue') {
         return {
@@ -505,11 +662,133 @@ Examples of correct phrasing:
 `;
 
 
+// Helper to resolve effective runtime mode and execution tier
+function resolveAppMode(reqBody: any): { appMode: AppMode; effectiveTier: EngineTier; ollamaModelToUse: string } {
+  const { isAiStudioEnv } = detectEnvironment();
+  let appMode: AppMode = reqBody.appMode;
+  if (!appMode) {
+    if (reqBody.provider === 'ollama') {
+      appMode = 'ollama';
+    } else if (isAiStudioEnv) {
+      appMode = 'ai_studio';
+    } else {
+      appMode = 'paid_api';
+    }
+  }
+
+  let effectiveTier: EngineTier = 'pro';
+  if (appMode === 'ai_studio') {
+    // AI Studio is subscription-based, using user's chosen subscription tier (pro / ultra_5x / ultra_20x)
+    effectiveTier = reqBody.subscriptionTier || reqBody.engineTier || 'pro';
+  } else if (appMode === 'paid_api') {
+    // Paid API is pay-as-you-go, running full flagship Gemini 3.8 Flash directly without subscription quota limits
+    effectiveTier = 'paid_direct';
+  }
+
+  const ollamaModelToUse = reqBody.ollamaModel || DEFAULT_OLLAMA_MODEL;
+  return { appMode, effectiveTier, ollamaModelToUse };
+}
+
+// API Endpoint to detect system operating modes & Ollama models
+app.get("/api/system/mode-status", async (req, res) => {
+  try {
+    const { isAiStudioEnv, hasGeminiApiKey } = detectEnvironment();
+    let ollamaOnline = false;
+    let ollamaModels: any[] = [];
+    let ollamaError = "";
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const resp = await fetch(`${OLLAMA_BASE_URL}/api/tags`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (resp.ok) {
+        const data: any = await resp.json();
+        ollamaOnline = true;
+        ollamaModels = data.models || [];
+      } else {
+        ollamaError = `Ollama HTTP ${resp.status}`;
+      }
+    } catch (err: any) {
+      ollamaError = err.message || "無法連線至本機 Ollama 服務";
+    }
+
+    const detectedModes = {
+      ai_studio: Boolean(isAiStudioEnv && hasGeminiApiKey),
+      ollama: Boolean(ollamaOnline && ollamaModels.length > 0),
+      paid_api: Boolean(!isAiStudioEnv && hasGeminiApiKey),
+    };
+
+    const recommendedMode = calculateRecommendedMode(detectedModes);
+
+    let defaultOllamaModel: string | undefined;
+    if (ollamaModels.length > 0) {
+      const preferred =
+        ollamaModels.find((m: any) => m.name === DEFAULT_OLLAMA_MODEL) ||
+        ollamaModels.find((m: any) => m.name?.toLowerCase().includes("qwen3.8") || m.name?.toLowerCase().includes("qwen")) ||
+        ollamaModels[0];
+      defaultOllamaModel = preferred?.name;
+    }
+
+    return res.json({
+      detectedModes,
+      details: {
+        isAiStudioEnv,
+        hasGeminiApiKey,
+        ollamaOnline,
+        ollamaBaseUrl: OLLAMA_BASE_URL,
+        ollamaModelCount: ollamaModels.length,
+      },
+      recommendedMode,
+      ollamaModels,
+      defaultOllamaModel,
+      error: ollamaError || undefined,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      error: error.message || "Failed to detect system mode status",
+    });
+  }
+});
+
+// API Endpoint to check Ollama local status and list models (legacy backward compatible)
+app.get("/api/ollama/status", async (req, res) => {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const resp = await fetch(`${OLLAMA_BASE_URL}/api/tags`, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!resp.ok) {
+      return res.json({
+        online: false,
+        baseUrl: OLLAMA_BASE_URL,
+        models: [],
+        error: `Ollama 回傳 HTTP ${resp.status}`,
+      });
+    }
+
+    const data: any = await resp.json();
+    return res.json({
+      online: true,
+      baseUrl: OLLAMA_BASE_URL,
+      models: data.models || [],
+    });
+  } catch (err: any) {
+    return res.json({
+      online: false,
+      baseUrl: OLLAMA_BASE_URL,
+      models: [],
+      error: err.message || "無法連線至本機 Ollama 服務",
+    });
+  }
+});
+
 // API Endpoint to Auto-Generate Cinematic Dialogue
 app.post("/api/generate-dialogue", async (req, res) => {
   try {
-    const { idea, style, mode, duration, engineTier = 'pro' } = req.body;
-    const ai = getGeminiClient();
+    const { idea, style, mode, duration } = req.body;
+    const { appMode, effectiveTier, ollamaModelToUse } = resolveAppMode(req.body);
 
     const prompt = `
 You are a Hollywood scriptwriter and anime dialogue director.
@@ -528,10 +807,21 @@ Return JSON format:
 }
 `;
 
+    if (appMode === 'ollama') {
+      const raw = await callOllamaChat({
+        model: ollamaModelToUse,
+        userPrompt: prompt + `\nCRITICAL: Return ONLY a valid JSON object matching the requested schema.`,
+        formatJson: true,
+      });
+      const result = parseJsonSafely(raw);
+      return res.json({ success: true, data: result });
+    }
+
+    const ai = getGeminiClient();
     const response = await callGeminiDynamic(
       ai,
       'dialogue',
-      engineTier as EngineTier,
+      effectiveTier,
       {
         contents: prompt,
         config: {
@@ -562,7 +852,27 @@ Return JSON format:
 // API Endpoint to analyze uploaded reference file image/media
 app.post("/api/analyze-reference-media", async (req, res) => {
   try {
-    const { imageBase64, role, fileName, engineTier = 'pro' } = req.body;
+    const { imageBase64, role, fileName } = req.body;
+    const { appMode, effectiveTier, ollamaModelToUse } = resolveAppMode(req.body);
+
+    if (appMode === 'ollama') {
+      const userPrompt = imageBase64 && imageBase64.includes(",")
+        ? `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Block 1 & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture). Keep it concise and within 60 words.`
+        : `Provide a concise reference description for file "${fileName || 'Asset'}" with role "${role || 'character'}". Keep it within 50 words.`;
+
+      const images = (imageBase64 && imageBase64.includes(","))
+        ? [imageBase64.split(",")[1]]
+        : undefined;
+
+      const text = await callOllamaChat({
+        model: ollamaModelToUse,
+        userPrompt,
+        images,
+      });
+
+      return res.json({ success: true, description: text.trim() });
+    }
+
     const ai = getGeminiClient();
 
     let contents: any[] = [];
@@ -585,7 +895,7 @@ app.post("/api/analyze-reference-media", async (req, res) => {
     const response = await callGeminiDynamic(
       ai,
       'media_analysis',
-      engineTier as EngineTier,
+      effectiveTier,
       {
         contents,
       }
@@ -626,10 +936,10 @@ function sanitizeGeneratedPromptText(text: string): string {
 app.post("/api/generate-h3-prompt", async (req, res) => {
   try {
     const config = req.body;
-    const engineTier: EngineTier = config.engineTier || 'pro';
-    const ai = getGeminiClient();
+    const { appMode, effectiveTier, ollamaModelToUse } = resolveAppMode(config);
 
     const multimodalParts: any[] = [];
+    const ollamaImages: string[] = [];
 
     const sanitizedReferences = (config.references && config.references.length > 0)
       ? config.references
@@ -656,6 +966,7 @@ app.post("/api/generate-h3-prompt", async (req, res) => {
                 multimodalParts.push(
                   `[Visual reference image attached above corresponds to ${r.tag} (Role: ${r.role}, Label: ${cleanName}). Inspect its real visual characteristics (face, clothing, lighting, style, colors, materials) and describe them faithfully in subject_definitions and retention_analysis without including any file names.]`
                 );
+                ollamaImages.push(base64Data);
               }
             }
 
@@ -692,6 +1003,59 @@ CRITICAL PROHIBITION: DO NOT write any file names, file extensions (e.g. .png, .
 Ensure English language is used for the actual prompt text (fullPrompt, block1, block2, block3) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh and suggestions!
 `;
 
+    if (appMode === 'ollama') {
+      const systemPrompt = `${MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION}
+
+CRITICAL FORMAT REQUIREMENT:
+You MUST output a valid JSON object matching this schema:
+{
+  "block1": "string (Block 1: Reference Analysis or Shot 1 details)",
+  "block2": "string (Block 2: Temporal Segments & Actions)",
+  "block3": "string (Block 3: Audio, Soundscape & Non-diegetic Music)",
+  "audioNotes": "string (Audio notes / non-diegetic music breakdown)",
+  "fullPrompt": "string (The complete assembled MiniMax-H3 prompt)",
+  "temporalTimeline": [
+    {
+      "timeframe": "string (e.g. [Shot 1] or [Shot 2] At 00:03.500)",
+      "action": "string (Action description)",
+      "camera": "string (Natural English camera movement)",
+      "audio": "string (SFX / dialogue)"
+    }
+  ],
+  "explanationZh": "string (Traditional Chinese explanation of the prompt design and cinematography)",
+  "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"]
+}
+Do NOT output any markdown tags outside the JSON. Return only the valid JSON object.`;
+
+      const raw = await callOllamaChat({
+        model: ollamaModelToUse,
+        systemPrompt,
+        userPrompt,
+        images: ollamaImages.length > 0 ? ollamaImages : undefined,
+        formatJson: true,
+      });
+
+      const resultJson = parseJsonSafely(raw);
+
+      // Sanitize any accidental file names from Ollama output
+      if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
+      if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
+      if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
+      if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
+      if (Array.isArray(resultJson.temporalTimeline)) {
+        resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
+          ...item,
+          action: sanitizeGeneratedPromptText(item.action || ''),
+          camera: sanitizeGeneratedPromptText(item.camera || ''),
+          audio: sanitizeGeneratedPromptText(item.audio || ''),
+        }));
+      }
+
+      return res.json({ success: true, data: resultJson });
+    }
+
+    const ai = getGeminiClient();
+
     const requestContents = multimodalParts.length > 0
       ? [...multimodalParts, userPrompt]
       : userPrompt;
@@ -699,7 +1063,7 @@ Ensure English language is used for the actual prompt text (fullPrompt, block1, 
     const response = await callGeminiDynamic(
       ai,
       'prompt_generation',
-      engineTier,
+      effectiveTier,
       {
         contents: requestContents,
         config: {
@@ -777,8 +1141,8 @@ Ensure English language is used for the actual prompt text (fullPrompt, block1, 
 // Quick Optimize Endpoint
 app.post("/api/optimize-existing-prompt", async (req, res) => {
   try {
-    const { rawPrompt, duration = "10s", suppressMusic = false, engineTier = 'pro' } = req.body;
-    const ai = getGeminiClient();
+    const { rawPrompt, duration = "10s", suppressMusic = false } = req.body;
+    const { appMode, effectiveTier, ollamaModelToUse } = resolveAppMode(req.body);
 
     const requestText = `
 Take the user's rough prompt or idea below and optimize/rewrite it into the official MiniMax-H3 prompt standard:
@@ -794,10 +1158,61 @@ Refine it strictly following official MiniMax-H3 specifications:
 DO NOT include any file names or file extensions in the generated prompt!
 `;
 
+    if (appMode === 'ollama') {
+      const systemPrompt = `${MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION}
+
+CRITICAL FORMAT REQUIREMENT:
+You MUST output a valid JSON object matching this schema:
+{
+  "block1": "string",
+  "block2": "string",
+  "block3": "string",
+  "audioNotes": "string",
+  "fullPrompt": "string",
+  "temporalTimeline": [
+    {
+      "timeframe": "string",
+      "action": "string",
+      "camera": "string",
+      "audio": "string"
+    }
+  ],
+  "explanationZh": "string",
+  "suggestions": ["string"]
+}
+Do NOT output any markdown tags outside the JSON. Return only the valid JSON object.`;
+
+      const raw = await callOllamaChat({
+        model: ollamaModelToUse,
+        systemPrompt,
+        userPrompt: requestText,
+        formatJson: true,
+      });
+
+      const resultJson = parseJsonSafely(raw);
+
+      if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
+      if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
+      if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
+      if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
+      if (Array.isArray(resultJson.temporalTimeline)) {
+        resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
+          ...item,
+          action: sanitizeGeneratedPromptText(item.action || ''),
+          camera: sanitizeGeneratedPromptText(item.camera || ''),
+          audio: sanitizeGeneratedPromptText(item.audio || ''),
+        }));
+      }
+
+      return res.json({ success: true, data: resultJson });
+    }
+
+    const ai = getGeminiClient();
+
     const response = await callGeminiDynamic(
       ai,
       'optimize',
-      engineTier as EngineTier,
+      effectiveTier,
       {
         contents: requestText,
         config: {

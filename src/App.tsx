@@ -14,6 +14,11 @@ import {
   CameraSpeed,
   GenerationMode,
   EngineTier,
+  AiProvider,
+  AppMode,
+  SystemModeStatus,
+  OllamaModelItem,
+  OllamaStatus,
 } from './types';
 import { Navbar } from './components/Navbar';
 import { ReferenceManager } from './components/ReferenceManager';
@@ -154,6 +159,29 @@ const DEFAULT_CONFIG: H3PromptConfig = {
 
 export default function App() {
   const [engineTier, setEngineTier] = useState<EngineTier>('pro');
+  const [appMode, setAppMode] = useState<AppMode>(() => {
+    try {
+      const saved = localStorage.getItem('minimax_h3_app_mode') as AppMode;
+      if (saved && ['ai_studio', 'ollama', 'paid_api'].includes(saved)) {
+        return saved;
+      }
+      const legacy = localStorage.getItem('minimax_h3_ai_provider');
+      if (legacy === 'ollama') return 'ollama';
+      return 'ai_studio';
+    } catch {
+      return 'ai_studio';
+    }
+  });
+  const [ollamaModel, setOllamaModel] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('minimax_h3_ollama_model');
+      return saved || 'orcarouter/Qwen3.8-27B-Uncensored:q6_K';
+    } catch {
+      return 'orcarouter/Qwen3.8-27B-Uncensored:q6_K';
+    }
+  });
+  const [systemStatus, setSystemStatus] = useState<SystemModeStatus | null>(null);
+  const [ollamaModels, setOllamaModels] = useState<OllamaModelItem[]>([]);
   const [config, setConfig] = useState<H3PromptConfig>(DEFAULT_CONFIG);
   const [output, setOutput] = useState<H3PromptOutput | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -232,10 +260,96 @@ export default function App() {
     if (rawMsg.includes('GEMINI_API_KEY')) {
       return '⚠️ 未設定 GEMINI_API_KEY 環境變數，請確認後端 .env 設定！';
     }
+    if (rawMsg.includes('Ollama') || rawMsg.includes('本機')) {
+      return rawMsg;
+    }
     if (rawMsg.includes('Failed to fetch') || rawMsg.includes('NetworkError')) {
       return '⚠️ 網路連線中斷或伺服器未啟動，請檢查連線狀態！';
     }
     return rawMsg;
+  };
+
+  const checkSystemStatus = async (notify = false) => {
+    try {
+      const res = await fetch('/api/system/mode-status');
+      const data: SystemModeStatus = await res.json();
+      setSystemStatus(data);
+
+      if (data.ollamaModels && Array.isArray(data.ollamaModels)) {
+        setOllamaModels(data.ollamaModels);
+
+        // Auto-reconcile or set default model
+        setOllamaModel((curr) => {
+          const exists = data.ollamaModels.some((m) => m.name === curr);
+          if (!exists && data.defaultOllamaModel) {
+            try {
+              localStorage.setItem('minimax_h3_ollama_model', data.defaultOllamaModel);
+            } catch (e) {}
+            return data.defaultOllamaModel;
+          }
+          return curr;
+        });
+      }
+
+      // If user hasn't explicitly set a manual mode in localStorage, auto-select by recommended priority
+      const savedManualMode = localStorage.getItem('minimax_h3_app_mode');
+      if (!savedManualMode && data.recommendedMode) {
+        setAppMode(data.recommendedMode);
+      }
+
+      if (notify) {
+        const modeLabels: Record<AppMode, string> = {
+          ai_studio: 'AI Studio 訂閱版',
+          ollama: '本地 Ollama 版',
+          paid_api: '本地 Paid API 版',
+        };
+        showToast(
+          `偵測完成！系統優先推薦【${modeLabels[data.recommendedMode]}】（${data.ollamaModels?.length || 0} 個本地模型）`,
+          'success'
+        );
+      }
+    } catch (e: any) {
+      console.error('Failed to check system status:', e);
+      if (notify) {
+        showToast('無法取得系統模式狀態，請確認伺服器已啟動', 'error');
+      }
+    }
+  };
+
+  const handleAppModeChange = (mode: AppMode) => {
+    setAppMode(mode);
+    setConfig((prev) => ({
+      ...prev,
+      appMode: mode,
+      provider: mode === 'ollama' ? 'ollama' : 'gemini',
+    }));
+    try {
+      localStorage.setItem('minimax_h3_app_mode', mode);
+      localStorage.setItem('minimax_h3_ai_provider', mode === 'ollama' ? 'ollama' : 'gemini');
+    } catch (e) {
+      console.error('Failed to save app mode to localStorage', e);
+    }
+    const modeLabels: Record<AppMode, string> = {
+      ai_studio: 'AI Studio 訂閱版',
+      ollama: '本地 Ollama 版',
+      paid_api: '本地 Paid API 版',
+    };
+    showToast(`已手動切換至【${modeLabels[mode]}】模式`, 'info');
+    if (mode === 'ollama') {
+      checkSystemStatus(false);
+    }
+  };
+
+  const handleOllamaModelChange = (model: string) => {
+    setOllamaModel(model);
+    setConfig((prev) => ({ ...prev, ollamaModel: model }));
+    try {
+      localStorage.setItem('minimax_h3_ollama_model', model);
+    } catch (e) {
+      console.error('Failed to save ollama model to localStorage', e);
+    }
+    const tag = model.includes(':') ? model.split(':')[1] : model;
+    showToast(`已切換本機模型：${tag || model}`, 'info');
   };
 
   const handleEngineTierChange = (tier: EngineTier) => {
@@ -246,12 +360,14 @@ export default function App() {
     } catch (e) {
       console.error('Failed to save engine tier to localStorage', e);
     }
-    const label = tier === 'pro' ? 'AI Pro (Web UI 配額最佳化)' : tier === 'ultra_5x' ? 'AI Ultra 5x (進階效能)' : 'AI Ultra 20x (極致旗艦)';
-    showToast(`已切換至 ${label} 算力方案`, 'info');
+    const label = tier === 'pro' ? 'AI Pro (訂閱配額最佳化)' : tier === 'ultra_5x' ? 'AI Ultra 5x (5倍訂閱配額)' : 'AI Ultra 20x (20倍訂閱配額)';
+    showToast(`已切換 AI Studio 訂閱算力方案：${label}`, 'info');
   };
 
   // Load saved options and history from localStorage on startup
   useEffect(() => {
+    checkSystemStatus(false);
+
     try {
       const savedTier = localStorage.getItem('minimax_h3_engine_tier') as EngineTier;
       if (savedTier && ['pro', 'ultra_5x', 'ultra_20x'].includes(savedTier)) {
@@ -343,8 +459,12 @@ export default function App() {
 
     try {
       // Include compressed image base64 data (~35KB) for image references to enable direct multimodal vision
-      const sanitizedConfig = {
+      const sanitizedConfig: H3PromptConfig = {
         ...config,
+        appMode,
+        engineTier,
+        provider: appMode === 'ollama' ? 'ollama' : 'gemini',
+        ollamaModel,
         references: config.references.map((r) => ({
           id: r.id,
           tag: r.tag,
@@ -518,8 +638,15 @@ export default function App() {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-purple-500/30">
       {/* Top Navigation Bar */}
       <Navbar
+        appMode={appMode}
+        onChangeAppMode={handleAppModeChange}
+        systemStatus={systemStatus}
+        onRefreshStatus={() => checkSystemStatus(true)}
         engineTier={engineTier}
         onChangeEngineTier={handleEngineTierChange}
+        ollamaModel={ollamaModel}
+        onChangeOllamaModel={handleOllamaModelChange}
+        ollamaModels={ollamaModels}
         onOpenPresets={() => setIsPresetOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
         onResetOptions={handleResetOptions}
