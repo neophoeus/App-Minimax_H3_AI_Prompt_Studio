@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.1.1] - 2026-09-21
+
+### 🚀 Tri-Engine Operating Architecture Evolution & Ollama Pre-flight Auto-Launch (三引擎架構升級與 Ollama 自啟動)
+
+#### 🏛️ 1. Tri-Engine Operating Architecture (三引擎架構體系全面升級)
+- **Clear Architectural Distinction (名詞層次徹底解耦)**:
+  - 將系統底層 AI 驅動核心全面由「3模式」升級為「**三引擎 (Tri-Engine Architecture)**」，徹底解決過去與 MiniMax 上層業務「**影片生成模式 (T2VA / I2VA / FL2VA / L2VA / Ref2VA)**」的名詞撞車與概念混淆。
+  - 三大專屬驅動核心正式確立命名標準：
+    1. **🏢 AI Studio 雲端引擎 (`ai_studio`, 優先級 1)**：專為 Google AI Studio 與 Cloud Run 訂閱環境打造，具備 Pro / Ultra 5x / Ultra 20x 階梯算力與智慧免額度分流。
+    2. **💻 本地 Ollama 離線引擎 (`ollama`, 優先級 2)**：本機 100% 離線隱私運行，自動動態探索本機模型（原生適配 `Qwen3.8-27B-Uncensored` 等），支援視覺看圖與深層思考清洗。
+    3. **🔑 Gemini Paid API 直通引擎 (`paid_api`, 優先級 3)**：自備 Google Cloud Paid API Key 直通旗艦級 `gemini-3.8-flash` 深度推理，按量計費無訂閱額度限制。
+- **UI & Notification Standardization (使用者介面與提示全景規範化)**:
+  - 頂部導航列徽章升級為 `v2.1.1 • 三引擎自動偵測`。
+  - 三引擎膠囊切換鈕（Pill Switcher）精簡優化為「`AI Studio 引擎`」、「`本地 Ollama 引擎`」與「`Paid API 直通引擎`」，提升各尺寸螢幕排版適應性。
+  - 說明彈窗全面更新為「**三引擎自動偵測與優先調度架構**」，詳細列示 1 > 2 > 3 優先判定次序。
+  - 系統 Toast 提示同步規範為「`已手動切換至【...】`」，語法更自然通順。
+
+#### ⚡ 2. Ollama Pre-flight Health Check & Auto-Launch (`start.bat`) (啟動前自動檢查與喚起)
+- **Automated Service Verification**:
+  - `start.bat` 在啟動 Studio 前，主動透過 HTTP 端點 (`http://127.0.0.1:11434/api/tags`) 探測本機 Ollama 服務狀態。
+- **Intelligent Fallback Launching**:
+  - 若偵測到 Ollama 處於離線狀態，優先嘗試喚起 Windows 官方托盤應用程式 (`%LOCALAPPDATA%\Programs\Ollama\ollama app.exe`)。
+  - 若該路徑不存在但系統 PATH 包含 `ollama`，則自動以最小化視窗執行 `start "Ollama Service" /min ollama serve`。
+  - 若兩者皆未安裝，則優雅提示並直接以雲端 Gemini 引擎繼續執行，絕不中斷應用啟動。
+- **Reliable Readiness Polling**:
+  - 喚起後進入最長 15 秒的就緒等待輪詢（採用跨環境高相容的 `ping` 實作延遲，避免 Windows `timeout` 重定向例外）。
+  - 一旦檢測到端點在線即立刻繼續啟動 Studio 伺服器並自動開啟瀏覽器。
+
+---
+
 ## [v2.1.0] - 2026-09-20
 
 ### 🚀 Three-Mode Operating Architecture & Local Ollama Dynamic Discovery (三模式運行架構與本機 Ollama 深度整合)

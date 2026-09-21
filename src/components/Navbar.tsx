@@ -50,9 +50,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   const [showPaidApiInfo, setShowPaidApiInfo] = useState(false);
 
   const modeLabels: Record<AppMode, string> = {
-    ai_studio: 'AI Studio 訂閱版',
-    ollama: '本地 Ollama 版',
-    paid_api: '本地 Paid API 版',
+    ai_studio: 'AI Studio 雲端引擎',
+    ollama: '本地 Ollama 離線引擎',
+    paid_api: 'Gemini Paid API 直通引擎',
   };
 
   const isAutoSelected = systemStatus?.recommendedMode === appMode;
@@ -74,7 +74,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 MiniMax-H3 AI 提示詞助手
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">
-                v2.1.0 • 3模式自動偵測
+                v2.1.1 • 三引擎自動偵測
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
@@ -95,9 +95,9 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Operating Mode Switcher & Controls */}
         <div className="flex items-center flex-wrap gap-2.5 sm:gap-3">
-          {/* 3-Mode Primary Pill Switcher */}
+          {/* Tri-Engine Primary Pill Switcher */}
           <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-700/80 shadow-inner">
-            {/* Mode 1: AI Studio 內運行版 (Priority 1) */}
+            {/* Engine 1: AI Studio 雲端引擎 (Priority 1) */}
             <button
               type="button"
               onClick={() => onChangeAppMode('ai_studio')}
@@ -106,16 +106,16 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-gradient-to-r from-indigo-600/30 to-purple-600/30 text-purple-200 border border-purple-500/50 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="模式一：AI Studio 訂閱制度/內運行版 (優先級 1，免額度最佳化路由)"
+              title="引擎一：AI Studio 雲端運行 (優先級 1，免額度最佳化路由)"
             >
               <Layers className="w-3.5 h-3.5 text-indigo-400" />
-              <span>AI Studio 訂閱版</span>
+              <span>AI Studio 引擎</span>
               {systemStatus?.detectedModes.ai_studio ? (
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="已偵測到 AI Studio 環境" />
               ) : null}
             </button>
 
-            {/* Mode 2: 本地 Ollama 版 (Priority 2) */}
+            {/* Engine 2: 本地 Ollama 離線引擎 (Priority 2) */}
             <button
               type="button"
               onClick={() => onChangeAppMode('ollama')}
@@ -124,10 +124,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-gradient-to-r from-amber-600/30 to-orange-600/30 text-amber-200 border border-amber-500/50 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="模式二：本地 Ollama 離線模型 (優先級 2，動態探索本地模型)"
+              title="引擎二：本地 Ollama 離線模型 (優先級 2，動態探索本地模型)"
             >
               <Cpu className="w-3.5 h-3.5 text-amber-400" />
-              <span>本地 Ollama 版</span>
+              <span>本地 Ollama 引擎</span>
               {systemStatus?.detectedModes.ollama ? (
                 <span
                   className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"
@@ -138,7 +138,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Mode 3: 本地 Paid API 版 (Priority 3) */}
+            {/* Engine 3: Gemini Paid API 直通引擎 (Priority 3) */}
             <button
               type="button"
               onClick={() => onChangeAppMode('paid_api')}
@@ -147,10 +147,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-gradient-to-r from-emerald-600/30 to-teal-600/30 text-emerald-200 border border-emerald-500/50 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="模式三：本地 Paid API 版 (優先級 3，使用本機配置的 Gemini API Key)"
+              title="引擎三：Gemini Paid API 直通 (優先級 3，使用自備 Gemini API Key)"
             >
               <Key className="w-3.5 h-3.5 text-teal-400" />
-              <span>本地 Paid API 版</span>
+              <span>Paid API 直通引擎</span>
               {systemStatus?.detectedModes.paid_api ? (
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="已配置 Gemini API Key" />
               ) : null}
@@ -283,7 +283,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="button"
                   onClick={() => setShowModeInfo(!showModeInfo)}
                   className="p-1 rounded text-slate-500 hover:text-slate-300 transition-colors"
-                  title="查看本機模型說明"
+                  title="查看三引擎架構與優先調度說明"
                 >
                   <HelpCircle className="w-3.5 h-3.5" />
                 </button>
@@ -304,7 +304,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="button"
                   onClick={() => setShowPaidApiInfo(!showPaidApiInfo)}
                   className="p-1 rounded text-slate-500 hover:text-slate-300 transition-colors"
-                  title="查看付費 API 模式說明"
+                  title="查看 Paid API 直通引擎說明"
                 >
                   <HelpCircle className="w-3.5 h-3.5" />
                 </button>
@@ -316,7 +316,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                     <span className="font-bold text-white flex items-center gap-1.5">
                       <Key className="w-3.5 h-3.5 text-teal-400" />
-                      本地 Paid API 付費直通說明
+                      Gemini Paid API 直通引擎說明
                     </span>
                     <button
                       onClick={() => setShowPaidApiInfo(false)}
@@ -338,13 +338,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           )}
 
-          {/* Mode Info Modal (Explains 3 modes & Auto-detection Priority) */}
+          {/* Mode Info Modal (Explains Tri-Engine & Auto-detection Priority) */}
           {showModeInfo && (
             <div className="absolute right-4 top-16 w-88 sm:w-96 p-4 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-50 text-xs text-slate-300 space-y-3">
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                 <span className="font-bold text-white flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-purple-400" />
-                  三模式自動偵測與優先次序機制
+                  三引擎自動偵測與優先調度架構
                 </span>
                 <button
                   onClick={() => setShowModeInfo(false)}
@@ -358,9 +358,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1">
                   <div className="font-semibold text-slate-200">🏆 系統自動優先判定次序：</div>
                   <div className="text-slate-400">
-                    <span className="text-purple-300 font-bold">1. AI Studio 訂閱版</span> ＞{' '}
-                    <span className="text-amber-300 font-bold">2. 本地 Ollama 版</span> ＞{' '}
-                    <span className="text-teal-300 font-bold">3. 本地 Paid API 版</span>
+                    <span className="text-purple-300 font-bold">1. AI Studio 雲端引擎</span> ＞{' '}
+                    <span className="text-amber-300 font-bold">2. 本地 Ollama 離線引擎</span> ＞{' '}
+                    <span className="text-teal-300 font-bold">3. Gemini Paid API 直通引擎</span>
                   </div>
                   {systemStatus && (
                     <div className="mt-1 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
@@ -374,23 +374,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
 
                 <div>
-                  <strong className="text-purple-300">1. AI Studio 訂閱制度內運行版</strong>
+                  <strong className="text-purple-300">1. AI Studio 雲端引擎 (優先級 1)</strong>
                   <p className="text-slate-400 mt-0.5">
-                    運行於 Google AI Studio 或 Cloud Run 訂閱環境。支援 AI Pro、AI Ultra 5x、AI Ultra 20x 階梯方案，內建 Web UI 免額度最佳化分流策略。
+                    運行於 Google AI Studio 或 Cloud Run 訂閱環境。支援 AI Pro、AI Ultra 5x、AI Ultra 20x 階梯算力，內建 Web UI 免額度最佳化分流策略。
                   </p>
                 </div>
 
                 <div>
-                  <strong className="text-amber-300">2. 本地 Ollama 版</strong>
+                  <strong className="text-amber-300">2. 本地 Ollama 離線引擎 (優先級 2)</strong>
                   <p className="text-slate-400 mt-0.5">
-                    連線至本機 <code className="text-amber-200">127.0.0.1:11434</code>。自動動態探索所有已下載模型（包含 Qwen3.8-27B 等），免聯網、100% 隱私離線生成。
+                    連線至本機 <code className="text-amber-200">127.0.0.1:11434</code>。自動動態探索所有已下載模型（原生支援 Qwen3.8-27B 等），免聯網、100% 隱私離線深度推理。
                   </p>
                 </div>
 
                 <div>
-                  <strong className="text-teal-300">3. 本地 Paid API 版</strong>
+                  <strong className="text-teal-300">3. Gemini Paid API 直通引擎 (優先級 3)</strong>
                   <p className="text-slate-400 mt-0.5">
-                    本機端點連線搭配使用者自己的 Google Gemini Paid API Key，採按量計費，全模組直通旗艦級 Gemini 3.8 Flash 深度推理，不受訂閱額度限制。
+                    本機端點連線搭配使用者自備之 Google Gemini Paid API Key，採按量計費，全模組直通旗艦級 Gemini 3.8 Flash 深度推理，不受訂閱額度限制。
                   </p>
                 </div>
               </div>

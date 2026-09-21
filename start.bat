@@ -1,10 +1,10 @@
 @echo off
-title MiniMax-H3 AI Prompt Studio v2.1.0
+title MiniMax-H3 AI Prompt Studio v2.1.1
 cls
 
 echo ======================================================================
-echo           MiniMax-H3 AI Prompt Studio [v2.1.0]
-echo           AI Engine: 3 Modes (AI Studio + Ollama + Paid API)
+echo           MiniMax-H3 AI Prompt Studio [v2.1.1]
+echo           AI Engine: Tri-Engine Architecture (AI Studio + Ollama + Paid API)
 echo ======================================================================
 echo.
 
@@ -35,9 +35,37 @@ echo [*] Checking local Ollama service (http://127.0.0.1:11434)...
 curl -s -m 2 http://127.0.0.1:11434/api/tags >nul 2>nul
 if %errorlevel% equ 0 (
     echo [+] Local Ollama is ONLINE [Qwen3.8-27B-Uncensored ready]
-) else (
-    echo [i] Local Ollama is OFFLINE [Cloud Gemini mode is available]
+    goto :OLLAMA_CHECK_DONE
 )
+
+echo [i] Local Ollama is not running. Attempting to start Ollama...
+if exist "%LOCALAPPDATA%\Programs\Ollama\ollama app.exe" (
+    start "" "%LOCALAPPDATA%\Programs\Ollama\ollama app.exe"
+    goto :WAIT_OLLAMA
+)
+
+where ollama >nul 2>nul
+if %errorlevel% equ 0 (
+    start "Ollama Service" /min ollama serve
+    goto :WAIT_OLLAMA
+)
+
+echo [i] Ollama is not installed on system. Continuing with Cloud Gemini engine...
+goto :OLLAMA_CHECK_DONE
+
+:WAIT_OLLAMA
+echo [*] Waiting for Ollama service to initialize...
+for /l %%i in (1,1,15) do (
+    ping 127.0.0.1 -n 2 >nul
+    curl -s -m 2 http://127.0.0.1:11434/api/tags >nul 2>nul && goto :OLLAMA_READY
+)
+echo [!] Ollama was launched but timed out waiting for API. Proceeding anyway...
+goto :OLLAMA_CHECK_DONE
+
+:OLLAMA_READY
+echo [+] Local Ollama started successfully [ONLINE]
+
+:OLLAMA_CHECK_DONE
 echo.
 
 echo [*] Starting Studio server at http://localhost:3000 ...

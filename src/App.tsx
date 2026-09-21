@@ -299,9 +299,9 @@ export default function App() {
 
       if (notify) {
         const modeLabels: Record<AppMode, string> = {
-          ai_studio: 'AI Studio 訂閱版',
-          ollama: '本地 Ollama 版',
-          paid_api: '本地 Paid API 版',
+          ai_studio: 'AI Studio 雲端引擎',
+          ollama: '本地 Ollama 離線引擎',
+          paid_api: 'Gemini Paid API 直通引擎',
         };
         showToast(
           `偵測完成！系統優先推薦【${modeLabels[data.recommendedMode]}】（${data.ollamaModels?.length || 0} 個本地模型）`,
@@ -311,7 +311,7 @@ export default function App() {
     } catch (e: any) {
       console.error('Failed to check system status:', e);
       if (notify) {
-        showToast('無法取得系統模式狀態，請確認伺服器已啟動', 'error');
+        showToast('無法取得系統引擎狀態，請確認伺服器已啟動', 'error');
       }
     }
   };
@@ -330,11 +330,11 @@ export default function App() {
       console.error('Failed to save app mode to localStorage', e);
     }
     const modeLabels: Record<AppMode, string> = {
-      ai_studio: 'AI Studio 訂閱版',
-      ollama: '本地 Ollama 版',
-      paid_api: '本地 Paid API 版',
+      ai_studio: 'AI Studio 雲端引擎',
+      ollama: '本地 Ollama 離線引擎',
+      paid_api: 'Gemini Paid API 直通引擎',
     };
-    showToast(`已手動切換至【${modeLabels[mode]}】模式`, 'info');
+    showToast(`已手動切換至【${modeLabels[mode]}】`, 'info');
     if (mode === 'ollama') {
       checkSystemStatus(false);
     }
