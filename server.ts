@@ -24,11 +24,13 @@ const getGeminiClient = () => {
 };
 
 export type EngineTier = 'pro' | 'ultra_5x' | 'ultra_20x' | 'paid_direct';
-export type AiProvider = 'gemini' | 'ollama';
-export type AppMode = 'ai_studio' | 'ollama' | 'paid_api';
+export type AiProvider = 'gemini' | 'ollama' | 'llamacpp';
+export type AppMode = 'ai_studio' | 'ollama' | 'llamacpp' | 'paid_api';
 
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || "http://127.0.0.1:11434";
 const DEFAULT_OLLAMA_MODEL = process.env.DEFAULT_OLLAMA_MODEL || "orcarouter/Qwen3.8-27B-Uncensored:q6_K";
+const LLAMACPP_BASE_URL = process.env.LLAMACPP_BASE_URL || "http://127.0.0.1:8080";
+const DEFAULT_LLAMACPP_MODEL = process.env.DEFAULT_LLAMACPP_MODEL || "default";
 
 /**
  * Detect runtime environment: AI Studio (Cloud Run/Applet/Subscription) vs Local
@@ -57,14 +59,18 @@ function detectEnvironment() {
  * Priority Order:
  * 1. 訂閱制度 AI Studio 內運行版 (ai_studio)
  * 2. 本地 Ollama 版 (ollama)
- * 3. 本地 Paid API 版 (paid_api)
+ * 3. 本地 llama.cpp 版 (llamacpp)
+ * 4. 本地 Paid API 版 (paid_api)
  */
-function calculateRecommendedMode(modes: { ai_studio: boolean; ollama: boolean; paid_api: boolean }): AppMode {
+function calculateRecommendedMode(modes: { ai_studio: boolean; ollama: boolean; llamacpp: boolean; paid_api: boolean }): AppMode {
   if (modes.ai_studio) {
     return 'ai_studio';
   }
   if (modes.ollama) {
     return 'ollama';
+  }
+  if (modes.llamacpp) {
+    return 'llamacpp';
   }
   if (modes.paid_api) {
     return 'paid_api';
@@ -169,6 +175,82 @@ async function callOllamaChat(params: {
     }
     if (err.code === "ECONNREFUSED" || err.message?.includes("fetch failed") || err.message?.includes("ECONNREFUSED")) {
       throw new Error(`無法連線至本機 Ollama 服務 (${OLLAMA_BASE_URL})。請確認 Ollama 已啟動，且終端或服務正在運行中。`);
+    }
+    throw err;
+  }
+}
+
+/**
+ * Call Local llama.cpp Server Chat API (/v1/chat/completions)
+ * Supports OpenAI-compatible messages, multi-modal images, response_format json, and Flash Attention / RTX 5090 acceleration
+ */
+async function callLlamaCppChat(params: {
+  model?: string;
+  systemPrompt?: string;
+  userPrompt: string;
+  images?: string[];
+  formatJson?: boolean;
+}): Promise<string> {
+  const modelToUse = params.model || DEFAULT_LLAMACPP_MODEL;
+  const messages: any[] = [];
+  if (params.systemPrompt) {
+    messages.push({ role: "system", content: params.systemPrompt });
+  }
+
+  if (params.images && params.images.length > 0) {
+    const userContent: any[] = [
+      { type: "text", text: params.userPrompt },
+    ];
+    for (const img of params.images) {
+      const dataUrl = img.startsWith("data:") ? img : `data:image/jpeg;base64,${img}`;
+      userContent.push({
+        type: "image_url",
+        image_url: { url: dataUrl },
+      });
+    }
+    messages.push({ role: "user", content: userContent });
+  } else {
+    messages.push({ role: "user", content: params.userPrompt });
+  }
+
+  const payload: any = {
+    model: modelToUse,
+    messages,
+    stream: false,
+    temperature: 0.7,
+  };
+  if (params.formatJson) {
+    payload.response_format = { type: "json_object" };
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3-minute timeout
+
+  try {
+    const response = await fetch(`${LLAMACPP_BASE_URL}/v1/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`llama.cpp API 錯誤 (${response.status}): ${errText.slice(0, 200)}`);
+    }
+
+    const data: any = await response.json();
+    const rawContent = data?.choices?.[0]?.message?.content || "";
+    return cleanModelOutput(rawContent);
+  } catch (err: any) {
+    clearTimeout(timeoutId);
+    if (err.name === "AbortError") {
+      throw new Error(`本機 llama.cpp 請求超時（超過 180 秒）。請確認模型 "${modelToUse}" 是否正在載入或記憶體/顯存負載是否過高。`);
+    }
+    if (err.code === "ECONNREFUSED" || err.message?.includes("fetch failed") || err.message?.includes("ECONNREFUSED")) {
+      throw new Error(`無法連線至本機 llama.cpp 服務 (${LLAMACPP_BASE_URL})。請確認 llama-server 正在運行（預設端口 8080）。`);
     }
     throw err;
   }
@@ -663,12 +745,19 @@ Examples of correct phrasing:
 
 
 // Helper to resolve effective runtime mode and execution tier
-function resolveAppMode(reqBody: any): { appMode: AppMode; effectiveTier: EngineTier; ollamaModelToUse: string } {
+function resolveAppMode(reqBody: any): {
+  appMode: AppMode;
+  effectiveTier: EngineTier;
+  ollamaModelToUse: string;
+  llamacppModelToUse: string;
+} {
   const { isAiStudioEnv } = detectEnvironment();
   let appMode: AppMode = reqBody.appMode;
   if (!appMode) {
     if (reqBody.provider === 'ollama') {
       appMode = 'ollama';
+    } else if (reqBody.provider === 'llamacpp') {
+      appMode = 'llamacpp';
     } else if (isAiStudioEnv) {
       appMode = 'ai_studio';
     } else {
@@ -686,10 +775,11 @@ function resolveAppMode(reqBody: any): { appMode: AppMode; effectiveTier: Engine
   }
 
   const ollamaModelToUse = reqBody.ollamaModel || DEFAULT_OLLAMA_MODEL;
-  return { appMode, effectiveTier, ollamaModelToUse };
+  const llamacppModelToUse = reqBody.llamacppModel || DEFAULT_LLAMACPP_MODEL;
+  return { appMode, effectiveTier, ollamaModelToUse, llamacppModelToUse };
 }
 
-// API Endpoint to detect system operating modes & Ollama models
+// API Endpoint to detect system operating modes & Ollama/llama.cpp models
 app.get("/api/system/mode-status", async (req, res) => {
   try {
     const { isAiStudioEnv, hasGeminiApiKey } = detectEnvironment();
@@ -713,9 +803,52 @@ app.get("/api/system/mode-status", async (req, res) => {
       ollamaError = err.message || "無法連線至本機 Ollama 服務";
     }
 
+    let llamacppOnline = false;
+    let llamacppModels: any[] = [];
+    let llamacppError = "";
+
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const resp = await fetch(`${LLAMACPP_BASE_URL}/v1/models`, { signal: controller.signal });
+      clearTimeout(timeout);
+      if (resp.ok) {
+        const data: any = await resp.json();
+        llamacppOnline = true;
+        llamacppModels = Array.isArray(data.data)
+          ? data.data.map((m: any) => ({
+              id: m.id || m.name || "default",
+              name: m.id || m.name || "default",
+              object: m.object,
+            }))
+          : [];
+        if (llamacppModels.length === 0) {
+          llamacppModels = [{ id: "default", name: "llama-server (活躍中)" }];
+        }
+      } else {
+        llamacppError = `llama.cpp HTTP ${resp.status}`;
+      }
+    } catch (err: any) {
+      try {
+        const controller2 = new AbortController();
+        const timeout2 = setTimeout(() => controller2.abort(), 2000);
+        const resp2 = await fetch(`${LLAMACPP_BASE_URL}/health`, { signal: controller2.signal });
+        clearTimeout(timeout2);
+        if (resp2.ok) {
+          llamacppOnline = true;
+          llamacppModels = [{ id: "default", name: "llama-server (活躍中)" }];
+        } else {
+          llamacppError = err.message || "無法連線至本機 llama.cpp 服務";
+        }
+      } catch (err2: any) {
+        llamacppError = err.message || "無法連線至本機 llama.cpp 服務";
+      }
+    }
+
     const detectedModes = {
       ai_studio: Boolean(isAiStudioEnv && hasGeminiApiKey),
       ollama: Boolean(ollamaOnline && ollamaModels.length > 0),
+      llamacpp: Boolean(llamacppOnline),
       paid_api: Boolean(!isAiStudioEnv && hasGeminiApiKey),
     };
 
@@ -730,6 +863,11 @@ app.get("/api/system/mode-status", async (req, res) => {
       defaultOllamaModel = preferred?.name;
     }
 
+    let defaultLlamaCppModel: string | undefined;
+    if (llamacppModels.length > 0) {
+      defaultLlamaCppModel = llamacppModels[0].id || llamacppModels[0].name;
+    }
+
     return res.json({
       detectedModes,
       details: {
@@ -738,15 +876,56 @@ app.get("/api/system/mode-status", async (req, res) => {
         ollamaOnline,
         ollamaBaseUrl: OLLAMA_BASE_URL,
         ollamaModelCount: ollamaModels.length,
+        llamacppOnline,
+        llamacppBaseUrl: LLAMACPP_BASE_URL,
+        llamacppModelCount: llamacppModels.length,
       },
       recommendedMode,
       ollamaModels,
       defaultOllamaModel,
-      error: ollamaError || undefined,
+      llamacppModels,
+      defaultLlamaCppModel,
+      error: ollamaError || llamacppError || undefined,
     });
   } catch (error: any) {
     return res.status(500).json({
       error: error.message || "Failed to detect system mode status",
+    });
+  }
+});
+
+// API Endpoint to check llama.cpp local status
+app.get("/api/llamacpp/status", async (req, res) => {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const resp = await fetch(`${LLAMACPP_BASE_URL}/v1/models`, { signal: controller.signal });
+    clearTimeout(timeout);
+
+    if (!resp.ok) {
+      return res.json({
+        online: false,
+        baseUrl: LLAMACPP_BASE_URL,
+        models: [],
+        error: `llama.cpp 回傳 HTTP ${resp.status}`,
+      });
+    }
+
+    const data: any = await resp.json();
+    const models = Array.isArray(data.data) && data.data.length > 0
+      ? data.data
+      : [{ id: "default", name: "llama-server (活躍中)" }];
+    return res.json({
+      online: true,
+      baseUrl: LLAMACPP_BASE_URL,
+      models,
+    });
+  } catch (err: any) {
+    return res.json({
+      online: false,
+      baseUrl: LLAMACPP_BASE_URL,
+      models: [],
+      error: err.message || "無法連線至本機 llama.cpp 服務",
     });
   }
 });
@@ -788,7 +967,7 @@ app.get("/api/ollama/status", async (req, res) => {
 app.post("/api/generate-dialogue", async (req, res) => {
   try {
     const { idea, style, mode, duration } = req.body;
-    const { appMode, effectiveTier, ollamaModelToUse } = resolveAppMode(req.body);
+    const { appMode, effectiveTier, ollamaModelToUse, llamacppModelToUse } = resolveAppMode(req.body);
 
     const prompt = `
 You are a Hollywood scriptwriter and anime dialogue director.
@@ -810,6 +989,16 @@ Return JSON format:
     if (appMode === 'ollama') {
       const raw = await callOllamaChat({
         model: ollamaModelToUse,
+        userPrompt: prompt + `\nCRITICAL: Return ONLY a valid JSON object matching the requested schema.`,
+        formatJson: true,
+      });
+      const result = parseJsonSafely(raw);
+      return res.json({ success: true, data: result });
+    }
+
+    if (appMode === 'llamacpp') {
+      const raw = await callLlamaCppChat({
+        model: llamacppModelToUse,
         userPrompt: prompt + `\nCRITICAL: Return ONLY a valid JSON object matching the requested schema.`,
         formatJson: true,
       });
@@ -853,7 +1042,7 @@ Return JSON format:
 app.post("/api/analyze-reference-media", async (req, res) => {
   try {
     const { imageBase64, role, fileName } = req.body;
-    const { appMode, effectiveTier, ollamaModelToUse } = resolveAppMode(req.body);
+    const { appMode, effectiveTier, ollamaModelToUse, llamacppModelToUse } = resolveAppMode(req.body);
 
     if (appMode === 'ollama') {
       const userPrompt = imageBase64 && imageBase64.includes(",")
@@ -866,6 +1055,24 @@ app.post("/api/analyze-reference-media", async (req, res) => {
 
       const text = await callOllamaChat({
         model: ollamaModelToUse,
+        userPrompt,
+        images,
+      });
+
+      return res.json({ success: true, description: text.trim() });
+    }
+
+    if (appMode === 'llamacpp') {
+      const userPrompt = imageBase64 && imageBase64.includes(",")
+        ? `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Block 1 & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture). Keep it concise and within 60 words.`
+        : `Provide a concise reference description for file "${fileName || 'Asset'}" with role "${role || 'character'}". Keep it within 50 words.`;
+
+      const images = (imageBase64 && imageBase64.includes(","))
+        ? [imageBase64.split(",")[1]]
+        : undefined;
+
+      const text = await callLlamaCppChat({
+        model: llamacppModelToUse,
         userPrompt,
         images,
       });
@@ -936,7 +1143,7 @@ function sanitizeGeneratedPromptText(text: string): string {
 app.post("/api/generate-h3-prompt", async (req, res) => {
   try {
     const config = req.body;
-    const { appMode, effectiveTier, ollamaModelToUse } = resolveAppMode(config);
+    const { appMode, effectiveTier, ollamaModelToUse, llamacppModelToUse } = resolveAppMode(config);
 
     const multimodalParts: any[] = [];
     const ollamaImages: string[] = [];
@@ -1054,6 +1261,57 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
       return res.json({ success: true, data: resultJson });
     }
 
+    if (appMode === 'llamacpp') {
+      const systemPrompt = `${MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION}
+
+CRITICAL FORMAT REQUIREMENT:
+You MUST output a valid JSON object matching this schema:
+{
+  "block1": "string (Block 1: Reference Analysis or Shot 1 details)",
+  "block2": "string (Block 2: Temporal Segments & Actions)",
+  "block3": "string (Block 3: Audio, Soundscape & Non-diegetic Music)",
+  "audioNotes": "string (Audio notes / non-diegetic music breakdown)",
+  "fullPrompt": "string (The complete assembled MiniMax-H3 prompt)",
+  "temporalTimeline": [
+    {
+      "timeframe": "string (e.g. [Shot 1] or [Shot 2] At 00:03.500)",
+      "action": "string (Action description)",
+      "camera": "string (Natural English camera movement)",
+      "audio": "string (SFX / dialogue)"
+    }
+  ],
+  "explanationZh": "string (Traditional Chinese explanation of the prompt design and cinematography)",
+  "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"]
+}
+Do NOT output any markdown tags outside the JSON. Return only the valid JSON object.`;
+
+      const raw = await callLlamaCppChat({
+        model: llamacppModelToUse,
+        systemPrompt,
+        userPrompt,
+        images: ollamaImages.length > 0 ? ollamaImages : undefined,
+        formatJson: true,
+      });
+
+      const resultJson = parseJsonSafely(raw);
+
+      // Sanitize any accidental file names from llama.cpp output
+      if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
+      if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
+      if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
+      if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
+      if (Array.isArray(resultJson.temporalTimeline)) {
+        resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
+          ...item,
+          action: sanitizeGeneratedPromptText(item.action || ''),
+          camera: sanitizeGeneratedPromptText(item.camera || ''),
+          audio: sanitizeGeneratedPromptText(item.audio || ''),
+        }));
+      }
+
+      return res.json({ success: true, data: resultJson });
+    }
+
     const ai = getGeminiClient();
 
     const requestContents = multimodalParts.length > 0
@@ -1142,7 +1400,7 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
 app.post("/api/optimize-existing-prompt", async (req, res) => {
   try {
     const { rawPrompt, duration = "10s", suppressMusic = false } = req.body;
-    const { appMode, effectiveTier, ollamaModelToUse } = resolveAppMode(req.body);
+    const { appMode, effectiveTier, ollamaModelToUse, llamacppModelToUse } = resolveAppMode(req.body);
 
     const requestText = `
 Take the user's rough prompt or idea below and optimize/rewrite it into the official MiniMax-H3 prompt standard:
@@ -1184,6 +1442,55 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
 
       const raw = await callOllamaChat({
         model: ollamaModelToUse,
+        systemPrompt,
+        userPrompt: requestText,
+        formatJson: true,
+      });
+
+      const resultJson = parseJsonSafely(raw);
+
+      if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
+      if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
+      if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
+      if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
+      if (Array.isArray(resultJson.temporalTimeline)) {
+        resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
+          ...item,
+          action: sanitizeGeneratedPromptText(item.action || ''),
+          camera: sanitizeGeneratedPromptText(item.camera || ''),
+          audio: sanitizeGeneratedPromptText(item.audio || ''),
+        }));
+      }
+
+      return res.json({ success: true, data: resultJson });
+    }
+
+    if (appMode === 'llamacpp') {
+      const systemPrompt = `${MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION}
+
+CRITICAL FORMAT REQUIREMENT:
+You MUST output a valid JSON object matching this schema:
+{
+  "block1": "string",
+  "block2": "string",
+  "block3": "string",
+  "audioNotes": "string",
+  "fullPrompt": "string",
+  "temporalTimeline": [
+    {
+      "timeframe": "string",
+      "action": "string",
+      "camera": "string",
+      "audio": "string"
+    }
+  ],
+  "explanationZh": "string",
+  "suggestions": ["string"]
+}
+Do NOT output any markdown tags outside the JSON. Return only the valid JSON object.`;
+
+      const raw = await callLlamaCppChat({
+        model: llamacppModelToUse,
         systemPrompt,
         userPrompt: requestText,
         formatJson: true,

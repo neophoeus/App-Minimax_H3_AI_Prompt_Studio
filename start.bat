@@ -1,10 +1,10 @@
 @echo off
-title MiniMax-H3 AI Prompt Studio v2.1.1
+title MiniMax-H3 AI Prompt Studio v2.2.0
 cls
 
 echo ======================================================================
-echo           MiniMax-H3 AI Prompt Studio [v2.1.1]
-echo           AI Engine: Tri-Engine Architecture (AI Studio + Ollama + Paid API)
+echo           MiniMax-H3 AI Prompt Studio [v2.2.0]
+echo           AI Engine: Quad-Engine Architecture [AI Studio + Ollama + llama.cpp + Paid API]
 echo ======================================================================
 echo.
 
@@ -31,7 +31,7 @@ if not exist "node_modules\" (
     echo.
 )
 
-echo [*] Checking local Ollama service (http://127.0.0.1:11434)...
+echo [*] Checking local Ollama service [http://127.0.0.1:11434]...
 curl -s -m 2 http://127.0.0.1:11434/api/tags >nul 2>nul
 if %errorlevel% equ 0 (
     echo [+] Local Ollama is ONLINE [Qwen3.8-27B-Uncensored ready]
@@ -50,7 +50,7 @@ if %errorlevel% equ 0 (
     goto :WAIT_OLLAMA
 )
 
-echo [i] Ollama is not installed on system. Continuing with Cloud Gemini engine...
+echo [i] Ollama is not installed on system. Continuing with other engines...
 goto :OLLAMA_CHECK_DONE
 
 :WAIT_OLLAMA
@@ -66,6 +66,51 @@ goto :OLLAMA_CHECK_DONE
 echo [+] Local Ollama started successfully [ONLINE]
 
 :OLLAMA_CHECK_DONE
+echo.
+
+echo [*] Checking local llama.cpp service [http://127.0.0.1:8080]...
+curl -s -m 2 http://127.0.0.1:8080/v1/models >nul 2>nul
+if %errorlevel% equ 0 (
+    echo [+] Local llama.cpp is ONLINE [http://127.0.0.1:8080] [RTX 5090 Ready]
+    goto :LLAMACPP_CHECK_DONE
+)
+curl -s -m 2 http://127.0.0.1:8080/health >nul 2>nul
+if %errorlevel% equ 0 (
+    echo [+] Local llama.cpp is ONLINE [http://127.0.0.1:8080] [RTX 5090 Ready]
+    goto :LLAMACPP_CHECK_DONE
+)
+
+echo [i] Local llama.cpp is not running.
+if exist "C:\llama.cpp\llama-server.exe" (
+    echo [*] Detected C:\llama.cpp environment. Launching model selector in new window...
+    start "llama.cpp Server" "%~dp0start_llama.bat"
+    goto :WAIT_LLAMACPP
+)
+
+where llama-server >nul 2>nul
+if %errorlevel% equ 0 (
+    echo [*] Detected llama-server in PATH. Launching model selector in new window...
+    start "llama.cpp Server" "%~dp0start_llama.bat"
+    goto :WAIT_LLAMACPP
+)
+
+echo [i] llama.cpp is not configured. [You can run start_llama.bat anytime]
+goto :LLAMACPP_CHECK_DONE
+
+:WAIT_LLAMACPP
+echo [*] Waiting for llama.cpp service to initialize...
+for /l %%i in (1,1,8) do (
+    ping 127.0.0.1 -n 2 >nul
+    curl -s -m 2 http://127.0.0.1:8080/v1/models >nul 2>nul && goto :LLAMACPP_READY
+    curl -s -m 2 http://127.0.0.1:8080/health >nul 2>nul && goto :LLAMACPP_READY
+)
+echo [i] llama.cpp window opened. Proceeding to start Prompt Studio...
+goto :LLAMACPP_CHECK_DONE
+
+:LLAMACPP_READY
+echo [+] Local llama.cpp started successfully [ONLINE]
+
+:LLAMACPP_CHECK_DONE
 echo.
 
 echo [*] Starting Studio server at http://localhost:3000 ...
@@ -84,7 +129,7 @@ goto :END
 :NO_NODE
 echo.
 echo [ERROR] Node.js is not found on your system.
-echo Please download and install Node.js (v18 or higher):
+echo Please download and install Node.js [v18 or higher]:
 echo https://nodejs.org/
 echo.
 pause
@@ -99,4 +144,8 @@ pause
 exit /b 1
 
 :END
-if %errorlevel% neq 0 pause
+echo.
+echo ======================================================================
+echo   MiniMax-H3 Prompt Studio 服務已結束。按任意鍵關閉此視窗...
+echo ======================================================================
+pause >nul

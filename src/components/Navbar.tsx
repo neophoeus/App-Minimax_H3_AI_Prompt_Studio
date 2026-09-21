@@ -11,8 +11,9 @@ import {
   RefreshCw,
   Layers,
   Key,
+  Terminal,
 } from 'lucide-react';
-import { EngineTier, AppMode, SystemModeStatus, OllamaModelItem } from '../types';
+import { EngineTier, AppMode, SystemModeStatus, OllamaModelItem, LlamaCppModelItem } from '../types';
 
 interface NavbarProps {
   appMode: AppMode;
@@ -24,6 +25,9 @@ interface NavbarProps {
   ollamaModel: string;
   onChangeOllamaModel: (model: string) => void;
   ollamaModels: OllamaModelItem[];
+  llamacppModel: string;
+  onChangeLlamaCppModel: (model: string) => void;
+  llamacppModels: LlamaCppModelItem[];
   onOpenPresets: () => void;
   onOpenHistory: () => void;
   onResetOptions: () => void;
@@ -40,6 +44,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   ollamaModel,
   onChangeOllamaModel,
   ollamaModels,
+  llamacppModel,
+  onChangeLlamaCppModel,
+  llamacppModels,
   onOpenPresets,
   onOpenHistory,
   onResetOptions,
@@ -52,6 +59,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   const modeLabels: Record<AppMode, string> = {
     ai_studio: 'AI Studio 雲端引擎',
     ollama: '本地 Ollama 離線引擎',
+    llamacpp: '本地 llama.cpp 離線引擎',
     paid_api: 'Gemini Paid API 直通引擎',
   };
 
@@ -74,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 MiniMax-H3 AI 提示詞助手
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">
-                v2.1.1 • 三引擎自動偵測
+                v2.2.0 • 四引擎自動偵測
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
@@ -138,7 +146,30 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Engine 3: Gemini Paid API 直通引擎 (Priority 3) */}
+            {/* Engine 3: 本地 llama.cpp 離線引擎 (Priority 3) */}
+            <button
+              type="button"
+              onClick={() => onChangeAppMode('llamacpp')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                appMode === 'llamacpp'
+                  ? 'bg-gradient-to-r from-sky-600/30 to-blue-600/30 text-sky-200 border border-sky-500/50 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="引擎三：本地 llama.cpp 離線模型 (優先級 3，極致 C/C++ 顯存加速，RTX 5090 原生適配)"
+            >
+              <Terminal className="w-3.5 h-3.5 text-sky-400" />
+              <span>本地 llama.cpp 引擎</span>
+              {systemStatus?.detectedModes.llamacpp ? (
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"
+                  title={`本機 llama.cpp 線上 (${systemStatus.details.llamacppModelCount} 個模型/插槽)`}
+                />
+              ) : (
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" title="本機 llama.cpp 離線 (預設端口 8080)" />
+              )}
+            </button>
+
+            {/* Engine 4: Gemini Paid API 直通引擎 (Priority 4) */}
             <button
               type="button"
               onClick={() => onChangeAppMode('paid_api')}
@@ -147,7 +178,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-gradient-to-r from-emerald-600/30 to-teal-600/30 text-emerald-200 border border-emerald-500/50 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="引擎三：Gemini Paid API 直通 (優先級 3，使用自備 Gemini API Key)"
+              title="引擎四：Gemini Paid API 直通 (優先級 4，使用自備 Gemini API Key)"
             >
               <Key className="w-3.5 h-3.5 text-teal-400" />
               <span>Paid API 直通引擎</span>
@@ -283,7 +314,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   type="button"
                   onClick={() => setShowModeInfo(!showModeInfo)}
                   className="p-1 rounded text-slate-500 hover:text-slate-300 transition-colors"
-                  title="查看三引擎架構與優先調度說明"
+                  title="查看四引擎架構與優先調度說明"
                 >
                   <HelpCircle className="w-3.5 h-3.5" />
                 </button>
@@ -291,7 +322,52 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           )}
 
-          {/* 3. If Paid API Mode: Direct Pay-As-You-Go Flagship Badge */}
+          {/* 3. If llama.cpp Mode: Dynamic Model Selector & Status */}
+          {appMode === 'llamacpp' && (
+            <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-700/80 shadow-inner">
+              <div className="flex items-center gap-1">
+                <Terminal className="w-3.5 h-3.5 text-sky-400 ml-1.5" />
+                <select
+                  value={llamacppModel}
+                  onChange={(e) => onChangeLlamaCppModel(e.target.value)}
+                  className="bg-slate-950 border border-slate-700 text-sky-200 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-sky-500 max-w-[210px] sm:max-w-[260px] truncate"
+                  title="選擇本地 llama.cpp 載入模型"
+                >
+                  {llamacppModels.length === 0 ? (
+                    <option value="default">
+                      {systemStatus?.details.llamacppOnline ? 'llama-server (活躍中)' : 'llama.cpp 離線 (未偵測到 8080 端口)'}
+                    </option>
+                  ) : (
+                    llamacppModels.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name || m.id}
+                      </option>
+                    ))
+                  )}
+                </select>
+
+                <button
+                  type="button"
+                  onClick={onRefreshStatus}
+                  className="p-1 rounded text-slate-400 hover:text-sky-300 transition-colors"
+                  title="重新偵測本機 llama.cpp 服務與模型"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowModeInfo(!showModeInfo)}
+                  className="p-1 rounded text-slate-500 hover:text-slate-300 transition-colors"
+                  title="查看四引擎架構與優先調度說明"
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 4. If Paid API Mode: Direct Pay-As-You-Go Flagship Badge */}
           {appMode === 'paid_api' && (
             <div className="relative flex items-center bg-slate-900/90 px-2.5 py-1 rounded-xl border border-slate-700/80 shadow-inner">
               <div className="flex items-center gap-1.5 text-xs">
@@ -338,13 +414,13 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           )}
 
-          {/* Mode Info Modal (Explains Tri-Engine & Auto-detection Priority) */}
+          {/* Mode Info Modal (Explains Quad-Engine & Auto-detection Priority) */}
           {showModeInfo && (
             <div className="absolute right-4 top-16 w-88 sm:w-96 p-4 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-50 text-xs text-slate-300 space-y-3">
               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                 <span className="font-bold text-white flex items-center gap-1.5">
                   <Sparkles className="w-4 h-4 text-purple-400" />
-                  三引擎自動偵測與優先調度架構
+                  四引擎自動偵測與優先調度架構
                 </span>
                 <button
                   onClick={() => setShowModeInfo(false)}
@@ -360,7 +436,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="text-slate-400">
                     <span className="text-purple-300 font-bold">1. AI Studio 雲端引擎</span> ＞{' '}
                     <span className="text-amber-300 font-bold">2. 本地 Ollama 離線引擎</span> ＞{' '}
-                    <span className="text-teal-300 font-bold">3. Gemini Paid API 直通引擎</span>
+                    <span className="text-sky-300 font-bold">3. 本地 llama.cpp 離線引擎</span> ＞{' '}
+                    <span className="text-teal-300 font-bold">4. Gemini Paid API 直通引擎</span>
                   </div>
                   {systemStatus && (
                     <div className="mt-1 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
@@ -388,7 +465,14 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
 
                 <div>
-                  <strong className="text-teal-300">3. Gemini Paid API 直通引擎 (優先級 3)</strong>
+                  <strong className="text-sky-300">3. 本地 llama.cpp 離線引擎 (優先級 3)</strong>
+                  <p className="text-slate-400 mt-0.5">
+                    連線至本機 <code className="text-sky-200">127.0.0.1:8080</code> (llama-server)。極致純 C/C++ 顯存加速，支援 Flash Attention (<code className="text-sky-200">-fa</code>)、32K 超大上下文與 <code className="text-sky-200">mmproj</code> 多模態視覺投影，RTX 5090 原生極限優化。
+                  </p>
+                </div>
+
+                <div>
+                  <strong className="text-teal-300">4. Gemini Paid API 直通引擎 (優先級 4)</strong>
                   <p className="text-slate-400 mt-0.5">
                     本機端點連線搭配使用者自備之 Google Gemini Paid API Key，採按量計費，全模組直通旗艦級 Gemini 3.8 Flash 深度推理，不受訂閱額度限制。
                   </p>

@@ -1,8 +1,8 @@
 export type GenerationMode = 'T2VA' | 'I2VA' | 'FL2VA' | 'L2VA' | 'Ref2VA';
 
-export type AiProvider = 'gemini' | 'ollama';
+export type AiProvider = 'gemini' | 'ollama' | 'llamacpp';
 
-export type AppMode = 'ai_studio' | 'ollama' | 'paid_api';
+export type AppMode = 'ai_studio' | 'ollama' | 'llamacpp' | 'paid_api';
 
 export type EngineTier = 'pro' | 'ultra_5x' | 'ultra_20x'; // AI Studio 訂閱制階梯方案 (AI Pro / Ultra 5x / Ultra 20x)
 
@@ -26,10 +26,25 @@ export interface OllamaStatus {
   error?: string;
 }
 
+export interface LlamaCppModelItem {
+  id: string;
+  name?: string;
+  object?: string;
+  size?: number;
+}
+
+export interface LlamaCppStatus {
+  online: boolean;
+  baseUrl: string;
+  models: LlamaCppModelItem[];
+  error?: string;
+}
+
 export interface SystemModeStatus {
   detectedModes: {
     ai_studio: boolean;
     ollama: boolean;
+    llamacpp: boolean;
     paid_api: boolean;
   };
   details: {
@@ -38,10 +53,15 @@ export interface SystemModeStatus {
     ollamaOnline: boolean;
     ollamaBaseUrl: string;
     ollamaModelCount: number;
+    llamacppOnline: boolean;
+    llamacppBaseUrl: string;
+    llamacppModelCount: number;
   };
   recommendedMode: AppMode;
   ollamaModels: OllamaModelItem[];
   defaultOllamaModel?: string;
+  llamacppModels: LlamaCppModelItem[];
+  defaultLlamaCppModel?: string;
   error?: string;
 }
 
@@ -113,6 +133,7 @@ export interface H3PromptConfig {
   provider?: AiProvider;
   appMode?: AppMode;
   ollamaModel?: string;
+  llamacppModel?: string;
   references: ReferenceItem[];
 }
 

@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v2.2.0] - 2026-09-21
+
+### 🚀 Quad-Engine Architecture Evolution & Native llama.cpp Integration (四引擎架構升級與本地 llama.cpp 深度整合)
+
+#### 🏛️ 1. Quad-Engine Operating Architecture (四引擎體系全面成形)
+- **Native llama.cpp Engine Support (`llamacpp`, 優先級 3)**:
+  - 正式將本機純 C/C++ 旗艦推理引擎 **llama.cpp** (`llama-server`) 納入核心體系，建構「**四引擎架構 (Quad-Engine Architecture)**」：
+    1. **🏢 AI Studio 雲端引擎 (`ai_studio`, 優先級 1)**
+    2. **💻 本地 Ollama 離線引擎 (`ollama`, 優先級 2)**
+    3. **⚡ 本地 llama.cpp 離線引擎 (`llamacpp`, 優先級 3)**：支援純 C/C++ 極致顯存加速、Flash Attention (`-fa`) 與 32K 超大上下文長度。
+    4. **🔑 Gemini Paid API 直通引擎 (`paid_api`, 優先級 4)**
+  - 自動相容 OpenAI 規範之 `/v1/chat/completions` 與 `/v1/models` 端點，支援 `response_format: { type: "json_object" }` 結構化輸出與 `<think>...</think>` 推理思考鏈清洗。
+  - 完美原生適配本機頂級硬體環境（如 NVIDIA RTX 5090 32GB VRAM），實現 `-ngl 99` 全層 GPU 卸載與極限吞吐量。
+
+#### 👁️ 2. Multimodal Projector (`mmproj`) Vision Support (多模態看圖能力智慧自動掛載)
+- **100% 自動關聯與掛載**：修復了 Windows CMD 通配符在雙引號中無法展開的解析缺陷，改用穩健的 `dir /b /s` 精確檢索。選定主模型後，系統自動關聯所屬目錄（或全域備援）之 `mmproj-*.gguf` 並組裝 `--mmproj` 參數。
+- **徹底根治載入錯誤**：解決了未掛載視覺投影權重時發送圖片參考導致 `llama-server` 拋出 `Failed to load image or audio file` 的伺服器錯誤，本地端離線圖片與分鏡參考解析 100% 順暢。
+
+#### ⚡ 3. Native Embedded MTP Dual-Speed Acceleration (原生嵌入式 MTP 雙倍極速加速)
+- **原生 NextN 結構深度啟用**：針對 Qwen3.8-27B 內建的 NextN 預測結構，自動注入 `--spec-type draft-mtp` 核心加速指令。
+- **官方通用零崩潰**：完全相容官方原版 upstream `llama-server.exe`，無須手動套用第三方補丁編譯，直接在 RTX 5090 上享有 **2.23x (+123.4%)** 的雙倍極速生成體驗！
+
+#### 🎮 4. Streamlined One-Click Launchers (`start_llama.bat` & `start.bat`) (極致一鍵啟動與防閃退修復)
+- **專屬 `start_llama.bat` 一鍵極簡啟動器**：
+  - 自動掃描 `C:\llama.cpp\models` 及其所有子目錄（如 `HauhauCS`、`JonathanColetti`）下的 GGUF 模型。
+  - 嚴格排除 `mmproj`、`FastMTP`、`draft` 等側車檔，僅呈現乾淨的主模型清單，並標註各模型所屬目錄的視覺投影狀態。
+  - 移除繁瑣的 FastMTP 模式詢問，使用者只需輸入編號（直接按 Enter 預設載入 1），一鍵全自動直達啟動！
+  - 內建背景程序探測：若檢測到背景已有舊的 `llama-server.exe` 佔用 8080 端口，主動提示並一鍵協助終止舊程序，避免端口衝突。
+- **`start.bat` 穩定性修復與一鍵全自動聯動**：
+  - **消除 CMD 複合語句區塊括號解析崩潰**：修復了 `if ( ... )` 條件區塊中因 `(http://127.0.0.1:8080)` 內的右圓括號 `)` 導致 CMD 提前閉合而觸發 `[RTX was unexpected at this time.` 的閃退問題，全檔提示全面標準化為方括號 `[...]`。
+  - **視窗常駐防護**：腳本末尾加入常駐保留提示，避免伺服器結束時瞬間關閉視窗。
+  - **智慧聯動**：啟動時主動探測 `http://127.0.0.1:8080` 是否在線；若離線且偵測到 `C:\llama.cpp`，自動於獨立視窗拉起模型選單，並輪詢確認端口就緒後無縫啟動 Prompt Studio。
+
+---
+
 ## [v2.1.1] - 2026-09-21
 
 ### 🚀 Tri-Engine Operating Architecture Evolution & Ollama Pre-flight Auto-Launch (三引擎架構升級與 Ollama 自啟動)

@@ -19,6 +19,7 @@ import {
   SystemModeStatus,
   OllamaModelItem,
   OllamaStatus,
+  LlamaCppModelItem,
 } from './types';
 import { Navbar } from './components/Navbar';
 import { ReferenceManager } from './components/ReferenceManager';
@@ -162,11 +163,12 @@ export default function App() {
   const [appMode, setAppMode] = useState<AppMode>(() => {
     try {
       const saved = localStorage.getItem('minimax_h3_app_mode') as AppMode;
-      if (saved && ['ai_studio', 'ollama', 'paid_api'].includes(saved)) {
+      if (saved && ['ai_studio', 'ollama', 'llamacpp', 'paid_api'].includes(saved)) {
         return saved;
       }
       const legacy = localStorage.getItem('minimax_h3_ai_provider');
       if (legacy === 'ollama') return 'ollama';
+      if (legacy === 'llamacpp') return 'llamacpp';
       return 'ai_studio';
     } catch {
       return 'ai_studio';
@@ -180,8 +182,17 @@ export default function App() {
       return 'orcarouter/Qwen3.8-27B-Uncensored:q6_K';
     }
   });
+  const [llamacppModel, setLlamaCppModel] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('minimax_h3_llamacpp_model');
+      return saved || 'default';
+    } catch {
+      return 'default';
+    }
+  });
   const [systemStatus, setSystemStatus] = useState<SystemModeStatus | null>(null);
   const [ollamaModels, setOllamaModels] = useState<OllamaModelItem[]>([]);
+  const [llamacppModels, setLlamaCppModels] = useState<LlamaCppModelItem[]>([]);
   const [config, setConfig] = useState<H3PromptConfig>(DEFAULT_CONFIG);
   const [output, setOutput] = useState<H3PromptOutput | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -291,6 +302,22 @@ export default function App() {
         });
       }
 
+      if (data.llamacppModels && Array.isArray(data.llamacppModels)) {
+        setLlamaCppModels(data.llamacppModels);
+
+        // Auto-reconcile or set default llama.cpp model
+        setLlamaCppModel((curr) => {
+          const exists = data.llamacppModels.some((m) => (m.id || m.name) === curr);
+          if (!exists && data.defaultLlamaCppModel) {
+            try {
+              localStorage.setItem('minimax_h3_llamacpp_model', data.defaultLlamaCppModel);
+            } catch (e) {}
+            return data.defaultLlamaCppModel;
+          }
+          return curr;
+        });
+      }
+
       // If user hasn't explicitly set a manual mode in localStorage, auto-select by recommended priority
       const savedManualMode = localStorage.getItem('minimax_h3_app_mode');
       if (!savedManualMode && data.recommendedMode) {
@@ -301,10 +328,12 @@ export default function App() {
         const modeLabels: Record<AppMode, string> = {
           ai_studio: 'AI Studio 雲端引擎',
           ollama: '本地 Ollama 離線引擎',
+          llamacpp: '本地 llama.cpp 離線引擎',
           paid_api: 'Gemini Paid API 直通引擎',
         };
+        const localCount = (data.ollamaModels?.length || 0) + (data.llamacppModels?.length || 0);
         showToast(
-          `偵測完成！系統優先推薦【${modeLabels[data.recommendedMode]}】（${data.ollamaModels?.length || 0} 個本地模型）`,
+          `偵測完成！系統優先推薦【${modeLabels[data.recommendedMode]}】（共探測到 ${localCount} 個本地模型/插槽）`,
           'success'
         );
       }
@@ -318,24 +347,26 @@ export default function App() {
 
   const handleAppModeChange = (mode: AppMode) => {
     setAppMode(mode);
+    const provider: AiProvider = mode === 'ollama' ? 'ollama' : mode === 'llamacpp' ? 'llamacpp' : 'gemini';
     setConfig((prev) => ({
       ...prev,
       appMode: mode,
-      provider: mode === 'ollama' ? 'ollama' : 'gemini',
+      provider,
     }));
     try {
       localStorage.setItem('minimax_h3_app_mode', mode);
-      localStorage.setItem('minimax_h3_ai_provider', mode === 'ollama' ? 'ollama' : 'gemini');
+      localStorage.setItem('minimax_h3_ai_provider', provider);
     } catch (e) {
       console.error('Failed to save app mode to localStorage', e);
     }
     const modeLabels: Record<AppMode, string> = {
       ai_studio: 'AI Studio 雲端引擎',
       ollama: '本地 Ollama 離線引擎',
+      llamacpp: '本地 llama.cpp 離線引擎',
       paid_api: 'Gemini Paid API 直通引擎',
     };
     showToast(`已手動切換至【${modeLabels[mode]}】`, 'info');
-    if (mode === 'ollama') {
+    if (mode === 'ollama' || mode === 'llamacpp') {
       checkSystemStatus(false);
     }
   };
@@ -349,7 +380,19 @@ export default function App() {
       console.error('Failed to save ollama model to localStorage', e);
     }
     const tag = model.includes(':') ? model.split(':')[1] : model;
-    showToast(`已切換本機模型：${tag || model}`, 'info');
+    showToast(`已切換本機 Ollama 模型：${tag || model}`, 'info');
+  };
+
+  const handleLlamaCppModelChange = (model: string) => {
+    setLlamaCppModel(model);
+    setConfig((prev) => ({ ...prev, llamacppModel: model }));
+    try {
+      localStorage.setItem('minimax_h3_llamacpp_model', model);
+    } catch (e) {
+      console.error('Failed to save llamacpp model to localStorage', e);
+    }
+    const tag = model.includes('/') ? model.split('/').pop() : model.includes('\\') ? model.split('\\').pop() : model;
+    showToast(`已切換本機 llama.cpp 模型：${tag || model}`, 'info');
   };
 
   const handleEngineTierChange = (tier: EngineTier) => {
@@ -463,8 +506,9 @@ export default function App() {
         ...config,
         appMode,
         engineTier,
-        provider: appMode === 'ollama' ? 'ollama' : 'gemini',
+        provider: appMode === 'ollama' ? 'ollama' : appMode === 'llamacpp' ? 'llamacpp' : 'gemini',
         ollamaModel,
+        llamacppModel,
         references: config.references.map((r) => ({
           id: r.id,
           tag: r.tag,
@@ -647,6 +691,9 @@ export default function App() {
         ollamaModel={ollamaModel}
         onChangeOllamaModel={handleOllamaModelChange}
         ollamaModels={ollamaModels}
+        llamacppModel={llamacppModel}
+        onChangeLlamaCppModel={handleLlamaCppModelChange}
+        llamacppModels={llamacppModels}
         onOpenPresets={() => setIsPresetOpen(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
         onResetOptions={handleResetOptions}
