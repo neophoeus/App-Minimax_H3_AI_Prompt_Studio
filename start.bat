@@ -1,10 +1,10 @@
 @echo off
-title MiniMax-H3 AI Prompt Studio v2.2.0
+title MiniMax-H3 AI Prompt Studio v3.0.0
 cls
 
 echo ======================================================================
-echo           MiniMax-H3 AI Prompt Studio [v2.2.0]
-echo           AI Engine: Quad-Engine Architecture [AI Studio + Ollama + llama.cpp + Paid API]
+echo           MiniMax-H3 AI Prompt Studio [v3.0.0]
+echo           AI Engine: Quad-Engine Architecture [AI Studio + Paid API + Ollama + llama.cpp]
 echo ======================================================================
 echo.
 
@@ -30,6 +30,15 @@ if not exist "node_modules\" (
     echo [+] Dependencies installed successfully
     echo.
 )
+
+echo [*] Checking AI Studio / Paid API configuration...
+findstr /i "GEMINI_API_KEY=" .env >nul 2>nul
+if %errorlevel% equ 0 (
+    echo [+] Gemini API Key configured in .env [AI Studio / Paid API Direct Engine Ready]
+) else (
+    echo [i] No GEMINI_API_KEY configured in .env [Ollama / llama.cpp offline engines available]
+)
+echo.
 
 echo [*] Checking local Ollama service [http://127.0.0.1:11434]...
 curl -s -m 2 http://127.0.0.1:11434/api/tags >nul 2>nul

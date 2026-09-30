@@ -135,6 +135,8 @@ export interface H3PromptConfig {
   ollamaModel?: string;
   llamacppModel?: string;
   references: ReferenceItem[];
+  isSeriesMode?: boolean;
+  seriesCount?: number; // 2 ~ 10, default 5
 }
 
 export interface TemporalSegment {
@@ -142,6 +144,19 @@ export interface TemporalSegment {
   action: string;
   camera: string; // e.g. The camera pushes in with small amplitude at slow speed
   audio: string;
+}
+
+export interface SeriesEpisode {
+  episodeIndex: number; // 1-indexed (e.g. 1, 2, 3, ...)
+  title: string;        // 段落標題 (例如: 第 1 段：初始開場與主體錨定)
+  duration: string;     // 例如 5s 或 10s
+  startingState: string;// 起始狀態 (具體畫面位置、物件與初始姿態)
+  actionSequence: string;// 連續動作 (客觀步驟化物理位移與動作)
+  endState: string;     // 結束狀態 (動作停止時的畫面靜態落點)
+  fullPrompt: string;   // 100% 獨立合法、立即可貼入 MiniMax-H3 生成的完整提示詞
+  cameraMovement: string;// 運鏡描述 (三維度自然英文動作)
+  audioSoundscape: string;// 音效與環境音
+  continuityNotes: string;// 承接說明 (如何純文字客觀承接上一段結束狀態)
 }
 
 export interface H3PromptOutput {
@@ -153,6 +168,10 @@ export interface H3PromptOutput {
   audioNotes: string;
   explanationZh: string;
   suggestions: string[];
+  isSeries?: boolean;
+  seriesTitle?: string;
+  storyArcSummary?: string;
+  episodes?: SeriesEpisode[];
 }
 
 export interface SavedPromptItem {

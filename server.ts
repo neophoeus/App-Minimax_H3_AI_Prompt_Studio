@@ -58,22 +58,22 @@ function detectEnvironment() {
 /**
  * Priority Order:
  * 1. 訂閱制度 AI Studio 內運行版 (ai_studio)
- * 2. 本地 Ollama 版 (ollama)
- * 3. 本地 llama.cpp 版 (llamacpp)
- * 4. 本地 Paid API 版 (paid_api)
+ * 2. 本地 Paid API 版 (paid_api)
+ * 3. 本地 Ollama 版 (ollama)
+ * 4. 本地 llama.cpp 版 (llamacpp)
  */
 function calculateRecommendedMode(modes: { ai_studio: boolean; ollama: boolean; llamacpp: boolean; paid_api: boolean }): AppMode {
   if (modes.ai_studio) {
     return 'ai_studio';
+  }
+  if (modes.paid_api) {
+    return 'paid_api';
   }
   if (modes.ollama) {
     return 'ollama';
   }
   if (modes.llamacpp) {
     return 'llamacpp';
-  }
-  if (modes.paid_api) {
-    return 'paid_api';
   }
   return 'ai_studio'; // 預設回退
 }
@@ -696,6 +696,19 @@ Examples of correct phrasing:
 - "The camera holds a static shot as the runner exits the frame."
 - "The camera rolls clockwise with small amplitude at slow speed as the fighter tumbles through the air."
 
+### 3.5 Objective, Literal & Step-by-Step Visual Action Principle (CRITICAL):
+Video diffusion models synthesize physical movement from text tokens. Flowery sentences, poetic metaphors, emotional adjectives, and abstract concepts cause motion confusion and anatomical distortion.
+- ALL visual actions MUST be specific, literal, and step-by-step:
+  - Be specific and literal. Describe what happens, in what order, step by step.
+  - DO NOT use flowery language, poetic metaphors, emotional adjectives, or abstract concepts (e.g. NEVER write "ethereal glow", "mysterious aura", "heart-wrenching sorrow", "breathtaking majesty", "symphony of lights", "vibes").
+  - Instead of "a ball bouncing around" → "A red ball moves to the right, bounces off the wall, and returns to the center"
+  - Instead of "fluid pouring" → "Water flows from the left container through the connecting tube into the right container until both levels are equal"
+  - Instead of "a detective looks around anxiously" → "A detective in a beige trench coat turns his head 45 degrees to the left, pauses for one second, then turns rapidly to the right while glancing at the train door"
+- ALWAYS construct action narratives using the three-state physical framework:
+  1. Starting state: Initial position of the subject/object, body posture, what hands are holding, and initial eye gaze.
+  2. Action: Objective physical motion, directions, trajectories, speeds, and contacts in chronological step-by-step order.
+  3. End state: Resting position, resulting posture, and physical status when motion concludes.
+
 ### 4. Speakers, Dialogue, Voiceover & Visible Text Rules:
 - Speakers who vocalize receive stable IDs: (S1), (S2), or compound (S1,S2). Non-vocalizing characters receive no speaker ID.
 - Dialogue MUST be formatted using <d>[Language] ...</d> tags:
@@ -714,6 +727,15 @@ Examples of correct phrasing:
   - Use Ref2VA with task type "[video continuation]" in summary.
   - The preceding clip is labeled as <Video 1> (the continuation starting point), and Shot 1 resumes seamlessly from the end state of <Video 1>.
 
+### 5.5 Multi-Episode Consecutive Prompts Generation Standard (When seriesCount > 1):
+When generating a sequence/series of prompts (e.g., 5 to 10 episodes):
+- EACH episode prompt MUST be 100% self-contained, valid, and immediately copyable/executable into MiniMax-H3 on its own!
+- NEVER include meta-references to non-existent videos (e.g. NEVER write "Resuming directly from Clip 1" or reference a clip before it exists).
+- Continuity across episodes is achieved purely through concrete physical narrative descriptions:
+  - Episode 1: Establishes the initial scene, subject, and first action sequence.
+  - Episode K (K >= 2): The prompt's initial description/Shot 1 objectively begins with the exact physical posture, position, and held objects that directly continue from where Episode K-1 ended.
+  - All episodes strictly share identical subject definitions (<Subject 1>), identical clothing, hair, facial features, reference image (<Picture 1>), visual style, and ambient soundscape base.
+
 ### 6. Absolute Prohibitions Regarding File Names:
 - STRICT RULE: DO NOT include any file names, file extensions (.jpg, .png, .mp4, .wav, etc.), or upload paths anywhere in the generated prompt text (neither in fullPrompt, block1, block2, block3, nor temporalTimeline).
 - In subject_definitions, define items purely by their physical appearance, role, and visual traits (e.g. "<Subject 1> is a cyberpunk detective..."), NEVER by a filename.
@@ -729,7 +751,7 @@ Examples of correct phrasing:
   "temporalTimeline": [
     {
       "timeframe": "[Shot 1] / [Shot 2] At 00:03.500",
-      "action": "Description of action...",
+      "action": "Literal step-by-step physical action (Starting state -> Action -> End state)...",
       "camera": "Natural camera movement description (e.g. The camera pushes in with small amplitude at slow speed...)",
       "audio": "Audio and dialogue with <d>[Language] ...</d> tags..."
     }
@@ -739,6 +761,23 @@ Examples of correct phrasing:
     "畫幅與鏡頭節奏建議",
     "MiniMax-H3 官方實用技巧 1",
     "MiniMax-H3 官方實用技巧 2"
+  ],
+  "isSeries": false,
+  "seriesTitle": "Optional series title when generating multiple episodes",
+  "storyArcSummary": "Optional story arc summary when generating multiple episodes",
+  "episodes": [
+    {
+      "episodeIndex": 1,
+      "title": "第 1 段標題",
+      "duration": "10s",
+      "startingState": "具體畫面初始姿態與位置",
+      "actionSequence": "連續步驟化客觀動作",
+      "endState": "動作結束時畫面落點姿態",
+      "fullPrompt": "100% 獨立合法可貼之完整 MiniMax-H3 提示詞",
+      "cameraMovement": "運鏡英文句子",
+      "audioSoundscape": "環境音與音效",
+      "continuityNotes": "承接說明"
+    }
   ]
 }
 `;
@@ -1182,6 +1221,37 @@ app.post("/api/generate-h3-prompt", async (req, res) => {
           .join('\n')
       : 'No reference files provided.';
 
+    const isSeriesMode = Boolean(config.isSeriesMode);
+    const seriesCount = Math.min(10, Math.max(2, Number(config.seriesCount) || 5));
+
+    const seriesDirective = isSeriesMode
+      ? `
+CRITICAL MULTI-EPISODE SERIES GENERATION PROTOCOL (${seriesCount} CONSECUTIVE EPISODES):
+- You MUST generate a chronological sequence of exactly ${seriesCount} video generation prompts (Episodes 1 to ${seriesCount}).
+- EACH EPISODE MUST BE A 100% SELF-CONTAINED, VALID, AND INDEPENDENTLY COPY-READY MINIMAX-H3 PROMPT!
+- NEVER include meta-references like "Resuming directly from Clip 1" or referencing non-existent video files.
+- Continuity across episodes MUST be achieved purely through literal step-by-step physical descriptions:
+  * Episode 1: Establishes initial scene, character appearance, and opening physical action sequence.
+  * Episode K (K >= 2): The prompt's initial description/Shot 1 objectively begins with the exact physical posture, position, and held objects that directly continue from where Episode K-1 ended.
+  * All episodes strictly share identical subject definitions (<Subject 1>), clothing, hair, facial features, reference image (<Picture 1>), visual style, and ambient soundscape base.
+- You MUST populate the "episodes" array with exactly ${seriesCount} items:
+  * episodeIndex: 1, 2, ... ${seriesCount}
+  * title: Traditional Chinese title (e.g. "第 1 段：初始開場與動作錨定", "第 2 段：情節承接與實體位移")
+  * duration: "${config.duration || '10s'}"
+  * startingState: Objective literal physical starting state (body posture, location, held objects)
+  * actionSequence: Chronological physical step-by-step motion (what moves where, in what order)
+  * endState: Resulting physical end state (where objects rest, final posture)
+  * fullPrompt: Complete, independent MiniMax-H3 prompt ready to paste directly into MiniMax
+  * cameraMovement: Natural camera description
+  * audioSoundscape: Soundscape and ambient sound
+  * continuityNotes: Traditional Chinese explanation of how this episode continues from the previous one's physical end state
+- Set "isSeries": true, "seriesTitle": A concise series title in Traditional Chinese, "storyArcSummary": 1-2 sentences summarizing the multi-shot story arc in Traditional Chinese.
+`
+      : `
+- Single-clip generation mode: Focus on generating one optimal, perfectly structured MiniMax-H3 prompt.
+- Set "isSeries": false, "episodes": []
+`;
+
     const userPrompt = `
 Generate an optimal MiniMax-H3 prompt based on the following user input:
 - Core Idea/Concept: ${config.idea || "A sleek futuristic scene"}
@@ -1199,7 +1269,18 @@ Generate an optimal MiniMax-H3 prompt based on the following user input:
 - Reference Assets (Block 1):
 ${sanitizedReferences}
 
-Please synthesize all these options into the official MiniMax-H3 prompt format strictly adhering to the system instructions.
+CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE (MUST FOLLOW STRICTLY):
+- Be specific and literal. Describe what happens, in what order, step by step.
+- DO NOT use flowery language, poetic metaphors, emotional adjectives, or abstract concepts (e.g. NEVER write "ethereal", "breathtaking", "mysterious aura", "soul-stirring", "stunning masterpiece", "symphony of light").
+- Instead of "a ball bouncing around" → "A red ball moves to the right, bounces off the wall, and returns to the center"
+- Instead of "fluid pouring" → "Water flows from the left container through the connecting tube into the right container until both levels are equal"
+- For every shot and action, describe:
+  1. Starting state (body posture, position in frame, what hands are holding, initial gaze)
+  2. Action (chronological step-by-step physical movement, directions, contact)
+  3. End state (resulting posture, resting place of objects when movement concludes)
+
+${seriesDirective}
+
 CRITICAL CAMERA RULES:
 - Integrate camera movements as natural English actions within each shot (e.g. "The camera pushes in with small amplitude at slow speed toward..."), NEVER as bracketed labels like "[Push In]".
 - If amplitude or speed was specified above, naturally include them in the camera sentence.
@@ -1207,7 +1288,7 @@ CRITICAL DIALOGUE RULES:
 - Any character spoken dialogue MUST be placed inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>). Keep the exact user dialogue verbatim.
 - Double quotes "" are strictly reserved for text visibly seen on-screen (e.g. signs, logos).
 CRITICAL PROHIBITION: DO NOT write any file names, file extensions (e.g. .png, .jpg), or local upload names into the output! Define subjects using clear visual descriptions only.
-Ensure English language is used for the actual prompt text (fullPrompt, block1, block2, block3) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh and suggestions!
+Ensure English language is used for the actual prompt text (fullPrompt, block1, block2, block3) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh, suggestions, and continuityNotes!
 `;
 
     if (appMode === 'ollama') {
@@ -1224,13 +1305,30 @@ You MUST output a valid JSON object matching this schema:
   "temporalTimeline": [
     {
       "timeframe": "string (e.g. [Shot 1] or [Shot 2] At 00:03.500)",
-      "action": "string (Action description)",
+      "action": "string (Action description following Starting state -> Action -> End state)",
       "camera": "string (Natural English camera movement)",
       "audio": "string (SFX / dialogue)"
     }
   ],
   "explanationZh": "string (Traditional Chinese explanation of the prompt design and cinematography)",
-  "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"]
+  "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"],
+  "isSeries": ${isSeriesMode ? "true" : "false"},
+  "seriesTitle": "string (Series Title)",
+  "storyArcSummary": "string (Story Arc Summary)",
+  "episodes": [
+    {
+      "episodeIndex": 1,
+      "title": "string (Episode Title in Traditional Chinese)",
+      "duration": "string",
+      "startingState": "string (Literal physical starting state)",
+      "actionSequence": "string (Step-by-step physical action)",
+      "endState": "string (Literal physical end state)",
+      "fullPrompt": "string (Complete independent MiniMax-H3 prompt)",
+      "cameraMovement": "string (Natural camera action)",
+      "audioSoundscape": "string (Audio soundscape)",
+      "continuityNotes": "string (How it continues from previous episode)"
+    }
+  ]
 }
 Do NOT output any markdown tags outside the JSON. Return only the valid JSON object.`;
 
@@ -1257,6 +1355,20 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
           audio: sanitizeGeneratedPromptText(item.audio || ''),
         }));
       }
+      if (Array.isArray(resultJson.episodes)) {
+        resultJson.episodes = resultJson.episodes.map((ep: any, idx: number) => ({
+          ...ep,
+          episodeIndex: ep.episodeIndex || idx + 1,
+          fullPrompt: sanitizeGeneratedPromptText(ep.fullPrompt || ''),
+          startingState: sanitizeGeneratedPromptText(ep.startingState || ''),
+          actionSequence: sanitizeGeneratedPromptText(ep.actionSequence || ''),
+          endState: sanitizeGeneratedPromptText(ep.endState || ''),
+        }));
+        if (isSeriesMode && resultJson.episodes.length > 0 && !resultJson.fullPrompt) {
+          resultJson.fullPrompt = resultJson.episodes[0].fullPrompt;
+        }
+        resultJson.isSeries = isSeriesMode;
+      }
 
       return res.json({ success: true, data: resultJson });
     }
@@ -1275,13 +1387,30 @@ You MUST output a valid JSON object matching this schema:
   "temporalTimeline": [
     {
       "timeframe": "string (e.g. [Shot 1] or [Shot 2] At 00:03.500)",
-      "action": "string (Action description)",
+      "action": "string (Action description following Starting state -> Action -> End state)",
       "camera": "string (Natural English camera movement)",
       "audio": "string (SFX / dialogue)"
     }
   ],
   "explanationZh": "string (Traditional Chinese explanation of the prompt design and cinematography)",
-  "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"]
+  "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"],
+  "isSeries": ${isSeriesMode ? "true" : "false"},
+  "seriesTitle": "string (Series Title)",
+  "storyArcSummary": "string (Story Arc Summary)",
+  "episodes": [
+    {
+      "episodeIndex": 1,
+      "title": "string (Episode Title in Traditional Chinese)",
+      "duration": "string",
+      "startingState": "string (Literal physical starting state)",
+      "actionSequence": "string (Step-by-step physical action)",
+      "endState": "string (Literal physical end state)",
+      "fullPrompt": "string (Complete independent MiniMax-H3 prompt)",
+      "cameraMovement": "string (Natural camera action)",
+      "audioSoundscape": "string (Audio soundscape)",
+      "continuityNotes": "string (How it continues from previous episode)"
+    }
+  ]
 }
 Do NOT output any markdown tags outside the JSON. Return only the valid JSON object.`;
 
@@ -1307,6 +1436,20 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
           camera: sanitizeGeneratedPromptText(item.camera || ''),
           audio: sanitizeGeneratedPromptText(item.audio || ''),
         }));
+      }
+      if (Array.isArray(resultJson.episodes)) {
+        resultJson.episodes = resultJson.episodes.map((ep: any, idx: number) => ({
+          ...ep,
+          episodeIndex: ep.episodeIndex || idx + 1,
+          fullPrompt: sanitizeGeneratedPromptText(ep.fullPrompt || ''),
+          startingState: sanitizeGeneratedPromptText(ep.startingState || ''),
+          actionSequence: sanitizeGeneratedPromptText(ep.actionSequence || ''),
+          endState: sanitizeGeneratedPromptText(ep.endState || ''),
+        }));
+        if (isSeriesMode && resultJson.episodes.length > 0 && !resultJson.fullPrompt) {
+          resultJson.fullPrompt = resultJson.episodes[0].fullPrompt;
+        }
+        resultJson.isSeries = isSeriesMode;
       }
 
       return res.json({ success: true, data: resultJson });
@@ -1353,6 +1496,39 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
                 type: Type.ARRAY,
                 items: { type: Type.STRING },
               },
+              isSeries: { type: Type.BOOLEAN },
+              seriesTitle: { type: Type.STRING },
+              storyArcSummary: { type: Type.STRING },
+              episodes: {
+                type: Type.ARRAY,
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    episodeIndex: { type: Type.INTEGER },
+                    title: { type: Type.STRING },
+                    duration: { type: Type.STRING },
+                    startingState: { type: Type.STRING },
+                    actionSequence: { type: Type.STRING },
+                    endState: { type: Type.STRING },
+                    fullPrompt: { type: Type.STRING },
+                    cameraMovement: { type: Type.STRING },
+                    audioSoundscape: { type: Type.STRING },
+                    continuityNotes: { type: Type.STRING },
+                  },
+                  required: [
+                    "episodeIndex",
+                    "title",
+                    "duration",
+                    "startingState",
+                    "actionSequence",
+                    "endState",
+                    "fullPrompt",
+                    "cameraMovement",
+                    "audioSoundscape",
+                    "continuityNotes",
+                  ],
+                },
+              },
             },
             required: [
               "block1",
@@ -1385,6 +1561,20 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
         audio: sanitizeGeneratedPromptText(item.audio || ''),
       }));
     }
+    if (Array.isArray(resultJson.episodes)) {
+      resultJson.episodes = resultJson.episodes.map((ep: any, idx: number) => ({
+        ...ep,
+        episodeIndex: ep.episodeIndex || idx + 1,
+        fullPrompt: sanitizeGeneratedPromptText(ep.fullPrompt || ''),
+        startingState: sanitizeGeneratedPromptText(ep.startingState || ''),
+        actionSequence: sanitizeGeneratedPromptText(ep.actionSequence || ''),
+        endState: sanitizeGeneratedPromptText(ep.endState || ''),
+      }));
+      if (isSeriesMode && resultJson.episodes.length > 0 && !resultJson.fullPrompt) {
+        resultJson.fullPrompt = resultJson.episodes[0].fullPrompt;
+      }
+      resultJson.isSeries = isSeriesMode;
+    }
 
     return res.json({ success: true, data: resultJson });
   } catch (error: any) {
@@ -1409,6 +1599,12 @@ Duration: ${duration}
 Suppress Music: ${suppressMusic ? "Yes" : "No"}
 
 Refine it strictly following official MiniMax-H3 specifications:
+CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE:
+- Be specific and literal. Describe what happens, in what order, step by step.
+- DO NOT use flowery language, poetic metaphors, emotional adjectives, or abstract concepts (avoid "ethereal", "breathtaking", "mysterious aura", "soul-stirring").
+- Instead of "a ball bouncing around" → "A red ball moves to the right, bounces off the wall, and returns to the center"
+- Instead of "fluid pouring" → "Water flows from the left container through the connecting tube into the right container until both levels are equal"
+- Describe the starting state, the action, and the end state for each shot.
 - Divide into shots starting with [Shot 1] (setting style/composition, no timestamp), and subsequent shots with cut timecodes: "[Shot 2] At MM:SS.mmm, the camera cuts to...".
 - Express camera motion as natural English actions within the shot (e.g. "The camera pushes in with small amplitude at slow speed toward..."). DO NOT use bracketed camera tags like "[Push In]".
 - Format spoken dialogue inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>), and reserve double quotes "" strictly for visible on-screen text.

@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v2.2.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.0.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -23,15 +23,35 @@ Adhering 100% to the official MiniMax-H3 [`h3-prompt-writing`](https://github.co
 
 Featuring a **Quad-Engine Operating Architecture with Priority Auto-Detection**, users can run the studio across four distinct environments:
 1. **🏢 AI Studio Cloud Engine (`ai_studio`, Priority 1)**: Tailored for Google AI Studio / Cloud Run subscription environments, featuring selectable quota tiers (**AI Pro**, **AI Ultra 5x**, **AI Ultra 20x**) with smart model routing and zero rate limits.
-2. **💻 Local Ollama Offline Engine (`ollama`, Priority 2)**: 100% private and offline on `http://127.0.0.1:11434`, with **dynamic local model discovery** (automatically scans all installed models like `Qwen3.8-27B-Uncensored` in `q8_0`, `q6_K`, `q5_K_M` without hardcoding).
-3. **⚡ Local llama.cpp Offline Engine (`llamacpp`, Priority 3)**: Pure C/C++ ultra-low latency offline inference connecting directly to `http://127.0.0.1:8080` (`llama-server`). Equipped with Flash Attention (`-fa`), 32K context windows, and `mmproj` multimodal vision support natively tailored for top-tier GPUs like the NVIDIA RTX 5090 (32GB VRAM).
-4. **🔑 Local Paid API Direct Engine (`paid_api`, Priority 4)**: Direct pay-as-you-go execution utilizing the user's paid Google Gemini API key, unlocking full-core flagship `gemini-3.8-flash` deep reasoning across all tasks without subscription quota constraints.
+2. **🔑 Local Paid API Direct Engine (`paid_api`, Priority 2)**: Direct pay-as-you-go execution utilizing the user's paid Google Gemini API key, unlocking full-core flagship `gemini-3.8-flash` deep reasoning across all tasks without subscription quota constraints.
+3. **💻 Local Ollama Offline Engine (`ollama`, Priority 3)**: 100% private and offline on `http://127.0.0.1:11434`, with **dynamic local model discovery** (automatically scans all installed models like `Qwen3.8-27B-Uncensored` in `q8_0`, `q6_K`, `q5_K_M` without hardcoding).
+4. **⚡ Local llama.cpp Offline Engine (`llamacpp`, Priority 4)**: Pure C/C++ ultra-low latency offline inference connecting directly to `http://127.0.0.1:8080` (`llama-server`). Equipped with Flash Attention (`-fa`), 32K context windows, and `mmproj` multimodal vision support natively tailored for top-tier GPUs like the NVIDIA RTX 5090 (32GB VRAM).
 
-The studio automatically detects the environment and auto-selects the highest priority engine on startup (**AI Studio > Ollama > llama.cpp > Paid API**), while preserving the ability to manually switch engines anytime.
+The studio automatically detects the environment and auto-selects the highest priority engine on startup (**AI Studio > Paid API > Ollama > llama.cpp**), while preserving the ability to manually switch engines anytime.
 
 ## ✨ Key Features
 
-### 1. Complete MiniMax-H3 Specification Compliance & Studio Layout (v2.0.1)
+### 1. Multi-Episode Consecutive Series Storyboard Studio (v3.0.0)
+- **2 to 10 Sequential Video Prompts Generation**: Generate coherent, step-by-step consecutive video prompts in a single click (recommended 5-clip golden narrative arc: Hook ➔ Progression ➔ Twist ➔ Resolution ➔ Outro).
+- **Single Global Inference Context**: Avoids narrative drift and fragmented reasoning by orchestrating the entire sequence with a unified `storyArcSummary`.
+- **Persistent State & Inventory Memory**: Automatically carries over character appearance (`<Subject 1>`), held items and inventory (items placed in pockets in Episode 1 can be retrieved in Episode 4), environmental wear (rain-soaked coats, night progression), and causal story goals across all clips.
+- **Pure Physical Continuity Hand-off**: Eliminates confusing references to ungenerated videos (e.g. no fake "Resuming from Clip 1"). Episode $K$ naturally and objectively begins by describing the ending posture, held objects, and position from Episode $K-1$. Every prompt is **100% independent, syntactically valid, and immediately copy-ready** for MiniMax-H3!
+- **Interactive Series Storyboard Dashboard**:
+  - Episode switcher tabs (`Episode #1`, `Episode #2`, ... `Episode #N`).
+  - Physical 3-state breakdown cards (`Starting State` ➔ `Action Sequence` ➔ `End State`) + Camera & Soundscape analysis.
+  - Quick action toolbar: **Copy Episode Prompt**, **Copy Entire Series (Formatted & Annotated)**, and **Export Markdown Storyboard Script**.
+
+### 2. Objective, Literal & Step-by-Step Physical Motion Directives (v3.0.0)
+- **Elimination of Flowery & Abstract Fluff**: Video diffusion models synthesize frames directly from text-to-pixel concepts. Flowery metaphors and emotional adjectives cause severe limb distortions and erratic movements.
+- **Literal Step-by-Step Phrasing**:
+  - *Bad*: "a ball bouncing around" ➔ *Good*: "A red ball moves to the right, bounces off the wall, and returns to the center"
+  - *Bad*: "fluid pouring" ➔ *Good*: "Water flows from the left container through the connecting tube into the right container until both levels are equal"
+- **Mandatory 3-State Physical Action Framework**:
+  1. **Starting State**: Exact position, posture, held objects, and gaze before motion begins.
+  2. **Action Sequence**: Literal chronological movements, trajectories, directions, and physical contacts.
+  3. **End State**: Static resting positions, resulting postures, and environmental changes when movement stops.
+
+### 3. Complete MiniMax-H3 Specification Compliance & Studio Layout
 - **Studio Layout Polish & 3-Column Rebalancing**: Rebalanced studio grid to `31% / 33% / 36%` (`lg:grid-cols-[31fr_33fr_36fr]`), expanding the middle control column by ~32% to completely eliminate cramped controls and text clipping.
 - **Redesigned Camera Motion Directives Panel**:
   - Intuitive category tabs (`Push & Zoom`, `Pan & Truck`, `Tilt & Pedestal`, `Arc & Track`, `Shake & Roll`) with live badge counters and an "Expand All" toggle.
@@ -57,19 +77,19 @@ The studio automatically detects the environment and auto-selects the highest pr
 - **Strict No-Filename Standard**:
   - Automatically strips and filters all raw filenames and extensions from generated prompt output, ensuring prompts strictly adhere to MiniMax-H3 official semantic syntax.
 
-### 2. Quad-Engine Operating Architecture & Native llama.cpp Integration (v2.2.0)
+### 4. Quad-Engine Operating Architecture & Native llama.cpp Integration (v3.0.0)
 - **Four Distinct AI Engines**:
   - **🏢 AI Studio Cloud Engine (`ai_studio`, Priority 1)**: Engineered for Google AI Studio and Cloud Run subscription environments. Features selectable subscription quota tiers:
     - **🟢 AI Pro (Web UI Quota Optimized - Default)**: Smart model specialization (`gemini-3.5-flash-lite` for dialogues, `gemini-3.6-flash` for media assets, and `gemini-3.8-flash` for core prompts) to guarantee smooth execution without 429 quota exhaustion.
     - **🔵 AI Ultra 5x (Performance)**: 5x quota tier unlocking deeper multi-shot reasoning.
     - **🟣 AI Ultra 20x (Extreme Flagship)**: 20x quota tier with maximum thinking capacity and high-resolution asset retention analysis.
-  - **💻 Local Ollama Offline Engine (`ollama`, Priority 2)**: 100% private and offline on `http://127.0.0.1:11434`, with **dynamic local model discovery** (automatically scans all installed models like `Qwen3.8-27B-Uncensored` without hardcoding), multimodal reference image vision analysis, and reasoning token (`<think>...</think>`) cleansing.
-  - **⚡ Local llama.cpp Offline Engine (`llamacpp`, Priority 3)**: Pure C/C++ ultra-high throughput offline inference connecting to `http://127.0.0.1:8080` (`llama-server`).
+  - **🔑 Local Paid API Direct Engine (`paid_api`, Priority 2)**: Direct pay-as-you-go execution utilizing the user's paid Google Gemini API key. Unconstrained by subscription quota pools, directly unlocks full-core flagship `gemini-3.8-flash` deep reasoning across all tasks without downscaling to lite models.
+  - **💻 Local Ollama Offline Engine (`ollama`, Priority 3)**: 100% private and offline on `http://127.0.0.1:11434`, with **dynamic local model discovery** (automatically scans all installed models like `Qwen3.8-27B-Uncensored` without hardcoding), multimodal reference image vision analysis, and reasoning token (`<think>...</think>`) cleansing.
+  - **⚡ Local llama.cpp Offline Engine (`llamacpp`, Priority 4)**: Pure C/C++ ultra-high throughput offline inference connecting to `http://127.0.0.1:8080` (`llama-server`).
     - **Hardware-Level Acceleration**: Tailored for flagship consumer GPUs like NVIDIA RTX 5090 (32GB VRAM) with `-ngl 99` full GPU offloading, Flash Attention (`--flash-attn on`), and 32K context windows (`-c 32768`).
     - **Multimodal Projector (`mmproj`)**: 100% automated pairing with vision projectors (`mmproj-*.gguf`), unlocking zero-quota offline image inspection and video scene comprehension.
     - **Native Embedded MTP Acceleration (`--spec-type draft-mtp`)**: Activates Qwen3.8's built-in NextN multi-token prediction heads without third-party patches, providing an immediate **2.23x (+123.4%)** token generation speedup!
-  - **🔑 Local Paid API Direct Engine (`paid_api`, Priority 4)**: Direct pay-as-you-go execution utilizing the user's paid Google Gemini API key. Unconstrained by subscription quota pools, directly unlocks full-core flagship `gemini-3.8-flash` deep reasoning across all tasks without downscaling to lite models.
-- **Priority-Based Auto-Detection & Selection**: Probes the runtime environment on startup and auto-selects the highest priority engine (**AI Studio > Ollama > llama.cpp > Paid API**), while preserving full freedom to manually switch anytime with `localStorage` persistence.
+- **Priority-Based Auto-Detection & Selection**: Probes the runtime environment on startup and auto-selects the highest priority engine (**AI Studio > Paid API > Ollama > llama.cpp**), while preserving full freedom to manually switch anytime with `localStorage` persistence.
 - **Exponential Backoff Retry with Jitter (1s ➔ 2s)**: Automatically catches transient `429 RESOURCE_EXHAUSTED` and `503 UNAVAILABLE` errors, retrying up to 2 times with randomized jitter before failover to smooth out burst rate limits.
 - **Resilient Multi-Model Fallback**: Automatically switches to backup models (`gemini-3.8-flash` ➔ `gemini-3.6-flash` ➔ `gemini-3.5-flash-lite`) if a model's quota is exhausted. Automatically skips retries for permanent errors (e.g. 404).
 - **Ultra-Relaxed Safety Policy (`HarmBlockThreshold.BLOCK_NONE`)**: Configured `BLOCK_NONE` across all core harm categories (harassment, hate speech, sexually explicit, dangerous content, civic integrity) to maximize creative storytelling freedom.

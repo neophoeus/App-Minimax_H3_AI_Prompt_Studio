@@ -123,7 +123,25 @@ export const Navbar: React.FC<NavbarProps> = ({
               ) : null}
             </button>
 
-            {/* Engine 2: 本地 Ollama 離線引擎 (Priority 2) */}
+            {/* Engine 2: Gemini Paid API 直通引擎 (Priority 2) */}
+            <button
+              type="button"
+              onClick={() => onChangeAppMode('paid_api')}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
+                appMode === 'paid_api'
+                  ? 'bg-gradient-to-r from-emerald-600/30 to-teal-600/30 text-emerald-200 border border-emerald-500/50 shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+              title="引擎二：Paid API 直通 (優先級 2，使用自備 Gemini API Key 直通高速推理)"
+            >
+              <Key className="w-3.5 h-3.5 text-teal-400" />
+              <span>Paid API 直通引擎</span>
+              {systemStatus?.detectedModes.paid_api ? (
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="已配置 Gemini API Key" />
+              ) : null}
+            </button>
+
+            {/* Engine 3: 本地 Ollama 離線引擎 (Priority 3) */}
             <button
               type="button"
               onClick={() => onChangeAppMode('ollama')}
@@ -132,7 +150,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-gradient-to-r from-amber-600/30 to-orange-600/30 text-amber-200 border border-amber-500/50 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="引擎二：本地 Ollama 離線模型 (優先級 2，動態探索本地模型)"
+              title="引擎三：本地 Ollama 離線模型 (優先級 3，動態探索本地模型)"
             >
               <Cpu className="w-3.5 h-3.5 text-amber-400" />
               <span>本地 Ollama 引擎</span>
@@ -146,7 +164,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               )}
             </button>
 
-            {/* Engine 3: 本地 llama.cpp 離線引擎 (Priority 3) */}
+            {/* Engine 4: 本地 llama.cpp 離線引擎 (Priority 4) */}
             <button
               type="button"
               onClick={() => onChangeAppMode('llamacpp')}
@@ -155,7 +173,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   ? 'bg-gradient-to-r from-sky-600/30 to-blue-600/30 text-sky-200 border border-sky-500/50 shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
               }`}
-              title="引擎三：本地 llama.cpp 離線模型 (優先級 3，極致 C/C++ 顯存加速，RTX 5090 原生適配)"
+              title="引擎四：本地 llama.cpp 離線模型 (優先級 4，極致 C/C++ 顯存加速，RTX 5090 原生適配)"
             >
               <Terminal className="w-3.5 h-3.5 text-sky-400" />
               <span>本地 llama.cpp 引擎</span>
@@ -167,24 +185,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               ) : (
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-400" title="本機 llama.cpp 離線 (預設端口 8080)" />
               )}
-            </button>
-
-            {/* Engine 4: Gemini Paid API 直通引擎 (Priority 4) */}
-            <button
-              type="button"
-              onClick={() => onChangeAppMode('paid_api')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                appMode === 'paid_api'
-                  ? 'bg-gradient-to-r from-emerald-600/30 to-teal-600/30 text-emerald-200 border border-emerald-500/50 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="引擎四：Gemini Paid API 直通 (優先級 4，使用自備 Gemini API Key)"
-            >
-              <Key className="w-3.5 h-3.5 text-teal-400" />
-              <span>Paid API 直通引擎</span>
-              {systemStatus?.detectedModes.paid_api ? (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="已配置 Gemini API Key" />
-              ) : null}
             </button>
           </div>
 
@@ -435,9 +435,9 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <div className="font-semibold text-slate-200">🏆 系統自動優先判定次序：</div>
                   <div className="text-slate-400">
                     <span className="text-purple-300 font-bold">1. AI Studio 雲端引擎</span> ＞{' '}
-                    <span className="text-amber-300 font-bold">2. 本地 Ollama 離線引擎</span> ＞{' '}
-                    <span className="text-sky-300 font-bold">3. 本地 llama.cpp 離線引擎</span> ＞{' '}
-                    <span className="text-teal-300 font-bold">4. Gemini Paid API 直通引擎</span>
+                    <span className="text-teal-300 font-bold">2. Gemini Paid API 直通引擎</span> ＞{' '}
+                    <span className="text-amber-300 font-bold">3. 本地 Ollama 離線引擎</span> ＞{' '}
+                    <span className="text-sky-300 font-bold">4. 本地 llama.cpp 離線引擎</span>
                   </div>
                   {systemStatus && (
                     <div className="mt-1 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
@@ -458,23 +458,23 @@ export const Navbar: React.FC<NavbarProps> = ({
                 </div>
 
                 <div>
-                  <strong className="text-amber-300">2. 本地 Ollama 離線引擎 (優先級 2)</strong>
+                  <strong className="text-teal-300">2. Gemini Paid API 直通引擎 (優先級 2)</strong>
+                  <p className="text-slate-400 mt-0.5">
+                    本機端點連線搭配使用者自備之 Google Gemini Paid API Key，採按量計費，全模組直通旗艦級 Gemini 3.8 Flash 深度推理，不受訂閱額度限制。
+                  </p>
+                </div>
+
+                <div>
+                  <strong className="text-amber-300">3. 本地 Ollama 離線引擎 (優先級 3)</strong>
                   <p className="text-slate-400 mt-0.5">
                     連線至本機 <code className="text-amber-200">127.0.0.1:11434</code>。自動動態探索所有已下載模型（原生支援 Qwen3.8-27B 等），免聯網、100% 隱私離線深度推理。
                   </p>
                 </div>
 
                 <div>
-                  <strong className="text-sky-300">3. 本地 llama.cpp 離線引擎 (優先級 3)</strong>
+                  <strong className="text-sky-300">4. 本地 llama.cpp 離線引擎 (優先級 4)</strong>
                   <p className="text-slate-400 mt-0.5">
                     連線至本機 <code className="text-sky-200">127.0.0.1:8080</code> (llama-server)。極致純 C/C++ 顯存加速，支援 Flash Attention (<code className="text-sky-200">-fa</code>)、32K 超大上下文與 <code className="text-sky-200">mmproj</code> 多模態視覺投影，RTX 5090 原生極限優化。
-                  </p>
-                </div>
-
-                <div>
-                  <strong className="text-teal-300">4. Gemini Paid API 直通引擎 (優先級 4)</strong>
-                  <p className="text-slate-400 mt-0.5">
-                    本機端點連線搭配使用者自備之 Google Gemini Paid API Key，採按量計費，全模組直通旗艦級 Gemini 3.8 Flash 深度推理，不受訂閱額度限制。
                   </p>
                 </div>
               </div>

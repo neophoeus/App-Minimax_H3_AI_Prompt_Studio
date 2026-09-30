@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v2.2.0-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v3.0.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -23,15 +23,35 @@
 
 具備全新 **四引擎架構與自動優先判定 (Quad-Engine Architecture)**，支援跨四大環境無縫協作：
 1. **🏢 訂閱制度 AI Studio 雲端引擎 (`ai_studio`, 優先級 1)**：專為 Google AI Studio 或 Cloud Run 訂閱環境打造，具備可選配額階梯方案（**AI Pro 最佳化**、**AI Ultra 5x**、**AI Ultra 20x**），內建 Web UI 免額度最佳化分流策略，自動重試與降級。
-2. **💻 本地 Ollama 離線引擎 (`ollama`, 優先級 2)**：連線至本機端點 `http://127.0.0.1:11434`，具備 **本地已安裝模型動態探索 (Dynamic Model Discovery)** 機制，不寫死任何模型，自動掃描並列出所有本機安裝模型（包含 `Qwen3.8-27B-Uncensored` 之 `q8_0`、`q6_K`、`q5_K_M` 等）。
-3. **⚡ 本地 llama.cpp 離線引擎 (`llamacpp`, 優先級 3)**：連線至本機端點 `http://127.0.0.1:8080` (`llama-server`)。採用純 C/C++ 極致顯存加速，支援 Flash Attention (`-fa`)、32K 超大上下文長度與 `mmproj` 多模態視覺投影，原生深度適配 NVIDIA RTX 5090 等頂級硬體，完全離線 0 配額消耗。
-4. **🔑 本地 Paid API 直通引擎 (`paid_api`, 優先級 4)**：本機運行搭配使用者自己的付費 Google Gemini API Key，採按量計費（Pay-as-you-go）直通模式，全核心直接調用旗艦級 `gemini-3.8-flash` 深度推理，不受訂閱額度限制。
+2. **🔑 本地 Paid API 直通引擎 (`paid_api`, 優先級 2)**：本機運行搭配使用者自己的付費 Google Gemini API Key，採按量計費（Pay-as-you-go）直通模式，全核心直接調用旗艦級 `gemini-3.8-flash` 深度推理，不受訂閱額度限制。
+3. **💻 本地 Ollama 離線引擎 (`ollama`, 優先級 3)**：連線至本機端點 `http://127.0.0.1:11434`，具備 **本地已安裝模型動態探索 (Dynamic Model Discovery)** 機制，不寫死任何模型，自動掃描並列出所有本機安裝模型（包含 `Qwen3.8-27B-Uncensored` 之 `q8_0`、`q6_K`、`q5_K_M` 等）。
+4. **⚡ 本地 llama.cpp 離線引擎 (`llamacpp`, 優先級 4)**：連線至本機端點 `http://127.0.0.1:8080` (`llama-server`)。採用純 C/C++ 極致顯存加速，支援 Flash Attention (`-fa`)、32K 超大上下文長度與 `mmproj` 多模態視覺投影，原生深度適配 NVIDIA RTX 5090 等頂級硬體，完全離線 0 配額消耗。
 
-系統啟動時主動探索本機與環境狀態，若同時偵測到多種引擎，嚴格依據 **AI Studio ＞ 本地 Ollama ＞ 本地 llama.cpp ＞ 本地 Paid API** 優先次序推薦預設引擎，同時保留使用者於導航列隨時手動點選切換的完全自由。
+系統啟動時主動探索本機與環境狀態，若同時偵測到多種引擎，嚴格依據 **AI Studio ＞ 本地 Paid API ＞ 本地 Ollama ＞ 本地 llama.cpp** 優先次序推薦預設引擎，同時保留使用者於導航列隨時手動點選切換的完全自由。
 
 ## ✨ 核心特色
 
-### 1. 完整相容 MiniMax-H3 官方規範與版面視覺重構 (v2.0.1)
+### 1. 系列連續提示詞故事板工作室 (v3.0.0)
+- **一次生成 2 至 10 段連續影片提示詞**：一鍵生成前後情節高度連貫的系列分鏡提示詞（推薦 5 段經典黃金敘事弧線：起／承／轉／合／尾聲）。
+- **單一全域推理上下文 (Single Global Inference Context)**：透過統一的 `storyArcSummary` 協調整個系列，避免傳統逐段生成導致的情節偏離與邏輯斷裂。
+- **角色道具與實體狀態長效記憶 (State & Inventory Memory)**：自動繼承角色容貌特徵（`<Subject 1>`）、手中與口袋物品（第 1 段放入口袋的鑰匙，第 4 段可自然掏出使用）、環境狀態變遷（雨水浸濕外套、晝夜推進）與前後因果目標。
+- **純文字客觀物理承接橋樑 (Pure Physical Continuity Hand-off)**：徹底杜絕未生成之虛擬影片引用（例如拒絕虛假的「接續第 1 段影片」）。第 $K$ 段完全以客觀文字描述第 $K-1$ 段結束時角色的實體姿態、手中物件與站位，確保每段提示詞 **100% 獨立完整、語法合規，且可直接複製貼上海螺 3 生成**！
+- **互動式系列故事板儀表板 (Series Storyboard Dashboard)**：
+  - 分段快速切換分頁（`第 1 段 (Episode #1)`、`第 2 段 (Episode #2)`、... `第 N 段`）。
+  - 客觀物理三態分析卡片（`起始狀態 Starting State` ➔ `動作過程 Action Sequence` ➔ `結束狀態 End State`）與運鏡／音效剖析。
+  - 快捷操作工具列：**複製單段提示詞**、**複製全系列完整提示詞（含分段註解）**、**匯出 Markdown 分鏡劇本**。
+
+### 2. 客觀具體動作三態論與純物理描述準則 (v3.0.0)
+- **全面摒棄華麗抽象修辭**：影音擴散生成模型本質上是由文字直接轉化像素，抽象形容詞（如「悲傷地在雨中漫步」、「震撼人心的氛圍」）極易引發肢體變形與詭異抽搐。
+- **簡易直白、按部就班的實體動作表述**：
+  - *避免*："a ball bouncing around" ➔ *改為*："A red ball moves to the right, bounces off the wall, and returns to the center"
+  - *避免*："fluid pouring" ➔ *改為*："Water flows from the left container through the connecting tube into the right container until both levels are equal"
+- **強制執行動作三態架構 (3-State Physical Action Framework)**：
+  1. **起始狀態 (Starting State)**：動作發生前的精確站位、肢體姿態、手持道具與視線方向。
+  2. **動作過程 (Action Sequence)**：按時間嚴格排序的實體位移、軌跡、方向與物體接觸。
+  3. **結束狀態 (End State)**：動作完成後的靜止落點、最終姿態與周遭環境變化。
+
+### 3. 完整相容 MiniMax-H3 官方規範與版面視覺重構 (v2.0.1)
 - **Studio 三欄版面空間重配比**：將三欄比例調整為 `31% / 33% / 36%`（`lg:grid-cols-[31fr_33fr_36fr]`），中央控制欄寬度實質增長約 32%，徹底解決按鈕擠壓與文字折行。
 - **全新重構之官方運鏡控制面板 (Camera Motion Panel)**：
   - 直覺分類分頁標籤（`推拉縮放`、`搖移平移`、`俯仰升降`、`跟拍主觀`、`晃動旋轉`），搭配即時選取計數徽章與「展開全部 / 分頁檢視」切換。
@@ -58,35 +78,35 @@
 - **嚴格零檔名洩漏標準 (Strict No-Filename Standard)**：
   - 徹底杜絕生成提示詞中出現任何本地檔案名稱與副檔名（`.png`, `.jpg`, `.mp4` 等），確保提示詞完全由純淨專業的影視語意細節構成。
 
-### 2. 四引擎架構體系與本地 llama.cpp 深度整合 (v2.2.0)
+### 4. 四引擎架構體系與本地 llama.cpp 深度整合 (v3.0.0)
 - **四大專屬 AI 驅動引擎**：
   - **🏢 AI Studio 雲端引擎 (`ai_studio`，優先級 1)**：專為 Google AI Studio 與 Cloud Run 訂閱環境打造。提供彈性訂閱算力方案：
     - **🟢 AI Pro (Web UI 配額最佳化 - 預設)**：透過模型分流（對話使用 `gemini-3.5-flash-lite`、圖片使用 `gemini-3.6-flash`、提示詞使用 `gemini-3.8-flash`），徹底消弭 429 額度超限。
     - **🔵 AI Ultra 5x (進階效能)**：5x 訂閱額度階梯，釋放深層多樣本推理。
     - **🟣 AI Ultra 20x (極致旗艦)**：20x 訂閱額度階梯，具備頂級思考深度與高精參考素材保留分析。
-  - **💻 本地 Ollama 離線引擎 (`ollama`，優先級 2)**：於 `http://127.0.0.1:11434` 實現 100% 本機離線隱私運作，具備**本地模型動態探索機制**（自動掃描已安裝的所有模型如 `Qwen3.8-27B-Uncensored`，絕不寫死清單）、多模態素材視覺審視與思考標記（`<think>...</think>`）自動清洗。
-  - **⚡ 本地 llama.cpp 離線引擎 (`llamacpp`，優先級 3)**：純 C/C++ 極致吞吐離線推理，連線至 `http://127.0.0.1:8080` (`llama-server`)。
+  - **🔑 本地 Paid API 直通引擎 (`paid_api`，優先級 2)**：直接使用使用者自備的 Google Gemini Paid API Key 進行按量計費直通呼叫。不受限於訂閱額度池，全流程直接啟用旗艦級 `gemini-3.8-flash` 深度推理核心，無需降級分流。
+  - **💻 本地 Ollama 離線引擎 (`ollama`，優先級 3)**：於 `http://127.0.0.1:11434` 實現 100% 本機離線隱私運作，具備**本地模型動態探索機制**（自動掃描已安裝的所有模型如 `Qwen3.8-27B-Uncensored`，絕不寫死清單）、多模態素材視覺審視與思考標記（`<think>...</think>`）自動清洗。
+  - **⚡ 本地 llama.cpp 離線引擎 (`llamacpp`，優先級 4)**：純 C/C++ 極致吞吐離線推理，連線至 `http://127.0.0.1:8080` (`llama-server`)。
     - **硬體級極速加速**：針對 NVIDIA RTX 5090 (32GB VRAM) 頂級硬體優化，支援 `-ngl 99` 全層 GPU 卸載、Flash Attention (`--flash-attn on`) 與 32K 旗艦上下文 (`-c 32768`)。
     - **多模態視覺投影 (`mmproj`)**：100% 自動配對掛載 `mmproj-*.gguf`，實現零額度負擔的本機離線分鏡與參考圖片視覺分析。
     - **原生 Embedded MTP 雙倍極速 (`--spec-type draft-mtp`)**：無須第三方補丁，直接深度調用 Qwen3.8 原生 NextN 多 Token 預測架構，立即享有 **2.23x (+123.4%)** 極速生成提升！
-  - **🔑 本地 Paid API 直通引擎 (`paid_api`，優先級 4)**：直接使用使用者自備的 Google Gemini Paid API Key 進行按量計費直通呼叫。不受限於訂閱額度池，全流程直接啟用旗艦級 `gemini-3.8-flash` 深度推理核心，無需降級分流。
-- **優先級自動偵測與智慧判定**：啟動時自動偵測執行環境並優先選用最高層級架構（**AI Studio > Ollama > llama.cpp > Paid API**），同時保留完整自由手動切換能力，選擇自動保存於 `localStorage`。
+- **優先級自動偵測與智慧判定**：啟動時自動偵測執行環境並優先選用最高層級架構（**AI Studio > Paid API > Ollama > llama.cpp**），同時保留完整自由手動切換能力，選擇自動保存於 `localStorage`。
 - **指數退避重試與隨機抖動 (1s ➔ 2s)**：針對短暫的 `429 RESOURCE_EXHAUSTED` 或 `503 UNAVAILABLE` 暫態限流，自動執行最多 2 次指數退避重試（含隨機微小抖動），有效平抑瞬間爆發請求（Burst）。
 - **無縫自動容錯降級**：重試耗盡或遇配額瓶頸時，後端自動切換至備援模型鏈（`gemini-3.8-flash` ➔ `gemini-3.6-flash` ➔ `gemini-3.5-flash-lite`）；若遇 404 等永久錯誤則自動快切跳過重試，保障 100% 請求成功率。
 - **最寬鬆安全性門檻 (`HarmBlockThreshold.BLOCK_NONE`)**：全面解除五大危害類別（騷擾、仇恨、性暗示、危險內容、誠信）的常規過濾限制，極致釋放影視劇作、暗黑科幻、動作衝突的分鏡創作自由度。
 - **即時安全性審查阻擋通知系統**：雙重安全攔截（檢查提示詞 `promptFeedback` 與生成結果 `finishReason`），一旦觸發不可避之敏感審查，前端即刻彈出 8 秒指引 Toast 告知創作者具體原因與調整建議。
 
-### 3. 多模態參考素材管理 (零額度負擔直通看圖)
+### 5. 多模態參考素材管理 (零額度負擔直通看圖)
 - 支援直接於瀏覽器上傳角色、場景、動作或音訊素材。
 - **多模態直通看圖**：上傳圖片縮圖直接打包進生成請求，Gemini、Ollama 與 llama.cpp（透過 `mmproj`）視覺核心親自審視五官、穿著、光影，0 額外 API 呼叫。
 - **極致輕量 Token 壓縮**：自動縮放至 512px（品質 0.75，約 35KB），每張圖僅佔 ~258 Tokens，徹底杜絕 429 額度耗盡。
 - **語意標籤預設**：上傳時自動配置清晰語意名稱（如「首幀開場畫面」、「主要角色 1」），原始檔名僅作介面識別，徹底與 AI 提示詞解耦。
 
-### 4. 電影級對白與音效配置 (Dialogue & Soundscape)
+### 6. 電影級對白與音效配置 (Dialogue & Soundscape)
 - 精簡直覺的對白與環境音效 (SFX) 手動配置，專為 MiniMax-H3 畫面人物嘴型口播同步設計。
 - 支援一鍵靜音/抑制背景純音樂模式 (`non_diegetic_music: N/A`)。
 
-### 5. 生產級 Studio 介面 (v1.5.0 架構)
+### 7. 生產級 Studio 介面 (v1.5.0 架構)
 - **三大欄寬版工作流 (`max-w-[1800px]`, 31% / 33% / 36%)**：精確配置左欄（輸入構想與素材 31%）、中欄（設定調整與主生成按鈕 33%）、右欄（提示詞輸出與一鍵複製 36%）。
 - **專屬提示詞編輯工具列**：在檢視區上方增設獨立工具列，支援「語法亮顯 / 手動微調」雙態切換、即時字元計數與一鍵還原 AI 初版生成結果。
 - **自適應生成模式網格**：自適應 `grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2`，確保各尺寸螢幕下按鈕文字清晰不截斷破折。

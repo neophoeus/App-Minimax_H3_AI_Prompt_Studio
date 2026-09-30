@@ -50,6 +50,8 @@ import {
   Minus,
   Plus,
   X,
+  ListOrdered,
+  Download,
 } from 'lucide-react';
 
 interface CameraMoveDetail {
@@ -156,6 +158,8 @@ const DEFAULT_CONFIG: H3PromptConfig = {
   suppressMusic: false,
   engineTier: 'pro',
   references: [],
+  isSeriesMode: false,
+  seriesCount: 5,
 };
 
 export default function App() {
@@ -196,7 +200,8 @@ export default function App() {
   const [config, setConfig] = useState<H3PromptConfig>(DEFAULT_CONFIG);
   const [output, setOutput] = useState<H3PromptOutput | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'full' | 'blocks' | 'timeline' | 'guide'>('full');
+  const [activeTab, setActiveTab] = useState<'full' | 'blocks' | 'timeline' | 'guide' | 'series'>('full');
+  const [selectedEpisodeIdx, setSelectedEpisodeIdx] = useState<number>(0);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editedPrompt, setEditedPrompt] = useState<string>('');
 
@@ -206,6 +211,8 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState<boolean>(false);
   const [savedPrompts, setSavedPrompts] = useState<SavedPromptItem[]>([]);
   const [copiedFull, setCopiedFull] = useState<boolean>(false);
+  const [copiedSeries, setCopiedSeries] = useState<boolean>(false);
+  const [copiedEpisodeIdx, setCopiedEpisodeIdx] = useState<number | null>(null);
 
   // Camera Motion tabs & view mode state
   const [cameraTabIdx, setCameraTabIdx] = useState<number>(0);
@@ -327,9 +334,9 @@ export default function App() {
       if (notify) {
         const modeLabels: Record<AppMode, string> = {
           ai_studio: 'AI Studio 雲端引擎',
+          paid_api: 'Gemini Paid API 直通引擎',
           ollama: '本地 Ollama 離線引擎',
           llamacpp: '本地 llama.cpp 離線引擎',
-          paid_api: 'Gemini Paid API 直通引擎',
         };
         const localCount = (data.ollamaModels?.length || 0) + (data.llamacppModels?.length || 0);
         showToast(
@@ -539,6 +546,15 @@ export default function App() {
         setOutput(result);
         setEditedPrompt(result.fullPrompt);
 
+        if (result.isSeries && result.episodes && result.episodes.length > 0) {
+          setActiveTab('series');
+          setSelectedEpisodeIdx(0);
+          showToast(`已成功為您生成 ${result.episodes.length} 段系列連續提示詞！`, 'success');
+        } else {
+          setActiveTab('full');
+          showToast('已成功為您生成 MiniMax-H3 完整提示詞！', 'success');
+        }
+
         // Auto save to local history (saving idea & fullPrompt separately)
         const newItem: SavedPromptItem = {
           id: `saved-${Date.now()}`,
@@ -578,8 +594,6 @@ export default function App() {
             console.error('LocalStorage save failed completely:', e);
           }
         }
-
-        showToast('已成功為您生成 MiniMax-H3 完整三段式提示詞！', 'success');
       } else {
         const errStr = formatErrorMessage(data.error || '生成失敗');
         const toastDuration = errStr.includes('安全性阻擋') ? 8000 : 6000;
@@ -593,6 +607,68 @@ export default function App() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const copyAllEpisodes = () => {
+    if (!output?.episodes || output.episodes.length === 0) return;
+    const fullSeriesText = output.episodes
+      .map((ep) => {
+        return `/* ===================================================
+   [MiniMax-H3 Series Clip #${ep.episodeIndex}]
+   標題: ${ep.title} | 時長: ${ep.duration}
+   起始狀態: ${ep.startingState}
+   連續動作: ${ep.actionSequence}
+   結束狀態: ${ep.endState}
+   鏡頭運鏡: ${ep.cameraMovement}
+   接續備註: ${ep.continuityNotes}
+   =================================================== */
+
+${ep.fullPrompt}`;
+      })
+      .join('\n\n\n');
+
+    copyToClipboard(fullSeriesText, `全系列 ${output.episodes.length} 段提示詞`);
+    setCopiedSeries(true);
+    setTimeout(() => setCopiedSeries(false), 2500);
+  };
+
+  const exportSeriesMarkdown = () => {
+    if (!output?.episodes || output.episodes.length === 0) return;
+    const mdLines = [
+      `# MiniMax-H3 系列連續提示詞專案: ${output.seriesTitle || config.idea || '未命名系列'}`,
+      `> 故事弧概要: ${output.storyArcSummary || '無'}`,
+      `> 生成模式: ${config.mode} | 時長: ${config.duration} | 比例: ${config.aspectRatio}`,
+      `> 建立時間: ${new Date().toLocaleString('zh-TW')}`,
+      '',
+      '---',
+      '',
+    ];
+
+    output.episodes.forEach((ep) => {
+      mdLines.push(`## ${ep.title} (時長: ${ep.duration})`);
+      mdLines.push(`- **起始狀態**: ${ep.startingState}`);
+      mdLines.push(`- **連續動作**: ${ep.actionSequence}`);
+      mdLines.push(`- **結束狀態**: ${ep.endState}`);
+      mdLines.push(`- **鏡頭運鏡**: ${ep.cameraMovement}`);
+      mdLines.push(`- **環境音效**: ${ep.audioSoundscape}`);
+      mdLines.push(`- **接續說明**: ${ep.continuityNotes}`);
+      mdLines.push('');
+      mdLines.push('```text');
+      mdLines.push(ep.fullPrompt);
+      mdLines.push('```');
+      mdLines.push('');
+      mdLines.push('---');
+      mdLines.push('');
+    });
+
+    const blob = new Blob([mdLines.join('\n')], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `minimax_h3_series_${Date.now()}.md`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('已匯出全系列分鏡 Markdown 檔案', 'success');
   };
 
   const handleSelectPreset = (preset: PresetTemplate) => {
@@ -832,6 +908,80 @@ export default function App() {
                   {config.mode === 'L2VA' && 'L2VA (Last-Frame Image)：上傳結尾圖片 (@image1)，往前推導合理的開場鏡頭並收斂至該尾幀。'}
                   {config.mode === 'Ref2VA' && 'Ref2VA (Full-Reference Rewrites)：包含 subject_definitions, summary, retention_analysis, detailed_description, overall_soundscape, non_diegetic_music 六大區段。'}
                 </span>
+              </div>
+
+              {/* Single Clip vs Multi-Episode Series Mode Toggle */}
+              <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-2.5">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-1.5">
+                    <ListOrdered className="w-3.5 h-3.5 text-cyan-400" />
+                    <span className="text-xs font-semibold text-slate-200">生成架構策略</span>
+                  </div>
+                  <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800 text-xs">
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, isSeriesMode: false })}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all ${
+                        !config.isSeriesMode
+                          ? 'bg-purple-600 text-white font-bold shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      單段獨立生成
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setConfig({ ...config, isSeriesMode: true })}
+                      className={`px-2.5 py-1 rounded-md text-[11px] font-medium transition-all flex items-center gap-1 ${
+                        config.isSeriesMode
+                          ? 'bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <span>系列連續生成</span>
+                      <span className="px-1.5 py-0.2 bg-cyan-400/20 text-cyan-300 text-[10px] rounded-full font-mono">
+                        {config.seriesCount || 5} 段
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+                {config.isSeriesMode && (
+                  <div className="pt-2 border-t border-slate-800/80 space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-300 font-medium flex items-center gap-1">
+                        <span>系列段數 (Episodes)：</span>
+                        <span className="font-mono text-cyan-400 font-bold">{config.seriesCount || 5} 段獨立提示詞</span>
+                      </span>
+                      <span className="text-[10px] text-slate-400">推薦 5 段（經典起承轉合）</span>
+                    </div>
+
+                    {/* Episode Count Pills */}
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      {[2, 3, 4, 5, 6, 8, 10].map((num) => {
+                        const active = (config.seriesCount || 5) === num;
+                        return (
+                          <button
+                            key={num}
+                            type="button"
+                            onClick={() => setConfig({ ...config, seriesCount: num })}
+                            className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold transition-all border ${
+                              active
+                                ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/60 shadow-sm'
+                                : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200'
+                            }`}
+                          >
+                            {num} 段
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <div className="text-[11px] text-slate-400 leading-relaxed bg-slate-900/60 p-2 rounded-lg border border-slate-800/80">
+                      💡 <strong className="text-slate-200">客觀物理連貫保障</strong>：一次生成 {config.seriesCount || 5} 段自包含、100% 獨立合法可貼之 MiniMax-H3 提示詞。全系列鎖定一致的主體定義（&lt;Subject 1&gt;）與畫風，第 K 段文字直接客觀承接第 K-1 段結束時的具體動作與姿態。
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -1321,6 +1471,9 @@ export default function App() {
             <div className="flex items-center justify-between border-b border-slate-800 pt-2 gap-2 overflow-x-auto scrollbar-none">
               <div className="flex items-center gap-1">
                 {[
+                  ...(output?.episodes && output.episodes.length > 0
+                    ? [{ id: 'series', label: `🎬 系列分鏡 (${output.episodes.length} 段)`, icon: Film }]
+                    : []),
                   { id: 'full', label: '全量提示詞 (Full Prompt)', icon: FileCode },
                   { id: 'blocks', label: '三段式拆解 (Blocks)', icon: Layers },
                   { id: 'timeline', label: '分鏡故事板 (Timeline)', icon: Clock },
@@ -1357,6 +1510,183 @@ export default function App() {
                 <div className="p-12 text-center text-slate-500 space-y-2">
                   <Sparkles className="w-8 h-8 text-slate-700 mx-auto" />
                   <p className="text-sm font-medium">請點擊中間欄「調用 Skill 生成」按鈕</p>
+                </div>
+              ) : activeTab === 'series' && output?.episodes && output.episodes.length > 0 ? (
+                /* Tab 0: Multi-Episode Series Storyboard */
+                <div className="space-y-4">
+                  {/* Series Header Bar */}
+                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2.5 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/40 text-xs font-mono font-bold">
+                          系列故事弧
+                        </span>
+                        <h3 className="text-sm font-bold text-white">
+                          {output.seriesTitle || config.idea?.slice(0, 30) || 'MiniMax-H3 系列連續提示詞'}
+                        </h3>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={exportSeriesMarkdown}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 text-xs transition-colors"
+                          title="匯出 Markdown 分鏡檔"
+                        >
+                          <Download className="w-3.5 h-3.5 text-cyan-400" />
+                          <span>匯出 MD</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={copyAllEpisodes}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-slate-950 font-bold text-xs shadow-sm transition-all active:scale-95"
+                          title="複製全系列所有段落提示詞"
+                        >
+                          {copiedSeries ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 stroke-[3]" />
+                              <span>已複製全系列！</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 stroke-[2.5]" />
+                              <span>一鍵複製全系列 ({output.episodes.length} 段)</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    {output.storyArcSummary && (
+                      <p className="text-xs text-slate-400 leading-relaxed pt-1 border-t border-slate-900">
+                        {output.storyArcSummary}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Episode Navigation Tabs */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                    {output.episodes.map((ep, idx) => {
+                      const isCurrent = selectedEpisodeIdx === idx;
+                      return (
+                        <button
+                          key={ep.episodeIndex || idx}
+                          type="button"
+                          onClick={() => setSelectedEpisodeIdx(idx)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 border ${
+                            isCurrent
+                              ? 'bg-purple-600 text-white font-bold border-purple-500 shadow-md shadow-purple-950'
+                              : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-slate-200 hover:bg-slate-800'
+                          }`}
+                        >
+                          <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-black/40">
+                            #{ep.episodeIndex}
+                          </span>
+                          <span>{ep.title.replace(/^第\s*\d+\s*段[：:]\s*/, '').slice(0, 10)}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Current Selected Episode Details Card */}
+                  {(() => {
+                    const currentEp = output.episodes[selectedEpisodeIdx] || output.episodes[0];
+                    if (!currentEp) return null;
+
+                    return (
+                      <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-3.5">
+                        {/* Episode Title & Metadata */}
+                        <div className="flex items-center justify-between flex-wrap gap-2 pb-2 border-b border-slate-800/80">
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <span className="px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-500/40 font-mono text-xs font-bold">
+                                Episode #{currentEp.episodeIndex}
+                              </span>
+                              <h4 className="text-sm font-bold text-white">{currentEp.title}</h4>
+                            </div>
+                            <span className="text-[11px] text-slate-500 font-mono mt-0.5 block">
+                              時長: {currentEp.duration} · 運鏡: {currentEp.cameraMovement}
+                            </span>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => {
+                              copyToClipboard(currentEp.fullPrompt, `第 ${currentEp.episodeIndex} 段提示詞`);
+                              setCopiedEpisodeIdx(currentEp.episodeIndex);
+                              setTimeout(() => setCopiedEpisodeIdx(null), 2000);
+                            }}
+                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-xs font-semibold shadow-sm transition-all"
+                          >
+                            {copiedEpisodeIdx === currentEp.episodeIndex ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                <span className="text-emerald-400">已複製此段！</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="w-3.5 h-3.5 text-cyan-400" />
+                                <span>複製此段提示詞</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+
+                        {/* Continuity Note Banner */}
+                        {currentEp.continuityNotes && (
+                          <div className="p-2.5 rounded-lg bg-indigo-950/30 border border-indigo-500/30 text-xs text-indigo-300 flex items-start gap-2">
+                            <span className="text-indigo-400 font-bold shrink-0">🔗 承接邏輯:</span>
+                            <span className="leading-relaxed">{currentEp.continuityNotes}</span>
+                          </div>
+                        )}
+
+                        {/* Physical Motion Breakdown: Starting State -> Action -> End State */}
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 text-xs">
+                          {/* Starting State */}
+                          <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
+                            <span className="font-bold text-amber-300 font-mono text-[11px] flex items-center gap-1">
+                              <span>🏁 起始狀態 (Starting)</span>
+                            </span>
+                            <p className="text-slate-300 leading-relaxed text-[11px]">
+                              {currentEp.startingState}
+                            </p>
+                          </div>
+
+                          {/* Action Sequence */}
+                          <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
+                            <span className="font-bold text-cyan-300 font-mono text-[11px] flex items-center gap-1">
+                              <span>🏃 連續動作 (Action)</span>
+                            </span>
+                            <p className="text-slate-300 leading-relaxed text-[11px]">
+                              {currentEp.actionSequence}
+                            </p>
+                          </div>
+
+                          {/* End State */}
+                          <div className="p-3 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
+                            <span className="font-bold text-emerald-300 font-mono text-[11px] flex items-center gap-1">
+                              <span>🎯 結束狀態 (End State)</span>
+                            </span>
+                            <p className="text-slate-300 leading-relaxed text-[11px]">
+                              {currentEp.endState}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Full Prompt Display for this episode */}
+                        <div className="space-y-1.5 pt-1">
+                          <div className="flex items-center justify-between text-xs text-slate-400">
+                            <span className="font-mono">MiniMax-H3 獨立生成提示詞：</span>
+                            <span className="text-[10px] text-slate-500">100% 獨立合法可貼</span>
+                          </div>
+                          <div className="p-3.5 rounded-xl bg-slate-900/95 border border-slate-800 text-xs font-mono text-slate-200 max-h-[300px] overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                            <PromptSyntaxHighlighter text={currentEp.fullPrompt} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               ) : activeTab === 'full' ? (
                 /* Tab 1: Full Prompt syntax highlight or editable textarea */

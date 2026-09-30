@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v3.0.0] - 2026-09-30
+
+### 🚀 Major Milestone Release: Narrative Series Storyboard Studio & Literal Physical Motion Framework (系列連續分鏡生成器、客觀動作三態論與四引擎優先序重構)
+
+#### 🎬 1. Multi-Episode Consecutive Series Storyboard Studio (系列連續提示詞生成器)
+- **2 至 10 段長篇連貫分鏡一次性生成**：
+  - 全新支援「**系列連續提示詞 (Multi-Episode Series)**」模式，可自由選擇生成 2 至 10 段獨立影片提示詞（預設推薦 5 段黃金起承轉合弧線），完美因應短影音、廣告分鏡與微電影連貫創作需求。
+- **單次全域推理上下文（Single Global Inference Context）**：
+  - 拒絕單段孤立生成造成的遺忘與情節偏航，系統於單次深度推理中統籌構建 `storyArcSummary`（全域故事弧概要），維持宏觀因果推演。
+  - **跨段脈絡累積繼承**：自動繼承道具持物（Persistent Inventory，前段收進口袋的信件/道具在後段能自然掏出）、環境推移（暴雨弄濕大衣、夜色漸深）與角色任務目標。
+- **純文字客觀物理無縫接軌（Physical Continuity Hand-off）**：
+  - 徹底剔除「指向未生成影片」的無效元語言（如 Resuming from Clip 1 等無效語法）。每一段均為 **100% 獨立合法、立即可單獨複製貼至海螺 AI (MiniMax-H3) 生成** 的合法 Prompt。
+  - 第 $K$ 段直接以客觀文字描述承接第 $K-1$ 段結束時的實體姿態、手中物件與位置，確保多段影片並排剪輯時不穿幫、不跳幀。
+- **專屬系列分鏡儀表板 (Series Storyboard Dashboard)**：
+  - 視覺化呈現段落切換標籤頁（Episode #1, #2, ... #N），清楚展示「起始狀態 ➔ 連續動作 ➔ 結束狀態」三態物理分解與接續備註。
+  - **一鍵操作利器**：支援「複製此段提示詞」、「一鍵複製全系列提示詞（含分段註解與狀態說明）」與「匯出 Markdown 分鏡腳本」。
+
+#### 📐 2. Objective, Literal & Step-by-Step Physical Motion Directives (客觀具體物理動作三態論)
+- **提示詞工程哲學徹底重塑**：
+  - 針對影片擴散模型底層文字至像素幀的映射特性，全面禁止華麗詞藻、詩意比喻與抽象情緒修飾（如「唯美」、「震撼」、「神祕氣息」），徹底杜絕肢體形變與動作漂移。
+- **步驟化直白動作範式 (Step-by-step & Literal)**：
+  - *拋棄*：「a ball bouncing around」 ➔ *改為*：「A red ball moves to the right, bounces off the wall, and returns to the center」
+  - *拋棄*：「fluid pouring」 ➔ *改為*：「Water flows from the left container through the connecting tube into the right container until both levels are equal」
+- **動作三態架構強制落實**：
+  1. **Starting State（起始狀態）**：主體在畫面中的位置、身體姿態、手中物件與初始視線。
+  2. **Action Sequence（連續動作）**：按時序推進之具體物理運動、位移路徑、接觸與互動。
+  3. **End State（結束狀態）**：動作停止時的靜態落點、新姿態與環境變化。
+
+#### 🏛️ 3. Re-aligned Quad-Engine Priority Architecture (四引擎排程次序核心重整)
+- **官方雲端與 Paid 直通優先，本地端點兼備**：
+  - 全面將伺服器自動推薦判定（`calculateRecommendedMode`）、頂部導航列排版、說明彈窗與啟動指令碼更新為全新優先次序：
+    1. 🥇 **🏢 AI Studio 雲端引擎 (`ai_studio`, 優先級 1)**：雲端/訂閱環境優先，享智慧多模型分流與免額度架構。
+    2. 🥈 **🔑 Gemini Paid API 直通引擎 (`paid_api`, 優先級 2)**：本地配置 `GEMINI_API_KEY` 時優先直通官方旗艦級 Gemini 3.8 Flash 高速端點。
+    3. 🥉 **💻 本地 Ollama 離線引擎 (`ollama`, 優先級 3)**：動態探索本機模型，免聯網 100% 隱私離線深度推理。
+    4. 🎖️ **⚡ 本地 llama.cpp 離線引擎 (`llamacpp`, 優先級 4)**：原生 C/C++ 極致顯存加速，支援 Flash Attention 與 RTX 5090 原生極限優化。
+- **`start.bat` 檢測流程升級**：
+  - 啟動時優先驗證 Gemini API Key 與雲端環境設定，隨後檢查本機 Ollama 與 llama.cpp 服務狀態。
+
+---
+
 ## [v2.2.0] - 2026-09-21
 
 ### 🚀 Quad-Engine Architecture Evolution & Native llama.cpp Integration (四引擎架構升級與本地 llama.cpp 深度整合)
