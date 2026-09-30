@@ -2,6 +2,41 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v3.1.0] - 2026-09-30
+
+### 🎯 Multi-Image Dual-Track Physical & Semantic Mapping Architecture (多圖參考素材物理槽位與語意主體雙軌映射架構)
+
+#### 🖼️ 1. Multi-Image Physical Upload Slot Alignment (多圖物理上傳槽位與模型對齊)
+- **Physical vs. Semantic Disambiguation (物理圖片槽位與語意主體解耦)**:
+  - 徹底解決海螺 (MiniMax-H3) 多模態視訊模型中「實體上傳圖槽位 (`<Picture N>` / `@imageN`)」與「語意主體宣告 (`<Subject N>`)」混淆與序號錯位的關鍵缺陷。
+  - 當使用者同時提供多張圖片（如 2 張角色外貌參考圖 + 1 張場景首幀圖）時，前台自動依檔案順序建立雙軌物理序號映射：
+    - **第 1 張圖 (角色 1)**：自動對齊標記為 `<Subject 1 aka Picture 1>` (`@image1`)。
+    - **第 2 張圖 (角色 2)**：自動對齊標記為 `<Subject 2 aka Picture 2>` (`@image2`)。
+    - **第 3 張圖 (開場首幀)**：自動累計為 `<Picture 3>` (`@image3 首幀畫面`)，徹底根絕模型將第 1 張角色大頭貼誤當作開場首幀畫面的致命問題。
+- **Pure Text Subject Declaration Mode (純文字主體宣告模式切換)**:
+  - 主體卡片（角色/物件/場景/風格）新增「📝 純文字宣告」與「🖼️ 附參考圖」即時切換開關。
+  - 若角色僅需以文字描述設定（無實體圖檔），切換為純文字宣告後將不佔用海螺實體 Picture 槽位，讓後續的首幀圖片正確維持在 `<Picture 1>`。
+
+#### 🧠 2. Backend Multimodal Prompt & System Protocol 2.1 (後端多模態契約與系統規範升級)
+- **Multi-Image Physical Upload Mapping Contract (系統規範 Section 2.1 擴充)**:
+  - 於 `server.ts` 系統指令中正式確立 Section 2.1《MiniMax Multi-Image Physical Upload Mapping Contract》。
+  - 嚴格要求 LLM：
+    1. 在 `subject_definitions` 中，明確定義 `<Subject 1> is ... as depicted in <Picture 1>, with locked visual identity.`
+    2. 開場首幀圖若為第 3 張圖，嚴格宣告為 `<Picture 3>`，杜絕誤標為 `<Picture 1>`。
+    3. 在 `summary` 任務摘要中精確引用：`generated from <Picture 3>, preserving <Subject 1> (from <Picture 1>) and <Subject 2> (from <Picture 2>)`。
+    4. 在 `retention_analysis` 中完整記錄各主體與圖片來源的保留標記。
+    5. 在 `detailed_description` [Shot 1] 中，開場鏡頭嚴格對齊 `<Picture 3>`。
+- **Dynamic Alignment Instruction Header Adaptation (動態首幀指令自動適配)**:
+  - 在 I2VA、FL2VA 與 L2VA 模式下，第一行對齊指令自動讀取實際的首幀 Picture 編號（例如 `at 0.00 seconds into the target video, <Picture 3> is fully referenced`），不再寫死 `<Picture 1>`。
+
+#### 🖥️ 3. UI Branding & Version Synchronization (介面版本與徽章全面同步)
+- **Navbar Version Badge Bump (導覽列版本徽章升級)**:
+  - 頂部導覽列版本徽章正式升級為 `v3.1.0 • 多圖雙軌映射與四引擎自動偵測`。
+- **Project Configuration Synchronization (專案設定同步更新)**:
+  - `package.json` 與 `package-lock.json` 版本全面晉升至 `3.1.0`。
+
+---
+
 ## [v3.0.1] - 2026-09-30
 
 ### 🎨 UI Branding Polish & Version Synchronization (首頁標題品牌化與版本資訊全面同步)

@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v3.0.1-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v3.1.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -30,6 +30,14 @@
 系統啟動時主動探索本機與環境狀態，若同時偵測到多種引擎，嚴格依據 **AI Studio ＞ 本地 Paid API ＞ 本地 Ollama ＞ 本地 llama.cpp** 優先次序推薦預設引擎，同時保留使用者於導航列隨時手動點選切換的完全自由。
 
 ## ✨ 核心特色
+
+### 0. 多圖實體槽位與主體雙軌映射架構 (v3.1.0)
+- **海螺原生多圖物理槽位解耦**：海螺模型對所有上傳圖片強制按照物理順序編號為 `<Picture 1>` (`@image1`), `<Picture 2>` (`@image2`), `<Picture 3>` (`@image3`)。
+- **雙重識別標籤與自動對齊**：
+  - 當使用者上傳多張圖片（如 2 張角色圖 + 1 張場景圖）時，前台自動將角色 1 與角色 2 對齊為 **`<Subject 1 aka Picture 1> (@image1)`** 與 **`<Subject 2 aka Picture 2> (@image2)`**。
+  - 開場首幀圖自動累計為 **`<Picture 3> (@image3)`**，徹底杜絕模型誤把角色外貌圖當作開場首幀畫面。
+- **純文字主體宣告模式 (Text-Only Mode)**：支援一鍵切換「📝 純文字宣告」，文字角色不佔用實體 Picture 槽位，避免虛擬圖片序號浪費。
+- **後端多模態契約 (System Protocol 2.1)**：在 `subject_definitions` 明確註記 `<Subject 1> is ... as depicted in <Picture 1>`，並在 `detailed_description` [Shot 1] 中嚴格對齊開場首幀 `<Picture 3>`。
 
 ### 1. 系列連續提示詞故事板工作室 (v3.0.0)
 - **一次生成 2 至 10 段連續影片提示詞**：一鍵生成前後情節高度連貫的系列分鏡提示詞（推薦 5 段經典黃金敘事弧線：起／承／轉／合／尾聲）。

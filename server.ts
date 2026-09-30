@@ -662,6 +662,28 @@ non_diegetic_music:
 - "overall_soundscape": 1-4 English sentences.
 - "non_diegetic_music": 1-3 English sentences, or "N/A".
 
+### 2.1 MiniMax Multi-Image Physical Upload Mapping Contract (CRITICAL):
+When multiple reference images are uploaded, MiniMax indexes them physically in sequential upload order: <Picture 1> (@image1), <Picture 2> (@image2), <Picture 3> (@image3)...
+1. Character / Subject Reference Images:
+   - When an image serves as a reference for a character or subject (e.g. <Subject 1> aka <Picture 1>, <Subject 2> aka <Picture 2>):
+     - In "subject_definitions": Define <Subject K> with its detailed visual appearance, costume, role, and explicitly state that it is depicted in its corresponding physical upload slot <Picture P> with locked visual identity:
+       e.g., "<Subject 1> is the [detailed facial, hairstyle, clothing, and role description] as depicted in <Picture 1>, with locked visual identity."
+       e.g., "<Subject 2> is the [detailed facial, hairstyle, clothing, and role description] as depicted in <Picture 2>, with locked visual identity."
+     - You may also define <Picture P> as the reference image for <Subject K> (e.g. "<Picture 1> is the character reference image for <Subject 1>.").
+2. Scene / Keyframe Images (e.g. <Picture 3>):
+   - When an image serves as the opening keyframe or scene composition, its Picture index matches its physical upload position (e.g. <Picture 3> if two character images precede it):
+     - In "subject_definitions": Define <Picture 3> as the first keyframe image establishing the scene, lighting, and composition:
+       e.g., "<Picture 3> is the first keyframe image showing [setting, aspect ratio, lighting] with <Subject 1> and <Subject 2>..."
+     - In "summary": Explicitly cite <Picture 3> and the preserved subjects:
+       e.g., "[reference generation] A 15-second ... scene generated from <Picture 3>, preserving <Subject 1> (from <Picture 1>) and <Subject 2> (from <Picture 2>) while ..."
+     - In "retention_analysis": Clearly link retention for both subjects and the keyframe:
+       e.g., "<Subject 1> (appears in [Shot 1]): fully_preserved - [features] remain unchanged (locked from <Picture 1>)."
+       e.g., "<Subject 2> (appears in [Shot 1]): fully_preserved - [features] remain unchanged (locked from <Picture 2>)."
+       e.g., "<Picture 3> (appears in [Shot 1]): fully_preserved - opening composition, camera angle, and environment remain the opening composition."
+     - In "detailed_description": [Shot 1] MUST match the keyframe image:
+       e.g., "[Shot 1] The opening frame matches <Picture 3>: <Subject 2> ... and <Subject 1> ..."
+3. CRITICAL RULE: DO NOT mix up the Picture indices! An image uploaded for Subject 1 is <Picture 1>; an image uploaded for Subject 2 is <Picture 2>; the scene keyframe is <Picture 3>. NEVER label the 3rd image as <Picture 1>!
+
 ### 3. Camera Motion Three-Dimension Specification:
 A complete camera-motion expression has three dimensions: Motion Type + Amplitude + Speed.
 Medium amplitude and normal speed are usually omitted.
@@ -1187,8 +1209,20 @@ app.post("/api/generate-h3-prompt", async (req, res) => {
     const multimodalParts: any[] = [];
     const ollamaImages: string[] = [];
 
-    const sanitizedReferences = (config.references && config.references.length > 0)
-      ? config.references
+    const rawRefs: any[] = Array.isArray(config.references) ? config.references : [];
+
+    // Identify opening keyframe tag and secondary keyframe tag for header lines
+    const openingKeyframeRef = rawRefs.find((r: any) =>
+      ['first_keyframe', 'keyframe', 'composition'].includes(r.role) || (r.tag && r.tag.startsWith('<Picture'))
+    );
+    const openingKeyframeTag = openingKeyframeRef?.physicalTag || openingKeyframeRef?.tag || '<Picture 1>';
+
+    const lastKeyframeRef = rawRefs.find((r: any) => r.role === 'last_keyframe');
+    const firstKeyframePic = (openingKeyframeRef?.physicalTag || '<Picture 1>').replace(/[<>]/g, '');
+    const lastKeyframePic = (lastKeyframeRef?.physicalTag || '<Picture 2>').replace(/[<>]/g, '');
+
+    const sanitizedReferences = (rawRefs.length > 0)
+      ? rawRefs
           .map((r: any) => {
             const cleanName = String(r.name || 'Reference Asset')
               .replace(/\.[a-zA-Z0-9]{2,5}$/i, '')
@@ -1197,6 +1231,10 @@ app.post("/api/generate-h3-prompt", async (req, res) => {
             const cleanDesc = String(r.description || '')
               .replace(/\b[\w-]+\.(?:png|jpe?g|webp|gif|mp4|mov|webm|mp3|wav)\b/gi, '')
               .trim() || 'Visual characteristics locked from reference';
+
+            const physicalSlotText = r.physicalTag
+              ? ` (Physical Upload Slot in MiniMax: ${r.physicalTag} / @image${r.pictureIndex})`
+              : (r.isPureSubject ? ' (Pure Text Subject Declaration, No Uploaded Image)' : '');
 
             // Check if this reference has an ultra-light image payload (~35KB, ~258 tokens)
             if (r.fileUrl && typeof r.fileUrl === 'string' && r.fileUrl.startsWith('data:image/')) {
@@ -1209,14 +1247,25 @@ app.post("/api/generate-h3-prompt", async (req, res) => {
                     data: base64Data,
                   },
                 });
-                multimodalParts.push(
-                  `[Visual reference image attached above corresponds to ${r.tag} (Role: ${r.role}, Label: ${cleanName}). Inspect its real visual characteristics (face, clothing, lighting, style, colors, materials) and describe them faithfully in subject_definitions and retention_analysis without including any file names.]`
-                );
+
+                if (r.physicalTag && r.tag && r.tag.startsWith('<Subject')) {
+                  multimodalParts.push(
+                    `[Visual Reference Image attached above is physical upload slot ${r.physicalTag} (@image${r.pictureIndex}), providing the character/subject visual reference for ${r.tag} (Role: ${r.role}, Label: ${cleanName}). Inspect its real facial structure, hairstyle, clothing, colors, and materials. In "subject_definitions", define ${r.tag} using its physical traits as depicted in ${r.physicalTag} (e.g. "${r.tag} is the [detailed appearance traits] as depicted in ${r.physicalTag}, with locked visual identity."). In "retention_analysis", state that ${r.tag} is fully_preserved from ${r.physicalTag}. Do NOT use any file names.]`
+                  );
+                } else if (r.physicalTag && r.tag && r.tag.startsWith('<Picture')) {
+                  multimodalParts.push(
+                    `[Visual Reference Image attached above is physical upload slot ${r.physicalTag} (@image${r.pictureIndex}) (Role: ${r.role}, Label: ${cleanName}). This image is the target keyframe/composition frame (${r.tag}). In "subject_definitions", define ${r.tag} as the first keyframe image showing the setting, lighting, atmosphere, and composition. In "summary" and "detailed_description" [Shot 1], explicitly reference this frame (${r.tag}). Do NOT use any file names.]`
+                  );
+                } else {
+                  multimodalParts.push(
+                    `[Visual reference image attached above corresponds to ${r.tag} (Role: ${r.role}, Label: ${cleanName}). Inspect its real visual characteristics (face, clothing, lighting, style, colors, materials) and describe them faithfully in subject_definitions and retention_analysis without including any file names.]`
+                  );
+                }
                 ollamaImages.push(base64Data);
               }
             }
 
-            return `- ${r.tag}: Role=${r.role}, Semantic Label=${cleanName}, Description=${cleanDesc}`;
+            return `- ${r.tag}${physicalSlotText}: Role=${r.role}, Semantic Label=${cleanName}, Description=${cleanDesc}`;
           })
           .join('\n')
       : 'No reference files provided.';
@@ -1233,7 +1282,7 @@ CRITICAL MULTI-EPISODE SERIES GENERATION PROTOCOL (${seriesCount} CONSECUTIVE EP
 - Continuity across episodes MUST be achieved purely through literal step-by-step physical descriptions:
   * Episode 1: Establishes initial scene, character appearance, and opening physical action sequence.
   * Episode K (K >= 2): The prompt's initial description/Shot 1 objectively begins with the exact physical posture, position, and held objects that directly continue from where Episode K-1 ended.
-  * All episodes strictly share identical subject definitions (<Subject 1>), clothing, hair, facial features, reference image (<Picture 1>), visual style, and ambient soundscape base.
+  * All episodes strictly share identical subject definitions (<Subject 1>), clothing, hair, facial features, reference image (${openingKeyframeTag}), visual style, and ambient soundscape base.
 - You MUST populate the "episodes" array with exactly ${seriesCount} items:
   * episodeIndex: 1, 2, ... ${seriesCount}
   * title: Traditional Chinese title (e.g. "第 1 段：初始開場與動作錨定", "第 2 段：情節承接與實體位移")
@@ -1268,6 +1317,20 @@ Generate an optimal MiniMax-H3 prompt based on the following user input:
 - Suppress Background Music: ${config.suppressMusic ? "Yes (Add non_diegetic_music: N/A)" : "No"}
 - Reference Assets (Block 1):
 ${sanitizedReferences}
+
+KEYFRAME & PHYSICAL SLOT ALIGNMENT CONTRACT:
+- If Generation Mode is I2VA:
+  The prompt MUST begin with the exact header line:
+  For the target video, at 0.00 seconds into the target video, ${openingKeyframeTag} (from [Shot 1]) is fully referenced.
+- If Generation Mode is FL2VA:
+  The prompt MUST begin with the exact header line:
+  How the reference pictures align with the target video — ${firstKeyframePic} (from Shot 1) aligns with the 0.00-second mark of the target video; ${lastKeyframePic} (from Shot N) aligns with the ${parseFloat(config.duration || '10').toFixed(2)}-second mark of the target video.
+- If Generation Mode is Ref2VA:
+  Follow the MiniMax Multi-Image Physical Upload Mapping Contract:
+  * In "subject_definitions": Define each <Subject K> as depicted in its corresponding <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity."). Define the keyframe image as ${openingKeyframeTag} (e.g. "${openingKeyframeTag} is the first keyframe image showing...").
+  * In "summary": Generated from ${openingKeyframeTag}, preserving <Subject 1> (from <Picture 1>), <Subject 2> (from <Picture 2>)...
+  * In "retention_analysis": Analyze retention for both <Subject K> (from <Picture P>) and ${openingKeyframeTag}.
+  * In "detailed_description" [Shot 1]: The opening frame matches ${openingKeyframeTag}.
 
 CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE (MUST FOLLOW STRICTLY):
 - Be specific and literal. Describe what happens, in what order, step by step.

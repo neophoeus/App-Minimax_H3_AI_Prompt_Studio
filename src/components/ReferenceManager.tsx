@@ -117,24 +117,60 @@ export const defaultLabelForRole = (r: ReferenceRole, catIndex: number): string 
 };
 
 /**
- * Re-indexes all reference items so that each asset category
- * (Subject, Picture, Video, Audio) is numbered independently starting from 1.
+ * Re-indexes all reference items with dual-track physical and semantic mapping:
+ * 1. Physical slots: Picture 1..N (upload order), Video 1..N, Audio 1..N
+ * 2. Semantic tags: Subject 1..N (characters/objects/scenes), Picture N (keyframes)
  */
 export const reindexReferences = (refs: ReferenceItem[]): ReferenceItem[] => {
-  const counts: Record<TagCategory, number> = {
-    Subject: 0,
-    Picture: 0,
-    Video: 0,
-    Audio: 0,
-  };
+  let pictureCount = 0;
+  let videoCount = 0;
+  let audioCount = 0;
+  let subjectCount = 0;
 
   return refs.map((ref) => {
-    const category = getCategoryForRole(ref.role);
-    counts[category] += 1;
-    const catIndex = counts[category];
-    const defaultTag = `<${category} ${catIndex}>`;
+    const isImageRole = ['first_keyframe', 'last_keyframe', 'keyframe', 'composition'].includes(ref.role);
+    const isSubjectRole = ['character', 'object', 'scene', 'style'].includes(ref.role);
+    const isVideoRole = ['motion', 'continuation'].includes(ref.role);
+    const isAudioRole = ref.role === 'audio';
 
-    // Only auto-update tag if empty or matches standard pattern <(Subject|Picture|Video|Audio) \d+>
+    let pictureIndex: number | undefined;
+    let physicalTag: string | undefined;
+
+    // Physical Picture Slot mapping:
+    // Any reference that is a keyframe/composition, or a subject with image (not marked pure text)
+    const isPhysicalImage = isImageRole || (isSubjectRole && ref.fileType === 'image' && !ref.isPureSubject);
+
+    if (isPhysicalImage) {
+      pictureCount += 1;
+      pictureIndex = pictureCount;
+      physicalTag = `<Picture ${pictureCount}>`;
+    } else if (isVideoRole) {
+      videoCount += 1;
+      physicalTag = `<Video ${videoCount}>`;
+    } else if (isAudioRole) {
+      audioCount += 1;
+      physicalTag = `<Audio ${audioCount}>`;
+    }
+
+    let defaultTag = '';
+    let catIndex = 1;
+
+    if (isSubjectRole) {
+      subjectCount += 1;
+      catIndex = subjectCount;
+      defaultTag = `<Subject ${subjectCount}>`;
+    } else if (isImageRole) {
+      catIndex = pictureIndex || 1;
+      defaultTag = `<Picture ${catIndex}>`;
+    } else if (isVideoRole) {
+      catIndex = videoCount;
+      defaultTag = `<Video ${videoCount}>`;
+    } else if (isAudioRole) {
+      catIndex = audioCount;
+      defaultTag = `<Audio ${audioCount}>`;
+    }
+
+    // Auto-update tag if empty or matches standard pattern <(Subject|Picture|Video|Audio) \d+>
     const isAutoTag = !ref.tag || /^<(Subject|Picture|Video|Audio)\s+\d+>$/i.test(ref.tag.trim());
     const newTag = isAutoTag ? defaultTag : ref.tag;
 
@@ -150,6 +186,8 @@ export const reindexReferences = (refs: ReferenceItem[]): ReferenceItem[] => {
       ...ref,
       tag: newTag,
       name: newName,
+      pictureIndex,
+      physicalTag,
     };
   });
 };
@@ -206,20 +244,21 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
     return 'image';
   };
 
-  const getRoleUploadHint = (role: ReferenceRole): string => {
-    switch (role) {
+  const getRoleUploadHint = (item: ReferenceItem): string => {
+    const slotInfo = item.physicalTag && item.pictureIndex ? ` [海螺槽位: ${item.physicalTag} / @image${item.pictureIndex}]` : '';
+    switch (item.role) {
       case 'continuation':
-        return '僅限上傳長影片接續來源影片 (MP4, MOV, WebM)';
+        return `僅限長影片接續來源 (MP4, MOV)${slotInfo}`;
       case 'motion':
-        return '僅限上傳影片動作參考檔 (MP4, MOV, WebM)';
+        return `僅限影片動作參考檔 (MP4, MOV)${slotInfo}`;
       case 'audio':
-        return '僅限上傳音訊檔 (MP3, WAV, AAC)';
+        return `僅限音訊檔 (MP3, WAV, AAC)${slotInfo}`;
       case 'first_keyframe':
-        return '僅限上傳開場首幀圖片 (JPG, PNG, WebP)';
+        return `僅限開場首幀圖片 (JPG, PNG, WebP)${slotInfo}`;
       case 'last_keyframe':
-        return '僅限上傳收斂尾幀圖片 (JPG, PNG, WebP)';
+        return `僅限收斂尾幀圖片 (JPG, PNG, WebP)${slotInfo}`;
       default:
-        return '僅限上傳圖片檔 (JPG, PNG, WebP)';
+        return `僅限圖片檔 (JPG, PNG, WebP)${slotInfo}`;
     }
   };
 
@@ -270,6 +309,7 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
         fileUrl: dataUrl,
         fileName: file.name,
         fileType,
+        isPureSubject: false,
       });
     } else {
       const reader = new FileReader();
@@ -299,7 +339,7 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            可選擇直接上傳圖片或影片，MiniMax-H3 會根據 Role (如 @image1: 角色鎖定, @video1: 動作鎖定) 進行 Retention Analysis 鎖定
+            支援多圖實體槽位自動對齊：角色圖自動映射為 &lt;Subject 1 aka Picture 1&gt; (@image1)，開場首幀自動累計為 &lt;Picture 3&gt; (@image3)，徹底杜絕模型序號錯位。
           </p>
         </div>
 
@@ -327,7 +367,7 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
             >
               <div className="flex items-center justify-between gap-2 flex-wrap">
                 {/* Tag & Role */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <input
                     type="text"
                     value={item.tag}
@@ -348,9 +388,60 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
                       </option>
                     ))}
                   </select>
+
+                  {/* Dual-track Physical Slot Badges */}
+                  {item.physicalTag && item.tag.startsWith('<Subject') && !item.isPureSubject && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-950/90 text-indigo-300 border border-indigo-500/50 text-[11px] font-mono font-semibold"
+                      title={`對應海螺多圖實體上傳槽位：${item.physicalTag} / @image${item.pictureIndex}`}
+                    >
+                      <span className="text-indigo-400 font-bold">aka {item.physicalTag}</span>
+                      <span className="text-indigo-400/80 font-normal">(@image{item.pictureIndex})</span>
+                    </span>
+                  )}
+
+                  {item.physicalTag && item.tag.startsWith('<Picture') && (
+                    <span
+                      className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-950/90 text-cyan-300 border border-cyan-500/50 text-[11px] font-mono font-semibold"
+                      title={`海螺實體圖片槽位：${item.physicalTag} / @image${item.pictureIndex}`}
+                    >
+                      <span>@image{item.pictureIndex}</span>
+                      <span className="text-[10px] text-cyan-400 font-sans font-normal">
+                        {item.role === 'last_keyframe' ? '尾幀收斂' : '首幀畫面'}
+                      </span>
+                    </span>
+                  )}
+
+                  {item.isPureSubject && (
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-slate-800 text-slate-400 text-[11px] font-sans">
+                      純文字主體宣告
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
+                  {/* Toggle pure subject for subject roles */}
+                  {['character', 'object', 'scene', 'style'].includes(item.role) && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        updateReference(item.id, {
+                          isPureSubject: !item.isPureSubject,
+                          fileUrl: !item.isPureSubject ? undefined : item.fileUrl,
+                          fileName: !item.isPureSubject ? undefined : item.fileName,
+                        })
+                      }
+                      className={`px-2 py-1 rounded-lg text-[11px] transition-colors border ${
+                        item.isPureSubject
+                          ? 'bg-amber-950/40 text-amber-300 border-amber-500/40 hover:bg-amber-950/60'
+                          : 'bg-slate-900 text-slate-400 border-slate-700 hover:text-slate-200'
+                      }`}
+                      title="切換為純文字主體宣告（無需上傳圖，不佔用 MiniMax Picture 實體槽位）"
+                    >
+                      {item.isPureSubject ? '📝 純文字宣告' : '🖼️ 附參考圖'}
+                    </button>
+                  )}
+
                   {/* Remove action */}
                   <button
                     type="button"
@@ -366,7 +457,13 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
               {/* Upload Dropzone & Media Preview */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
                 <div className="sm:col-span-1">
-                  {item.fileUrl ? (
+                  {item.isPureSubject ? (
+                    <div className="p-3 rounded-xl border border-dashed border-slate-800 bg-slate-900/30 flex flex-col items-center justify-center text-center gap-1 h-24">
+                      <Tag className="w-4 h-4 text-slate-500" />
+                      <span className="text-xs text-slate-400 font-medium">純文字主體語意宣告</span>
+                      <span className="text-[10px] text-slate-500">不佔用海螺 Picture 槽位</span>
+                    </div>
+                  ) : item.fileUrl ? (
                     <div className="relative rounded-lg overflow-hidden border border-purple-500/30 bg-slate-900 group aspect-video flex items-center justify-center">
                       {item.fileType === 'image' && (
                         <img
@@ -417,7 +514,7 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
                             : '上傳參考圖片'}
                         </span>
                       </div>
-                      <span className="text-[10px] text-slate-500">{getRoleUploadHint(item.role)}</span>
+                      <span className="text-[10px] text-slate-500">{getRoleUploadHint(item)}</span>
                       <input
                         type="file"
                         accept={getAcceptFileType(item.role)}

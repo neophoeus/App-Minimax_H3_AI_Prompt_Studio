@@ -524,6 +524,9 @@ export default function App() {
           description: r.description,
           fileType: r.fileType,
           fileName: r.fileName,
+          pictureIndex: r.pictureIndex,
+          physicalTag: r.physicalTag,
+          isPureSubject: r.isPureSubject,
           fileUrl: r.fileType === 'image' && r.fileUrl && r.fileUrl.startsWith('data:image/') ? r.fileUrl : undefined,
         })),
       };

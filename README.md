@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v3.0.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.1.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -30,6 +30,14 @@ Featuring a **Quad-Engine Operating Architecture with Priority Auto-Detection**,
 The studio automatically detects the environment and auto-selects the highest priority engine on startup (**AI Studio > Paid API > Ollama > llama.cpp**), while preserving the ability to manually switch engines anytime.
 
 ## ✨ Key Features
+
+### 0. Multi-Image Dual-Track Physical & Semantic Mapping (v3.1.0)
+- **Decoupling Physical Slots from Semantic Entities**: Hailuo models strictly index all uploaded images by physical arrival order: `<Picture 1>` (`@image1`), `<Picture 2>` (`@image2`), `<Picture 3>` (`@image3`).
+- **Dual Identification & Auto-Alignment**:
+  - When multiple images are provided (e.g., 2 character portrait references + 1 opening scene keyframe), the studio automatically maps Character 1 and Character 2 as **`<Subject 1 aka Picture 1> (@image1)`** and **`<Subject 2 aka Picture 2> (@image2)`**.
+  - The opening keyframe image dynamically advances to **`<Picture 3> (@image3)`**, preventing the model from erroneously treating a character close-up as the opening composition.
+- **Text-Only Subject Declaration Mode**: Supports one-click toggle to "📝 Pure Text Declaration" so that text-only subjects do not waste physical Picture slots.
+- **Backend Multimodal Contract (System Protocol 2.1)**: Formally defines `<Subject 1> is ... as depicted in <Picture 1>` in `subject_definitions`, and aligns `detailed_description` [Shot 1] to opening keyframe `<Picture 3>`.
 
 ### 1. Multi-Episode Consecutive Series Storyboard Studio (v3.0.0)
 - **2 to 10 Sequential Video Prompts Generation**: Generate coherent, step-by-step consecutive video prompts in a single click (recommended 5-clip golden narrative arc: Hook ➔ Progression ➔ Twist ➔ Resolution ➔ Outro).

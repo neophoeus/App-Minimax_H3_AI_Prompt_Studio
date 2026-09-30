@@ -87,6 +87,9 @@ export interface ReferenceItem {
   fileType: 'image' | 'video' | 'audio';
   fileUrl?: string; // object URL or data URL for local preview
   fileName?: string;
+  pictureIndex?: number; // Physical image index (1, 2, 3...) in upload order
+  physicalTag?: string; // e.g. "<Picture 1>" or "@image1" indicating the physical upload slot in MiniMax
+  isPureSubject?: boolean; // True if declared purely in text without an uploaded image
 }
 
 export type CameraMotionType =
