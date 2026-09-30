@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v3.0.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.0.1-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)

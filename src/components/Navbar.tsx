@@ -79,14 +79,14 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
-                MiniMax-H3 AI 提示詞助手
+                MiniMax-H3 AI 提示詞工作室
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">
-                v2.2.0 • 四引擎自動偵測
+                v3.0.1 • 四引擎自動偵測
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-              <span>三段式標準結構 (Ref + Core + Scene Timeline)</span>
+              <span>三段式標準結構 & 系列連續劇本 (Series)</span>
               <span className="text-slate-600">•</span>
               <a
                 href="https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing"

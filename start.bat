@@ -1,9 +1,9 @@
 @echo off
-title MiniMax-H3 AI Prompt Studio v3.0.0
+title MiniMax-H3 AI Prompt Studio v3.0.1
 cls
 
 echo ======================================================================
-echo           MiniMax-H3 AI Prompt Studio [v3.0.0]
+echo           MiniMax-H3 AI Prompt Studio [v3.0.1]
 echo           AI Engine: Quad-Engine Architecture [AI Studio + Paid API + Ollama + llama.cpp]
 echo ======================================================================
 echo.
