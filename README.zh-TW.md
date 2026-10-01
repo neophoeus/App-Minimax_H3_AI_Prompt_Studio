@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v3.1.0-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v3.2.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -31,7 +31,19 @@
 
 ## ✨ 核心特色
 
-### 0. 多圖實體槽位與主體雙軌映射架構 (v3.1.0)
+### 0. 4 階創意自由度滑桿與導演思維架構 (v3.2.0)
+- **解決提示詞刻板僵硬痛點**：針對視訊提示詞容易「太中規中矩、畫面呆板」的問題，首創 4 階創意滑桿系統，自由調度從嚴格直譯到前衛奇觀的自由度。
+- **4 階精確檔位劃分**：
+  - **Level 0 (保守忠實)**：規格轉譯官。100% 遵照原文字，零腦補，以專業電影格式規格化轉譯。
+  - **Level 1 (邏輯補完 - 預設推薦)**：細節攝影指導。保持原意，補齊環境反饋與次生微動態（水汽、光斑、髮絲、景深分層），讓畫面充實飽滿。
+  - **Level 2 (創意靈動)**：院線電影導演。導入電影級視覺變化：特殊運鏡角度（低角倒影、透視穿梭）、戲劇性光影橫掃與肢體反差。
+  - **Level 3 (天馬行空)**：前衛先鋒藝術家。以構想為靈感原點釋放極致想像，導入超現實奇觀、重力或物理異變與戲劇性反轉，兼顧 H3 客觀動作語法。
+- **統一採樣溫度 1.0 + 導演指令主導**：全引擎（Gemini、Ollama、llama.cpp）採樣溫度統一為 `1.0`，杜絕低溫死板與高溫語法崩潰，讓模型永遠在最豐富的詞彙庫下由明確的導演指示精準引導。
+- **直觀互動與完整連動**：
+  - 前端 0~3 步進式 Range Slider、色彩膠囊切換鈕與即時特色說明卡片。
+  - 支援 `localStorage` 自動持久化保存、官方精選範本預設等級與系列 Markdown 匯出中繼資料連動。
+
+### 1. 多圖實體槽位與主體雙軌映射架構 (v3.1.0)
 - **海螺原生多圖物理槽位解耦**：海螺模型對所有上傳圖片強制按照物理順序編號為 `<Picture 1>` (`@image1`), `<Picture 2>` (`@image2`), `<Picture 3>` (`@image3`)。
 - **雙重識別標籤與自動對齊**：
   - 當使用者上傳多張圖片（如 2 張角色圖 + 1 張場景圖）時，前台自動將角色 1 與角色 2 對齊為 **`<Subject 1 aka Picture 1> (@image1)`** 與 **`<Subject 2 aka Picture 2> (@image2)`**。

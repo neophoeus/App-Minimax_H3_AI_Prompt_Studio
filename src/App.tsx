@@ -13,6 +13,7 @@ import {
   CameraAmplitude,
   CameraSpeed,
   GenerationMode,
+  CreativityLevel,
   EngineTier,
   AiProvider,
   AppMode,
@@ -52,6 +53,8 @@ import {
   X,
   ListOrdered,
   Download,
+  Flame,
+  Compass,
 } from 'lucide-react';
 
 interface CameraMoveDetail {
@@ -143,6 +146,65 @@ const LIGHTING_PRESETS = [
   'Cinematic dark shadows with directional moonlight',
 ];
 
+const CREATIVITY_LEVEL_SPECS = {
+  0: {
+    level: 0 as const,
+    titleZh: '保守忠實',
+    titleEn: 'Strict',
+    badge: '規格轉譯官・零腦補',
+    sliderBg: 'accent-cyan-500',
+    color: 'from-blue-500 to-cyan-500',
+    activeBorder: 'border-cyan-500/60',
+    activeBg: 'bg-cyan-950/40 text-cyan-200',
+    badgeBg: 'bg-cyan-950/80 text-cyan-300 border-cyan-700/50',
+    textColor: 'text-cyan-400',
+    description: '嚴格遵照使用者原始文字與限制，不增添未提及之人事物，以專業規格化電影語法忠實轉譯。',
+    icon: ShieldCheck,
+  },
+  1: {
+    level: 1 as const,
+    titleZh: '邏輯補完',
+    titleEn: 'Enrich',
+    badge: '細節攝影指導・預設推薦',
+    sliderBg: 'accent-emerald-500',
+    color: 'from-emerald-500 to-teal-400',
+    activeBorder: 'border-emerald-500/60',
+    activeBg: 'bg-emerald-950/40 text-emerald-200',
+    badgeBg: 'bg-emerald-950/80 text-emerald-300 border-emerald-700/50',
+    textColor: 'text-emerald-400',
+    description: '維持核心意圖，主動補齊客觀物理邏輯與環境微動態（水汽、光斑、髮絲、景深分層），畫面充實生動。',
+    icon: Sparkles,
+  },
+  2: {
+    level: 2 as const,
+    titleZh: '創意靈動',
+    titleEn: 'Creative',
+    badge: '院線電影導演・光影張力',
+    sliderBg: 'accent-purple-500',
+    color: 'from-purple-500 to-indigo-500',
+    activeBorder: 'border-purple-500/60',
+    activeBg: 'bg-purple-950/40 text-purple-200',
+    badgeBg: 'bg-purple-950/80 text-purple-300 border-purple-700/50',
+    textColor: 'text-purple-400',
+    description: '保留主題與角色，導入電影級視覺變化：特殊運鏡視角（低角倒影、透視）、戲劇性光影橫掃與肢體反差。',
+    icon: Compass,
+  },
+  3: {
+    level: 3 as const,
+    titleZh: '天馬行空',
+    titleEn: 'Wild',
+    badge: '前衛先鋒藝術家・奇觀演繹',
+    sliderBg: 'accent-amber-500',
+    color: 'from-amber-500 to-rose-500',
+    activeBorder: 'border-amber-500/60',
+    activeBg: 'bg-amber-950/40 text-amber-200',
+    badgeBg: 'bg-amber-950/80 text-amber-300 border-amber-700/50',
+    textColor: 'text-amber-400',
+    description: '以構想為靈感原點釋放極致想像，導入超現實奇觀、重力或物理異變與戲劇性反轉，兼顧 H3 動作語法。',
+    icon: Flame,
+  },
+};
+
 const DEFAULT_CONFIG: H3PromptConfig = {
   idea: '',
   mode: 'T2VA',
@@ -156,6 +218,7 @@ const DEFAULT_CONFIG: H3PromptConfig = {
   dialogueText: '',
   sfxText: '',
   suppressMusic: false,
+  creativityLevel: 1,
   engineTier: 'pro',
   references: [],
   isSeriesMode: false,
@@ -640,7 +703,7 @@ ${ep.fullPrompt}`;
     const mdLines = [
       `# MiniMax-H3 系列連續提示詞專案: ${output.seriesTitle || config.idea || '未命名系列'}`,
       `> 故事弧概要: ${output.storyArcSummary || '無'}`,
-      `> 生成模式: ${config.mode} | 時長: ${config.duration} | 比例: ${config.aspectRatio}`,
+      `> 生成模式: ${config.mode} | 時長: ${config.duration} | 比例: ${config.aspectRatio} | 創意自由度: Level ${config.creativityLevel ?? 1} (${CREATIVITY_LEVEL_SPECS[(config.creativityLevel ?? 1) as CreativityLevel]?.titleZh || '邏輯補完'})`,
       `> 建立時間: ${new Date().toLocaleString('zh-TW')}`,
       '',
       '---',
@@ -757,6 +820,12 @@ ${ep.fullPrompt}`;
     showToast(`已添加修飾語: ${tagText}`, 'success');
   };
 
+  const currentCreativityLevel: CreativityLevel = (
+    typeof config.creativityLevel === 'number' && config.creativityLevel >= 0 && config.creativityLevel <= 3
+      ? config.creativityLevel
+      : 1
+  ) as CreativityLevel;
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-purple-500/30">
       {/* Top Navigation Bar */}
@@ -836,6 +905,109 @@ ${ep.fullPrompt}`;
               style={{ fontSize: `${ideaFontSize}px`, lineHeight: 1.6 }}
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-all resize-y min-h-[240px]"
             />
+
+            {/* Creativity Level Slider (0: 保守忠實 ~ 3: 天馬行空) */}
+            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/90 space-y-3 shadow-inner">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  <Sliders className="w-3.5 h-3.5 text-purple-400" />
+                  <label className="text-xs font-semibold text-slate-200">
+                    創意自由度 (Creativity Slider)
+                  </label>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 transition-all ${
+                      CREATIVITY_LEVEL_SPECS[currentCreativityLevel].badgeBg
+                    }`}
+                  >
+                    Level {currentCreativityLevel}: {CREATIVITY_LEVEL_SPECS[currentCreativityLevel].titleZh}
+                  </span>
+                </div>
+              </div>
+
+              {/* Range Slider Track */}
+              <div className="space-y-1.5 px-0.5">
+                <input
+                  type="range"
+                  min="0"
+                  max="3"
+                  step="1"
+                  value={currentCreativityLevel}
+                  onChange={(e) =>
+                    setConfig({
+                      ...config,
+                      creativityLevel: (parseInt(e.target.value, 10) as CreativityLevel) || 0,
+                    })
+                  }
+                  className={`w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer ${
+                    CREATIVITY_LEVEL_SPECS[currentCreativityLevel].sliderBg
+                  } focus:outline-none transition-all`}
+                />
+                <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                  <span className={currentCreativityLevel === 0 ? 'text-cyan-400 font-bold' : ''}>0 (保守)</span>
+                  <span className={currentCreativityLevel === 1 ? 'text-emerald-400 font-bold' : 'text-slate-400 font-medium'}>
+                    1 (預設推薦)
+                  </span>
+                  <span className={currentCreativityLevel === 2 ? 'text-purple-400 font-bold' : ''}>2 (創意)</span>
+                  <span className={currentCreativityLevel === 3 ? 'text-amber-400 font-bold' : ''}>3 (天馬行空)</span>
+                </div>
+              </div>
+
+              {/* 4 Discrete Segmented Quick-Select Buttons */}
+              <div className="grid grid-cols-4 gap-1.5 pt-0.5">
+                {([0, 1, 2, 3] as const).map((lvl) => {
+                  const spec = CREATIVITY_LEVEL_SPECS[lvl];
+                  const Icon = spec.icon;
+                  const isSelected = currentCreativityLevel === lvl;
+                  return (
+                    <button
+                      key={lvl}
+                      type="button"
+                      onClick={() => setConfig({ ...config, creativityLevel: lvl })}
+                      className={`py-1.5 px-1 rounded-lg border text-center transition-all flex flex-col items-center justify-center gap-0.5 ${
+                        isSelected
+                          ? `${spec.activeBg} ${spec.activeBorder} shadow-sm ring-1 ring-white/10`
+                          : 'bg-slate-900/60 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-1">
+                        <Icon className={`w-3 h-3 ${isSelected ? spec.textColor : 'text-slate-500'}`} />
+                        <span className={`text-[11px] font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
+                          {lvl} {spec.titleZh}
+                        </span>
+                      </div>
+                      <span className="text-[9px] text-slate-500 font-mono truncate max-w-full">
+                        {lvl === 1 ? '預設推薦' : spec.titleEn}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Dynamic Level Explanation Card */}
+              <div
+                className={`p-2.5 rounded-lg border text-[11px] leading-relaxed transition-all ${
+                  CREATIVITY_LEVEL_SPECS[currentCreativityLevel].activeBg
+                } ${CREATIVITY_LEVEL_SPECS[currentCreativityLevel].activeBorder}`}
+              >
+                <div className="flex items-center gap-1.5 font-semibold mb-1">
+                  <span className={CREATIVITY_LEVEL_SPECS[currentCreativityLevel].textColor}>
+                    {CREATIVITY_LEVEL_SPECS[currentCreativityLevel].badge}
+                  </span>
+                  <span className="text-slate-500">•</span>
+                  <span className="text-slate-300">
+                    {currentCreativityLevel === 0 && '原意保真度 100%'}
+                    {currentCreativityLevel === 1 && '補足客觀物理微動態'}
+                    {currentCreativityLevel === 2 && '電影感運鏡與光影變化'}
+                    {currentCreativityLevel === 3 && '極高自由度探索奇觀'}
+                  </span>
+                </div>
+                <p className="text-slate-300/90">
+                  {CREATIVITY_LEVEL_SPECS[currentCreativityLevel].description}
+                </p>
+              </div>
+            </div>
 
             {/* Mode Selectors */}
             <div className="space-y-2.5">

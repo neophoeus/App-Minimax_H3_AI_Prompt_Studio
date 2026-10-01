@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v3.2.0] - 2026-10-01
+
+### 🎨 4-Level Creativity Slider & Director Directives Architecture (4 階創意自由度滑桿與導演思維指令完全主導架構)
+
+#### 🎛️ 1. 4-Level Creativity Slider (4 階創意自由度滑桿控制系統)
+- **Four Distinct Creativity Levels (4 階明確階梯劃分)**:
+  - **Level 0: 保守忠實 (Strict & Faithful)**：規格轉譯官。100% 嚴格遵照使用者原始文字與限制，不增添未提及之人事物，以專業規格化電影語法忠實轉譯。
+  - **Level 1: 邏輯補完 (Enrich & Logical - 預設推薦)**：細節攝影指導。維持核心意圖，主動補齊客觀物理邏輯與環境微動態（水汽、光斑、髮絲、景深分層），徹底消除畫面生硬呆板感。
+  - **Level 2: 創意靈動 (Creative & Dynamic)**：院線電影導演。保留主題與角色，導入電影級視覺變化：特殊運鏡視角（低角倒影、透視穿梭）、戲劇性光影橫掃與肢體反差。
+  - **Level 3: 天馬行空 (Wild & Unconstrained)**：前衛先鋒藝術家。以構想為靈感原點釋放極致想像，導入超現實奇觀、重力或物理異變與戲劇性反轉，兼顧 MiniMax-H3 客觀物理動作語法。
+- **Interactive UI Range Slider & Quick-Select Pills (前端互動滑桿與膠囊切換鈕)**:
+  - 於「核心創意思路」卡片下方配置 0~3 步進式 Range Slider 與 4 個主題色彩膠囊按鈕，支援直觀拖曳與一鍵快速切換。
+  - 配備動態特色說明小卡，切換時即時變更色彩主題標籤與詳細行為指引。
+
+#### 🧠 2. Unified Temperature 1.0 & Director Directives (統一溫度 1.0 與導演思維指令主導)
+- **Unified Temperature 1.0 (全引擎統一採樣溫度 1.0)**:
+  - 將 Google Gemini、本機 Ollama 與 llama.cpp 的採樣溫度統一設定為 `1.0`，確保大語言模型永遠處於文字生動、詞彙豐富的最佳創作狀態，外層 JSON 解析 100% 穩定安全。
+- **Role-Based Prompt Directives (四階專屬角色導演指令注入)**:
+  - 後端 `getCreativityDirective(level)` 依檔位注入高精度角色指令（規格轉譯官 / 細節攝影指導 / 院線電影導演 / 前衛先鋒藝術家），由明確的語意邊界完全主導創意增減。
+- **Universal Feature Coverage (全流程功能全面支援)**:
+  - 同步覆蓋單鏡提示詞生成 (`/api/generate-h3-prompt`)、多鏡連續劇本故事板 (Series Mode) 以及提示詞快速優化 (`/api/optimize-existing-prompt`)。
+
+#### 💾 3. State Persistence, Presets & Markdown Export (設定保存、預設範本與匯出連動)
+- **Automatic LocalStorage Persistence (瀏覽器自動持久化保存)**:
+  - 使用者所選之創意等級自動寫入 `localStorage`，重新整理或重啟應用後無縫恢復。
+- **Official Presets Calibration (官方精選範本等級校準)**:
+  - 為 6 組官方精選範本配置最佳創意等級（商業廣告設定為 Level 1，動漫與動作特技設定為 Level 2）。
+- **Series Markdown Export Metadata (系列分鏡匯出連動)**:
+  - 全系列分鏡匯出 Markdown 檔案自動包含當前採用的創意等級與風格名稱中繼資料。
+
+#### 🏷️ 4. Interface & Package Version Bump (全站版本標籤與專案設定升級)
+- **Navbar Version Badge Bump (導覽列版本徽章升級)**:
+  - 頂部導覽列版本徽章正式升級為 `v3.2.0 • 4 階創意滑桿與導演思維架構`。
+- **Project Configuration Synchronization (專案設定全面同步)**:
+  - `package.json` 與 `package-lock.json` 版本全面晉升至 `3.2.0`。
+
+---
+
 ## [v3.1.0] - 2026-09-30
 
 ### 🎯 Multi-Image Dual-Track Physical & Semantic Mapping Architecture (多圖參考素材物理槽位與語意主體雙軌映射架構)

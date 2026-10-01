@@ -82,7 +82,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 MiniMax-H3 AI 提示詞工作室
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">
-                v3.1.0 • 多圖雙軌映射與四引擎自動偵測
+                v3.2.0 • 4 階創意滑桿與導演思維架構
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">

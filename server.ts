@@ -122,6 +122,7 @@ async function callOllamaChat(params: {
   userPrompt: string;
   images?: string[];
   formatJson?: boolean;
+  temperature?: number;
 }): Promise<string> {
   const modelToUse = params.model || DEFAULT_OLLAMA_MODEL;
   const messages: any[] = [];
@@ -139,7 +140,7 @@ async function callOllamaChat(params: {
     messages,
     stream: false,
     options: {
-      temperature: 0.7,
+      temperature: typeof params.temperature === "number" ? params.temperature : 0.7,
       num_ctx: 32768,
     },
   };
@@ -190,6 +191,7 @@ async function callLlamaCppChat(params: {
   userPrompt: string;
   images?: string[];
   formatJson?: boolean;
+  temperature?: number;
 }): Promise<string> {
   const modelToUse = params.model || DEFAULT_LLAMACPP_MODEL;
   const messages: any[] = [];
@@ -217,7 +219,7 @@ async function callLlamaCppChat(params: {
     model: modelToUse,
     messages,
     stream: false,
-    temperature: 0.7,
+    temperature: typeof params.temperature === "number" ? params.temperature : 0.7,
   };
   if (params.formatJson) {
     payload.response_format = { type: "json_object" };
@@ -804,6 +806,62 @@ When generating a sequence/series of prompts (e.g., 5 to 10 episodes):
 }
 `;
 
+/**
+ * Sampling temperature is unified at 1.0 across all engines (Gemini, Ollama, llama.cpp).
+ * This ensures peak vocabulary fluency and vivid descriptive phrasing without artificial throttling,
+ * while creative liberty is 100% steered by explicit Prompt Directives.
+ */
+function getCreativityTemperature(_level?: number): number {
+  return 1.0;
+}
+
+/**
+ * Builds specific instruction directives for the selected Creativity Level (0 ~ 3)
+ */
+function getCreativityDirective(level: number): string {
+  switch (level) {
+    case 0:
+      return `
+CRITICAL CREATIVITY GUIDELINE [LEVEL 0 - STRICT & FAITHFUL (保守忠實 / 零腦補)]:
+- ROLE: Precision Technical Transcriber & Spec Compliance Officer.
+- ZERO EXTRAPOLATION: Strictly and literally follow ONLY what the user explicitly requested.
+- ABSOLUTE PROHIBITION: Do NOT introduce any new characters, unmentioned subplots, extra props, or background actions that were not specified in the input.
+- ELEGANT LITERAL PHRASING: While strictly sticking to the user's explicit facts, use natural, professional cinematic English phrasing (avoid robotic word-for-word translation, but introduce zero unasked creative elements).
+- STRUCTURE: Follow the exact three-state physical framework (Starting state -> Action -> End state) for every action. Keep the narrative concise, clean, and 100% faithful.`;
+
+    case 2:
+      return `
+CRITICAL CREATIVITY GUIDELINE [LEVEL 2 - CREATIVE & DYNAMIC (創意靈動 / 變化豐富)]:
+- ROLE: Visionary Feature Film Director & DP.
+- CINEMATIC EXPANSION: Preserve the core subject and setting, but actively introduce compelling visual variations, dramatic tension, and sophisticated cinematic flair:
+  1. Dynamic Camera Perspectives: Incorporate unconventional, high-impact camera angles (e.g. dramatic low-angle tilt reveals, Dutch tilts during tension, tracking shots passing through tight foreground obstructions, sweeping arc reveals).
+  2. Dramatic Lighting & Environmental Shifts: Introduce shifting lighting dynamics (e.g. headlights sweeping across a dark alley, flickering neon casts, high-contrast rim lighting, volumetric shadow projections, sudden atmospheric changes).
+  3. Character Physical Nuances: Enhance the subject's physical actions with emotional weight and intent through posture shifts, sharp eye darts, or sudden kinetic pauses.
+- PHYSICAL GRAMMAR ANCHOR: Every creative variation MUST be described in objective, step-by-step physical actions (Starting state -> Action -> End state) without vague poetic buzzwords.`;
+
+    case 3:
+      return `
+CRITICAL CREATIVITY GUIDELINE [LEVEL 3 - WILD & UNCONSTRAINED (天馬行空 / 奇觀演繹)]:
+- ROLE: Avant-Garde Visual Effects Auteur & Conceptual Surrealist.
+- UNBOUNDED CREATIVE FREEDOM: Treat the user's input purely as a thematic launchpad. You are liberated from conventional realism or linear expectations:
+  1. Surreal / High-Concept Twists: Introduce mind-bending physical phenomena, unexpected visual transformations (e.g. liquids defying gravity, light solidifying into geometric trails, reality dissolving into cybernetic grids, unexpected spatial warping).
+  2. Kinetic Spectacle & Shocking Escalations: Design scenes that feel like high-budget sci-fi/fantasy trailer climaxes, with bold choreography, dramatic physical escalations, and extraordinary visual contrasts.
+  3. Memorable Visual Punchline: Conclude with a striking, iconic ending visual state that leaves a powerful visual impression.
+  4. CRITICAL MINIMAX-H3 COMPLIANCE: Even with wild creativity, the final prompt MUST strictly follow MiniMax-H3 fields and objective physical action descriptions (Starting state -> Action -> End state). Express impossible or surreal wonders through concrete, literal physical movement!`;
+
+    case 1:
+    default:
+      return `
+CRITICAL CREATIVITY GUIDELINE [LEVEL 1 - ENRICH & LOGICAL (邏輯補完 / 畫面充實 - DEFAULT)]:
+- ROLE: Professional Cinematographer & Lighting/Staging Coordinator.
+- FAITHFUL CORE INTENT: Keep the user's primary idea, characters, and narrative goal 100% intact.
+- RICH PHYSICAL LOGIC: Logically complete the physical environment and secondary motions to eliminate any stiffness, dullness, or artificial emptiness:
+  1. Secondary Micro-Motions: Incorporate realistic secondary physical reactions (e.g. hair strands or clothing fluttering in the breeze, steam billows rising and curling from liquid, droplets beading and streaking down surfaces, subtle eyelid twitches, natural breathing rhythm, fingers micro-adjusting grip).
+  2. Multi-Plane Spatial Depth: Structure the composition with clear foreground layers (e.g. out-of-focus wet glass, door frame, passing dust particles), midground action, and deep atmospheric background.
+  3. Plausible Environmental Interaction: Objects realistically react to the environment (e.g. feet kicking up subtle dust puffs, neon light shimmering in puddle ripples).
+- OBJECTIVE PHRASING: Ensure all enriched details are described strictly as literal physical actions (Starting state -> Action -> End state) without flowery adjectives.`;
+  }
+}
 
 // Helper to resolve effective runtime mode and execution tier
 function resolveAppMode(reqBody: any): {
@@ -1270,6 +1328,10 @@ app.post("/api/generate-h3-prompt", async (req, res) => {
           .join('\n')
       : 'No reference files provided.';
 
+    const creativityLevel = typeof config.creativityLevel === 'number' ? config.creativityLevel : 1;
+    const creativityDirective = getCreativityDirective(creativityLevel);
+    const dynamicTemperature = getCreativityTemperature(creativityLevel);
+
     const isSeriesMode = Boolean(config.isSeriesMode);
     const seriesCount = Math.min(10, Math.max(2, Number(config.seriesCount) || 5));
 
@@ -1315,6 +1377,7 @@ Generate an optimal MiniMax-H3 prompt based on the following user input:
 - Spoken Dialogue to be voiced by character (MUST format inside <d>[Language] ...</d>): ${config.dialogueText ? config.dialogueText : "None"}
 - Sound Effects / Audio: ${config.sfxText || "Ambient soundscape"}
 - Suppress Background Music: ${config.suppressMusic ? "Yes (Add non_diegetic_music: N/A)" : "No"}
+- Creativity Level: Level ${creativityLevel} of 3
 - Reference Assets (Block 1):
 ${sanitizedReferences}
 
@@ -1341,6 +1404,8 @@ CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE (MUST FOLLOW STRICTLY):
   1. Starting state (body posture, position in frame, what hands are holding, initial gaze)
   2. Action (chronological step-by-step physical movement, directions, contact)
   3. End state (resulting posture, resting place of objects when movement concludes)
+
+${creativityDirective}
 
 ${seriesDirective}
 
@@ -1401,6 +1466,7 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
         userPrompt,
         images: ollamaImages.length > 0 ? ollamaImages : undefined,
         formatJson: true,
+        temperature: dynamicTemperature,
       });
 
       const resultJson = parseJsonSafely(raw);
@@ -1483,6 +1549,7 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
         userPrompt,
         images: ollamaImages.length > 0 ? ollamaImages : undefined,
         formatJson: true,
+        temperature: dynamicTemperature,
       });
 
       const resultJson = parseJsonSafely(raw);
@@ -1532,6 +1599,7 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
         contents: requestContents,
         config: {
           systemInstruction: MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION,
+          temperature: dynamicTemperature,
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,
@@ -1652,14 +1720,19 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
 // Quick Optimize Endpoint
 app.post("/api/optimize-existing-prompt", async (req, res) => {
   try {
-    const { rawPrompt, duration = "10s", suppressMusic = false } = req.body;
+    const { rawPrompt, duration = "10s", suppressMusic = false, creativityLevel = 1 } = req.body;
     const { appMode, effectiveTier, ollamaModelToUse, llamacppModelToUse } = resolveAppMode(req.body);
+
+    const numLevel = typeof creativityLevel === 'number' ? creativityLevel : 1;
+    const creativityDirective = getCreativityDirective(numLevel);
+    const dynamicTemperature = getCreativityTemperature(numLevel);
 
     const requestText = `
 Take the user's rough prompt or idea below and optimize/rewrite it into the official MiniMax-H3 prompt standard:
 Rough Prompt: "${rawPrompt}"
 Duration: ${duration}
 Suppress Music: ${suppressMusic ? "Yes" : "No"}
+Creativity Level: Level ${numLevel} of 3
 
 Refine it strictly following official MiniMax-H3 specifications:
 CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE:
@@ -1673,6 +1746,8 @@ CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE:
 - Format spoken dialogue inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>), and reserve double quotes "" strictly for visible on-screen text.
 - Formulate complete overall_soundscape and non_diegetic_music sections according to the guide.
 DO NOT include any file names or file extensions in the generated prompt!
+
+${creativityDirective}
 `;
 
     if (appMode === 'ollama') {
@@ -1704,6 +1779,7 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
         systemPrompt,
         userPrompt: requestText,
         formatJson: true,
+        temperature: dynamicTemperature,
       });
 
       const resultJson = parseJsonSafely(raw);
@@ -1753,6 +1829,7 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
         systemPrompt,
         userPrompt: requestText,
         formatJson: true,
+        temperature: dynamicTemperature,
       });
 
       const resultJson = parseJsonSafely(raw);
@@ -1783,6 +1860,7 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
         contents: requestText,
         config: {
           systemInstruction: MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION,
+          temperature: dynamicTemperature,
           responseMimeType: "application/json",
           responseSchema: {
             type: Type.OBJECT,

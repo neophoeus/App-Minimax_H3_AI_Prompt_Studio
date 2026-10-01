@@ -20,6 +20,7 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
       dialogueText: 'Your extra-caffeinated synth-latte is ready, traveler.',
       sfxText: 'Espresso machine steam hiss, rainfall outside, soft mechanical purring',
       suppressMusic: true,
+      creativityLevel: 1,
       references: [
         {
           id: 'ref-1',
@@ -66,6 +67,7 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
       dialogueText: 'This bridge ends our decade-long feud!',
       sfxText: 'Katana unsheathing metallic shriek, thunder rumble, wind gust rustling petals',
       suppressMusic: false,
+      creativityLevel: 2,
       references: [],
     },
   },
@@ -88,6 +90,7 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
       dialogueText: '',
       sfxText: 'Gentle water splash droplets, subtle crystal chime reverberation',
       suppressMusic: true,
+      creativityLevel: 1,
       references: [
         {
           id: 'ref-perfume',
@@ -118,6 +121,7 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
       dialogueText: '',
       sfxText: 'V8 engine roar morphing smoothly into high-pitched plasma jet turbine hum',
       suppressMusic: false,
+      creativityLevel: 2,
       references: [
         {
           id: 'ref-fl1',
@@ -156,6 +160,7 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
       dialogueText: 'Breaching sector seven now!',
       sfxText: 'Heavy armor landing thump, laser wall buzzing hum, metal sparks crackling',
       suppressMusic: true,
+      creativityLevel: 2,
       references: [
         {
           id: 'ref-hero',
@@ -195,6 +200,7 @@ export const PRESET_TEMPLATES: PresetTemplate[] = [
       dialogueText: 'Target is entering the industrial sector. Maintain visual contact.',
       sfxText: 'Tire screeching on wet asphalt, engine revving, rain falling',
       suppressMusic: false,
+      creativityLevel: 1,
       references: [
         {
           id: 'ref-cont-vid',

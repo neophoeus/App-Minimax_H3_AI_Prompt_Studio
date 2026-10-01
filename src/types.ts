@@ -119,6 +119,8 @@ export type CameraMove = CameraMotionType;
 export type CameraAmplitude = 'default' | 'with small amplitude' | 'with large amplitude';
 export type CameraSpeed = 'default' | 'at slow speed' | 'at fast speed';
 
+export type CreativityLevel = 0 | 1 | 2 | 3;
+
 export interface H3PromptConfig {
   idea: string;
   mode: GenerationMode;
@@ -132,6 +134,7 @@ export interface H3PromptConfig {
   dialogueText: string;
   sfxText: string;
   suppressMusic: boolean; // non_diegetic_music: N/A
+  creativityLevel?: CreativityLevel; // 0: 保守忠實, 1: 邏輯補完(預設), 2: 創意靈動, 3: 天馬行空
   engineTier?: EngineTier;
   provider?: AiProvider;
   appMode?: AppMode;

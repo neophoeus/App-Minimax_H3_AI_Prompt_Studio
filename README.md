@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v3.1.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v3.2.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -31,7 +31,19 @@ The studio automatically detects the environment and auto-selects the highest pr
 
 ## ✨ Key Features
 
-### 0. Multi-Image Dual-Track Physical & Semantic Mapping (v3.1.0)
+### 0. 4-Level Creativity Slider & Director Directives Architecture (v3.2.0)
+- **Eliminating Stiff and Conventional Video Prompts**: Overcoming the tendency of video generation models to produce overly rigid or dull scenes, introducing a 4-level creativity slider allowing creators to modulate freedom from literal fidelity to wild spectacle.
+- **Four Distinct Creativity Tiers**:
+  - **Level 0 (Strict & Faithful)**: Precision technical transcriber. 100% compliant with explicit user text, zero extrapolation, cleanly translated into standard H3 specifications.
+  - **Level 1 (Enrich & Logical - Default)**: Cinematographer & lighting coordinator. Maintains core intent while enriching physical logic, secondary micro-actions (steam, ripples, hair flutter, depth of field), eliminating artificial emptiness.
+  - **Level 2 (Creative & Dynamic)**: Feature film director & DP. Preserves core themes while introducing dynamic camera staging (Dutch tilts, low-angle reveals), dramatic shifting lights, and kinetic contrast.
+  - **Level 3 (Wild & Unconstrained)**: Avant-garde visual effects auteur. Treats inputs as conceptual launchpads, introducing surreal phenomena, gravity/scale distortions, and mind-bending cinematic spectacles.
+- **Unified Temperature 1.0 + Director Prompt Directives**: Sampling temperature is unified at `1.0` across all engines (Gemini, Ollama, llama.cpp), ensuring rich vocabulary and natural flow without syntax crashes, fully steered by explicit cognitive director directives.
+- **Intuitive UI & Seamless Sync**:
+  - 0~3 stepped Range Slider with 4 clickable theme pills and real-time behavioral guidance card.
+  - Synchronized across browser `localStorage`, preset templates, and series Markdown exports.
+
+### 1. Multi-Image Dual-Track Physical & Semantic Mapping (v3.1.0)
 - **Decoupling Physical Slots from Semantic Entities**: Hailuo models strictly index all uploaded images by physical arrival order: `<Picture 1>` (`@image1`), `<Picture 2>` (`@image2`), `<Picture 3>` (`@image3`).
 - **Dual Identification & Auto-Alignment**:
   - When multiple images are provided (e.g., 2 character portrait references + 1 opening scene keyframe), the studio automatically maps Character 1 and Character 2 as **`<Subject 1 aka Picture 1> (@image1)`** and **`<Subject 2 aka Picture 2> (@image2)`**.
