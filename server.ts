@@ -3,6 +3,7 @@ import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI, Type, ThinkingLevel, HarmCategory, HarmBlockThreshold, FinishReason, BlockedReason } from "@google/genai";
 import dotenv from "dotenv";
+import { auditPrompt, repairPrompt } from "./src/utils/promptAudit";
 
 dotenv.config();
 
@@ -589,9 +590,21 @@ async function callGeminiDynamic(
  * (https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing)
  * Dynamically tailored per Generation Mode to conserve input tokens and sharpen model focus.
  */
-function buildModularSystemInstruction(mode: string = "T2VA"): string {
+function buildModularSystemInstruction(mode: string = "T2VA", outputContract: string = "official"): string {
   let headerAndSectionRules = "";
-  if (mode === "T2VA") {
+  if (outputContract === "compact") {
+    headerAndSectionRules = `
+### 1. Structure & Core Fields for Compact Mode (Concise Narrative Output):
+The prompt MUST follow this exact, clean two-part natural-language layout (do NOT output subject_definitions, summary, or retention_analysis headers):
+
+[A complete, dense, vivid, and objective literal description of the entire scene, character appearance/visual style, step-by-step physical actions following Starting State -> Action Sequence -> End State, and natural camera movements in continuous English prose. Preserve character spoken dialogue inside <d>[Language] ...</d> tags.]
+
+overall_soundscape:
+[Brief, scene-grounded audible sounds and physical sound effects in 1-2 English sentences]
+
+non_diegetic_music:
+[N/A or brief audience-only background music description in 1 English sentence]`;
+  } else if (mode === "T2VA") {
     headerAndSectionRules = `
 ### 1. Structure & Core Fields for T2VA (Text-to-Video-Audio):
 - Has NO instruction header line. Starts directly with the three core fields:
@@ -1222,23 +1235,12 @@ app.post("/api/analyze-reference-media", async (req, res) => {
 });
 
 /**
- * Strips raw filenames, file extensions (.jpg, .png, etc.), or accidental file paths from AI-generated prompts
+ * Strips raw filenames, file extensions, and internal video leakage tokens from AI-generated prompts
+ * and normalizes timestamp formats.
  */
-function sanitizeGeneratedPromptText(text: string): string {
+function sanitizeGeneratedPromptText(text: string, durationSeconds: number = 10): string {
   if (!text || typeof text !== 'string') return text;
-  return text
-    // Replace patterns like "is file.png, " or "is image.jpg" with "is "
-    .replace(/\b(?:is\s+)?[\w-]+\.(?:png|jpe?g|webp|gif|mp4|mov|webm|mp3|wav|ogg)\b/gi, (match) =>
-      match.toLowerCase().startsWith('is ') ? 'is ' : ''
-    )
-    // Strip standalone file extensions or remaining filename patterns
-    .replace(/\b[\w-]+\.(?:png|jpe?g|webp|gif|mp4|mov|webm|mp3|wav|ogg)\b/gi, '')
-    // Clean up double commas, empty brackets, dangling spaces, and 'is ,'
-    .replace(/\bis\s*,\s*/gi, 'is ')
-    .replace(/,\s*,/g, ',')
-    .replace(/\(\s*\)/g, '')
-    .replace(/[ \t]{2,}/g, ' ')
-    .trim();
+  return repairPrompt(text, durationSeconds);
 }
 
 // API Endpoint to generate/refine MiniMax-H3 prompt
@@ -1412,7 +1414,7 @@ Ensure English language is used for the actual prompt text (fullPrompt) as MiniM
 `;
 
     if (appMode === 'ollama') {
-      const systemPrompt = `${buildModularSystemInstruction(config.mode || "T2VA")}
+      const systemPrompt = `${buildModularSystemInstruction(config.mode || "T2VA", config.outputContract || "official")}
 
 CRITICAL FORMAT REQUIREMENT:
 You MUST output a valid JSON object matching this schema:
@@ -1451,28 +1453,37 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
 
       const resultJson = parseJsonSafely(raw);
 
-      // Sanitize any accidental file names from Ollama output
-      if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
+      // Sanitize and audit Ollama output
+      const durationSec = parseFloat(config.duration || '10') || 10;
+      if (resultJson.fullPrompt) {
+        resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt, durationSec);
+        resultJson.auditResult = auditPrompt(resultJson.fullPrompt, {
+          duration: config.duration,
+          cameraMoves: config.cameraMoves,
+          mode: config.mode,
+        });
+      }
       if (Array.isArray(resultJson.episodes)) {
         resultJson.episodes = resultJson.episodes.map((ep: any, idx: number) => ({
           ...ep,
           episodeIndex: ep.episodeIndex || idx + 1,
-          fullPrompt: sanitizeGeneratedPromptText(ep.fullPrompt || ''),
-          startingState: sanitizeGeneratedPromptText(ep.startingState || ''),
-          actionSequence: sanitizeGeneratedPromptText(ep.actionSequence || ''),
-          endState: sanitizeGeneratedPromptText(ep.endState || ''),
+          fullPrompt: sanitizeGeneratedPromptText(ep.fullPrompt || '', durationSec),
+          startingState: sanitizeGeneratedPromptText(ep.startingState || '', durationSec),
+          actionSequence: sanitizeGeneratedPromptText(ep.actionSequence || '', durationSec),
+          endState: sanitizeGeneratedPromptText(ep.endState || '', durationSec),
         }));
         if (isSeriesMode && resultJson.episodes.length > 0 && !resultJson.fullPrompt) {
           resultJson.fullPrompt = resultJson.episodes[0].fullPrompt;
         }
         resultJson.isSeries = isSeriesMode;
       }
+      resultJson.outputContract = config.outputContract || 'official';
 
       return res.json({ success: true, data: resultJson });
     }
 
     if (appMode === 'llamacpp') {
-      const systemPrompt = `${buildModularSystemInstruction(config.mode || "T2VA")}
+      const systemPrompt = `${buildModularSystemInstruction(config.mode || "T2VA", config.outputContract || "official")}
 
 CRITICAL FORMAT REQUIREMENT:
 You MUST output a valid JSON object matching this schema:
@@ -1511,22 +1522,31 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
 
       const resultJson = parseJsonSafely(raw);
 
-      // Sanitize any accidental file names from llama.cpp output
-      if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
+      // Sanitize and audit llama.cpp output
+      const durationSec = parseFloat(config.duration || '10') || 10;
+      if (resultJson.fullPrompt) {
+        resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt, durationSec);
+        resultJson.auditResult = auditPrompt(resultJson.fullPrompt, {
+          duration: config.duration,
+          cameraMoves: config.cameraMoves,
+          mode: config.mode,
+        });
+      }
       if (Array.isArray(resultJson.episodes)) {
         resultJson.episodes = resultJson.episodes.map((ep: any, idx: number) => ({
           ...ep,
           episodeIndex: ep.episodeIndex || idx + 1,
-          fullPrompt: sanitizeGeneratedPromptText(ep.fullPrompt || ''),
-          startingState: sanitizeGeneratedPromptText(ep.startingState || ''),
-          actionSequence: sanitizeGeneratedPromptText(ep.actionSequence || ''),
-          endState: sanitizeGeneratedPromptText(ep.endState || ''),
+          fullPrompt: sanitizeGeneratedPromptText(ep.fullPrompt || '', durationSec),
+          startingState: sanitizeGeneratedPromptText(ep.startingState || '', durationSec),
+          actionSequence: sanitizeGeneratedPromptText(ep.actionSequence || '', durationSec),
+          endState: sanitizeGeneratedPromptText(ep.endState || '', durationSec),
         }));
         if (isSeriesMode && resultJson.episodes.length > 0 && !resultJson.fullPrompt) {
           resultJson.fullPrompt = resultJson.episodes[0].fullPrompt;
         }
         resultJson.isSeries = isSeriesMode;
       }
+      resultJson.outputContract = config.outputContract || 'official';
 
       return res.json({ success: true, data: resultJson });
     }
@@ -1538,7 +1558,7 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
       : userPrompt;
 
     const geminiConfig: any = {
-      systemInstruction: buildModularSystemInstruction(config.mode || "T2VA"),
+      systemInstruction: buildModularSystemInstruction(config.mode || "T2VA", config.outputContract || "official"),
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -1608,22 +1628,31 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
     const outputText = response.text || "{}";
     const resultJson = JSON.parse(outputText);
 
-    // Sanitize any accidental file names from Gemini output
-    if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
+    // Sanitize and audit Gemini output
+    const durationSec = parseFloat(config.duration || '10') || 10;
+    if (resultJson.fullPrompt) {
+      resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt, durationSec);
+      resultJson.auditResult = auditPrompt(resultJson.fullPrompt, {
+        duration: config.duration,
+        cameraMoves: config.cameraMoves,
+        mode: config.mode,
+      });
+    }
     if (Array.isArray(resultJson.episodes)) {
       resultJson.episodes = resultJson.episodes.map((ep: any, idx: number) => ({
         ...ep,
         episodeIndex: ep.episodeIndex || idx + 1,
-        fullPrompt: sanitizeGeneratedPromptText(ep.fullPrompt || ''),
-        startingState: sanitizeGeneratedPromptText(ep.startingState || ''),
-        actionSequence: sanitizeGeneratedPromptText(ep.actionSequence || ''),
-        endState: sanitizeGeneratedPromptText(ep.endState || ''),
+        fullPrompt: sanitizeGeneratedPromptText(ep.fullPrompt || '', durationSec),
+        startingState: sanitizeGeneratedPromptText(ep.startingState || '', durationSec),
+        actionSequence: sanitizeGeneratedPromptText(ep.actionSequence || '', durationSec),
+        endState: sanitizeGeneratedPromptText(ep.endState || '', durationSec),
       }));
       if (isSeriesMode && resultJson.episodes.length > 0 && !resultJson.fullPrompt) {
         resultJson.fullPrompt = resultJson.episodes[0].fullPrompt;
       }
       resultJson.isSeries = isSeriesMode;
     }
+    resultJson.outputContract = config.outputContract || 'official';
 
     return res.json({ success: true, data: resultJson });
   } catch (error: any) {
@@ -1775,6 +1804,212 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
     return res.status(500).json({
       success: false,
       error: error.message || "Failed to optimize prompt.",
+    });
+  }
+});
+
+// Single Episode Refinement Endpoint (Series Mode in-place surgical refinement)
+app.post("/api/refine-series-episode", async (req, res) => {
+  try {
+    const {
+      seriesTitle = "連續劇本故事板",
+      storyArcSummary = "",
+      targetEpisodeIndex = 1,
+      currentEpisode,
+      previousEpisode,
+      nextEpisode,
+      refineInstruction,
+      config = {},
+    } = req.body;
+
+    if (!currentEpisode) {
+      return res.status(400).json({ success: false, error: "缺少待精修之集數資料 (currentEpisode)" });
+    }
+    if (!refineInstruction || typeof refineInstruction !== "string" || !refineInstruction.trim()) {
+      return res.status(400).json({ success: false, error: "缺少修改指引 (refineInstruction)" });
+    }
+
+    const { appMode, effectiveTier, ollamaModelToUse, llamacppModelToUse } = resolveAppMode(config);
+
+    const assistantDirector = typeof config.assistantDirector === 'boolean'
+      ? config.assistantDirector
+      : (config.creativityLevel !== 0);
+    const assistantDirectorDirective = getAssistantDirectorDirective(assistantDirector);
+
+    const ollamaTemperature = resolveTemperature('ollama', config.temperatureMode, config.manualTemperature);
+    const llamacppTemperature = resolveTemperature('llamacpp', config.temperatureMode, config.manualTemperature);
+    const geminiTemperature = resolveTemperature('gemini', config.temperatureMode, config.manualTemperature);
+
+    const prevAnchor = previousEpisode
+      ? `CRITICAL PRECEDING EPISODE CONTINUITY (Episode #${previousEpisode.episodeIndex}):
+- Previous Title: ${previousEpisode.title}
+- Previous Physical End State: "${previousEpisode.endState}"
+YOU MUST STRICTLY CONTINUE FROM THIS EXACT PHYSICAL POSTURE, POSITION, AND HELD OBJECTS AS THE STARTING STATE FOR THIS EPISODE! Do NOT contradict where the character or items were left.`
+      : `This is Episode #1. Establish the opening starting state.`;
+
+    const nextAnchor = nextEpisode
+      ? `FOLLOWING EPISODE CONTINUITY CONTEXT (Episode #${nextEpisode.episodeIndex}):
+- Following Starting State: "${nextEpisode.startingState}"
+Ensure your refined end state provides a natural, logical hand-off to this following state.`
+      : `This is the final episode of the sequence.`;
+
+    const durationToUse = currentEpisode.duration || config.duration || "10s";
+    const durationSec = parseFloat(durationToUse) || 10;
+
+    const userPrompt = `
+You are performing an IN-PLACE SURGICAL REFINEMENT of Episode #${targetEpisodeIndex} in a multi-episode consecutive video series.
+Series Context:
+- Series Title: "${seriesTitle}"
+- Overall Story Arc: "${storyArcSummary}"
+
+${prevAnchor}
+
+${nextAnchor}
+
+CURRENT EPISODE CONTENT (BEFORE REFINEMENT):
+- Title: "${currentEpisode.title}"
+- Duration: "${durationToUse}"
+- Current Starting State: "${currentEpisode.startingState || ''}"
+- Current Action Sequence: "${currentEpisode.actionSequence || ''}"
+- Current End State: "${currentEpisode.endState || ''}"
+- Current Full Prompt: "${currentEpisode.fullPrompt || ''}"
+
+SPECIFIC USER REFINEMENT INSTRUCTION (CRITICAL - APPLY THESE ADJUSTMENTS EXACTLY):
+"${refineInstruction.trim()}"
+
+REFINEMENT PROTOCOL:
+1. Preserve physical continuity with Episode #${previousEpisode ? previousEpisode.episodeIndex : 1}.
+2. Apply the user's specific adjustment to the action sequence and resulting end state.
+3. Express camera movements naturally in English.
+4. Output a 100% complete, independent, copy-ready MiniMax-H3 prompt in "fullPrompt".
+5. DO NOT mention meta-instructions or compliance checks. DO NOT include any file names or extensions.
+6. Provide Traditional Chinese for title, and continuityNotes.
+
+${assistantDirectorDirective}
+`;
+
+    const jsonSchemaInstructions = `
+CRITICAL FORMAT REQUIREMENT:
+You MUST output a valid JSON object matching this schema:
+{
+  "episodeIndex": ${targetEpisodeIndex},
+  "title": "string (Updated Traditional Chinese Title)",
+  "duration": "${durationToUse}",
+  "startingState": "string (Literal physical starting state)",
+  "actionSequence": "string (Step-by-step physical action sequence incorporating user's refinement)",
+  "endState": "string (Literal physical end state)",
+  "fullPrompt": "string (Complete, independent, copy-ready MiniMax-H3 prompt)",
+  "cameraMovement": "string (Natural camera action)",
+  "audioSoundscape": "string (Audio soundscape)",
+  "continuityNotes": "string (Explanation of continuity in Traditional Chinese)"
+}
+Do NOT output any markdown tags outside the JSON. Return only the valid JSON object.`;
+
+    if (appMode === 'ollama') {
+      const systemPrompt = `${buildModularSystemInstruction(config.mode || "T2VA", config.outputContract || "official")}
+${jsonSchemaInstructions}`;
+
+      const raw = await callOllamaChat({
+        model: ollamaModelToUse,
+        systemPrompt,
+        userPrompt,
+        formatJson: true,
+        temperature: ollamaTemperature,
+      });
+
+      const resultJson = parseJsonSafely(raw);
+      resultJson.episodeIndex = targetEpisodeIndex;
+      resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt || '', durationSec);
+      resultJson.startingState = sanitizeGeneratedPromptText(resultJson.startingState || '', durationSec);
+      resultJson.actionSequence = sanitizeGeneratedPromptText(resultJson.actionSequence || '', durationSec);
+      resultJson.endState = sanitizeGeneratedPromptText(resultJson.endState || '', durationSec);
+
+      return res.json({ success: true, refinedEpisode: resultJson });
+    }
+
+    if (appMode === 'llamacpp') {
+      const systemPrompt = `${buildModularSystemInstruction(config.mode || "T2VA", config.outputContract || "official")}
+${jsonSchemaInstructions}`;
+
+      const raw = await callLlamaCppChat({
+        model: llamacppModelToUse,
+        systemPrompt,
+        userPrompt,
+        formatJson: true,
+        temperature: llamacppTemperature,
+      });
+
+      const resultJson = parseJsonSafely(raw);
+      resultJson.episodeIndex = targetEpisodeIndex;
+      resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt || '', durationSec);
+      resultJson.startingState = sanitizeGeneratedPromptText(resultJson.startingState || '', durationSec);
+      resultJson.actionSequence = sanitizeGeneratedPromptText(resultJson.actionSequence || '', durationSec);
+      resultJson.endState = sanitizeGeneratedPromptText(resultJson.endState || '', durationSec);
+
+      return res.json({ success: true, refinedEpisode: resultJson });
+    }
+
+    const ai = getGeminiClient();
+    const geminiConfig: any = {
+      systemInstruction: buildModularSystemInstruction(config.mode || "T2VA", config.outputContract || "official"),
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          episodeIndex: { type: Type.INTEGER },
+          title: { type: Type.STRING },
+          duration: { type: Type.STRING },
+          startingState: { type: Type.STRING },
+          actionSequence: { type: Type.STRING },
+          endState: { type: Type.STRING },
+          fullPrompt: { type: Type.STRING },
+          cameraMovement: { type: Type.STRING },
+          audioSoundscape: { type: Type.STRING },
+          continuityNotes: { type: Type.STRING },
+        },
+        required: [
+          "episodeIndex",
+          "title",
+          "duration",
+          "startingState",
+          "actionSequence",
+          "endState",
+          "fullPrompt",
+          "cameraMovement",
+          "audioSoundscape",
+          "continuityNotes",
+        ],
+      },
+    };
+
+    if (typeof geminiTemperature === 'number') {
+      geminiConfig.temperature = geminiTemperature;
+    }
+
+    const response = await callGeminiDynamic(
+      ai,
+      'prompt_generation',
+      effectiveTier,
+      {
+        contents: userPrompt,
+        config: geminiConfig,
+      }
+    );
+
+    const outputText = response.text || "{}";
+    const resultJson = JSON.parse(outputText);
+    resultJson.episodeIndex = targetEpisodeIndex;
+    resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt || '', durationSec);
+    resultJson.startingState = sanitizeGeneratedPromptText(resultJson.startingState || '', durationSec);
+    resultJson.actionSequence = sanitizeGeneratedPromptText(resultJson.actionSequence || '', durationSec);
+    resultJson.endState = sanitizeGeneratedPromptText(resultJson.endState || '', durationSec);
+
+    return res.json({ success: true, refinedEpisode: resultJson });
+  } catch (error: any) {
+    console.error("Error refining series episode:", error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Failed to refine series episode.",
     });
   }
 });

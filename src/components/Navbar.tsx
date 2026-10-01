@@ -82,11 +82,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 MiniMax-H3 AI 提示詞工作室
               </h1>
               <span className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">
-                v4.0.0 • 輔助導演與全量提示詞旗艦架構
+                v4.1.0 • 語法審計自癒、單集精修與雙契約旗艦架構
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
-              <span>MiniMax-H3 官方標準全量規格 & 系列連續劇本 (Series)</span>
+              <span>MiniMax-H3 官方標準規格、語法審計自癒 & 系列劇本 (Series)</span>
               <span className="text-slate-600">•</span>
               <a
                 href="https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing"

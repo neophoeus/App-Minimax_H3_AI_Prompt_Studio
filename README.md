@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v4.0.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v4.1.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -31,7 +31,13 @@ The studio automatically detects the environment and auto-selects the highest pr
 
 ## ✨ Key Features
 
-### 0. Assistant Director Toggle, Dual-Mode Temperature & Full Prompt Architecture (v4.0.0)
+### 0. Prompt Audit, Auto-Repair, Series Refinement & Dual Contracts (v4.1.0)
+- **Prompt Audit & Lossless Auto-Repair Engine**: Integrated a static regex syntax auditor (`promptAudit.ts`) verifying timeline bounds, normalizing timestamps (`MM:SS.mmm`), scrubbing multimodal leakage tokens (`contact sheet`, `sampled frame`, etc.), and enforcing stationary camera syntax with live UI badges and one-click auto-repair.
+- **Series Single-Episode In-Place Refinement**: Surgically refine any individual episode within a multi-episode series via `POST /api/refine-series-episode` while strictly locking the preceding episode's physical ending posture.
+- **Dual Output Contracts (Official vs Compact)**: Seamlessly toggle between MiniMax official 6-section/3-section structured prompts and compact dense narrative prose.
+- **ComfyUI Workflow Format Copying**: Export full series prompts formatted with chapter dividers (`=== Episode X: ... ===`) ready for direct ingestion by ComfyUI nodes.
+
+### 1. Assistant Director Toggle, Dual-Mode Temperature & Full Prompt Architecture (v4.0.0)
 - **Assistant Director Toggle**: Replaced legacy stepped sliders with an intuitive Assistant Director toggle (enabled by default). When enabled, it maintains core storytelling while automatically extrapolating rich environmental and micro-physical interactions (atmospheric depth, air currents, lighting dynamics); when disabled, it acts as a strict technical transcriber with zero extrapolation.
 - **Dual-Mode Temperature Strategy**:
   - **Google Gemini**: Automatically omits sampling temperature parameters in Auto mode to leverage Gemini's native model default.

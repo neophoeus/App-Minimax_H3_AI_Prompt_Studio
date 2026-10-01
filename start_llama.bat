@@ -55,10 +55,35 @@ for /r "C:\llama.cpp\models" %%f in (*.gguf) do (
                 set "dir_!count!=%%~dpf"
                 set "name_!count!=%%~nxf"
                 
-                REM 檢查該模型所屬目錄是否有 mmproj 視覺投影
+                REM 檢查該模型所屬目錄是否有對應架構的 mmproj 視覺投影
                 set "has_mmproj_!count!=無"
-                for /f "delims=" %%m in ('dir /b /s "%%~dpfmmproj*.gguf" 2^>nul') do (
-                    set "has_mmproj_!count!=有 [%%~nxm]"
+                set "item_tag="
+                echo !fname! | findstr /i "Gemma4" >nul && set "item_tag=Gemma4"
+                if not defined item_tag (
+                    echo !fname! | findstr /i "Qwen3.8" >nul && set "item_tag=Qwen3.8"
+                )
+                if not defined item_tag (
+                    echo !fname! | findstr /i "Qwen" >nul && set "item_tag=Qwen"
+                )
+                if not defined item_tag (
+                    echo !fname! | findstr /i "Gemma" >nul && set "item_tag=Gemma"
+                )
+                if defined item_tag (
+                    for /f "delims=" %%m in ('dir /b "%%~dpf*mmproj*!item_tag!*.gguf" 2^>nul') do (
+                        set "has_mmproj_!count!=有 [%%~nxm]"
+                    )
+                )
+                if "!has_mmproj_!count!"=="無" (
+                    for /f "delims=" %%m in ('dir /b "%%~dpfmmproj*.gguf" 2^>nul') do (
+                        set "has_mmproj_!count!=有 [%%~nxm]"
+                    )
+                )
+                
+                REM 標註 MTP 支援狀態
+                set "mtp_tag_!count!=標準自回歸 (無 MTP 層)"
+                echo !fname! | findstr /i "Qwen3.8 DeepSeek-V3 FastMTP MTP" >nul
+                if not errorlevel 1 (
+                    set "mtp_tag_!count!=原生 MTP (2.23x 加速)"
                 )
             )
         )
@@ -72,11 +97,12 @@ if %count%==0 (
 )
 
 echo ----------------------------------------------------------------------
-echo 可載入的 Qwen3.8 主模型清單:
+echo 可載入的 GGUF 主模型清單:
 echo ----------------------------------------------------------------------
 for /l %%i in (1,1,%count%) do (
     echo   [%%i] !name_%%i!
-    echo       └─ 視覺投影: !has_mmproj_%%i!
+    echo       ├─ 視覺投影: !has_mmproj_%%i!
+    echo       └─ 加速特性: !mtp_tag_%%i!
     echo.
 )
 echo ----------------------------------------------------------------------
@@ -94,18 +120,55 @@ set "SELECTED_MODEL=!file_%choice%!"
 set "MODEL_DIR=!dir_%choice%!"
 set "MODEL_NAME=!name_%choice%!"
 
-REM 自動定位配對 mmproj 視覺投影
+REM 自動定位配對 mmproj 視覺投影 (優先依架構家族精準配對)
 set "MMPROJ_FILE="
 set "MMPROJ_NAME="
 set "MMPROJ_ARG="
-for /f "delims=" %%m in ('dir /b /s "!MODEL_DIR!mmproj*.gguf" 2^>nul') do (
-    if not defined MMPROJ_FILE (
-        set "MMPROJ_FILE=%%m"
-        set "MMPROJ_NAME=%%~nxm"
-        set "MMPROJ_ARG=--mmproj "%%m""
+
+set "SEARCH_TAG="
+echo !MODEL_NAME! | findstr /i "Gemma4" >nul && set "SEARCH_TAG=Gemma4"
+if not defined SEARCH_TAG (
+    echo !MODEL_NAME! | findstr /i "Qwen3.8" >nul && set "SEARCH_TAG=Qwen3.8"
+)
+if not defined SEARCH_TAG (
+    echo !MODEL_NAME! | findstr /i "Qwen" >nul && set "SEARCH_TAG=Qwen"
+)
+if not defined SEARCH_TAG (
+    echo !MODEL_NAME! | findstr /i "Gemma" >nul && set "SEARCH_TAG=Gemma"
+)
+
+if defined SEARCH_TAG (
+    for /f "delims=" %%m in ('dir /b "!MODEL_DIR!*mmproj*!SEARCH_TAG!*.gguf" 2^>nul') do (
+        if not defined MMPROJ_FILE (
+            set "MMPROJ_FILE=!MODEL_DIR!%%m"
+            set "MMPROJ_NAME=%%~nxm"
+            set "MMPROJ_ARG=--mmproj "!MODEL_DIR!%%m""
+        )
     )
 )
-REM 若當前目錄無 mmproj，全目錄備援搜尋
+
+REM 若無架構專屬匹配，則在當前目錄尋找任何 mmproj
+if not defined MMPROJ_FILE (
+    for /f "delims=" %%m in ('dir /b "!MODEL_DIR!mmproj*.gguf" 2^>nul') do (
+        if not defined MMPROJ_FILE (
+            set "MMPROJ_FILE=!MODEL_DIR!%%m"
+            set "MMPROJ_NAME=%%~nxm"
+            set "MMPROJ_ARG=--mmproj "!MODEL_DIR!%%m""
+        )
+    )
+)
+
+REM 若當前目錄無 mmproj，全目錄備援搜尋 (優先依架構)
+if not defined MMPROJ_FILE if defined SEARCH_TAG (
+    for /f "delims=" %%m in ('dir /b /s "C:\llama.cpp\models\*mmproj*!SEARCH_TAG!*.gguf" 2^>nul') do (
+        if not defined MMPROJ_FILE (
+            set "MMPROJ_FILE=%%m"
+            set "MMPROJ_NAME=%%~nxm"
+            set "MMPROJ_ARG=--mmproj "%%m""
+        )
+    )
+)
+
 if not defined MMPROJ_FILE (
     for /f "delims=" %%m in ('dir /b /s "C:\llama.cpp\models\mmproj*.gguf" 2^>nul') do (
         if not defined MMPROJ_FILE (
@@ -116,8 +179,17 @@ if not defined MMPROJ_FILE (
     )
 )
 
-REM 自動啟用 Qwen3.8 原生 Embedded MTP 加速 (2.23x 極速，官方原版完美支援)
-set "MTP_ARG=--spec-type draft-mtp"
+REM 智慧架構與 MTP 加速判定 (僅 Qwen3.8 等原生內建 MTP 層之模型啟用)
+set "MTP_ARG="
+set "MTP_DESC="
+echo !MODEL_NAME! | findstr /i "Qwen3.8 DeepSeek-V3 FastMTP MTP" >nul
+if not errorlevel 1 (
+    set "MTP_ARG=--spec-type draft-mtp"
+    set "MTP_DESC=原生 Embedded MTP [雙倍極速 2.23x 加速，官方通用相容]"
+) else (
+    set "MTP_ARG="
+    set "MTP_DESC=標準自回歸推理模式 [該模型無 MTP 層，已自動切換安全標準模式]"
+)
 
 cls
 echo ======================================================================
@@ -125,11 +197,11 @@ echo           MiniMax-H3 AI Prompt Studio - llama.cpp 伺服器啟動中
 echo ======================================================================
 echo [*] 模型路徑: !SELECTED_MODEL!
 if defined MMPROJ_NAME (
-    echo [+] 視覺投影: !MMPROJ_NAME! [已自動配對掛載，支援多模態圖片/影片分析]
+    echo [+] 視覺投影: !MMPROJ_NAME! [已自動精準配對掛載，支援多模態圖片/影片分析]
 ) else (
-    echo [i] 視覺投影: 未偵測到 mmproj 投影檔 [純文字推理模式]
+    echo [i] 視覺投影: 未偵測到相容 mmproj 投影檔 [純文字推理模式]
 )
-echo [+] 推理加速: 原生 Embedded MTP [雙倍極速 2.23x 加速，官方通用相容]
+echo [+] 推理加速: !MTP_DESC!
 echo [*] GPU 卸載: -ngl 99 [RTX 5090 32GB VRAM 全層載入]
 echo [*] 加速技術: --flash-attn on, -c 32768 [32K 旗艦上下文]
 echo [*] 連線端點: http://127.0.0.1:8080

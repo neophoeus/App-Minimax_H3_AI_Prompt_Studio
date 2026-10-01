@@ -22,7 +22,10 @@ import {
   OllamaModelItem,
   OllamaStatus,
   LlamaCppModelItem,
+  OutputContract,
+  AuditResult,
 } from './types';
+import { auditPrompt, repairPrompt } from './utils/promptAudit';
 import { Navbar } from './components/Navbar';
 import { ReferenceManager } from './components/ReferenceManager';
 import { PromptSyntaxHighlighter } from './components/PromptSyntaxHighlighter';
@@ -55,6 +58,9 @@ import {
   Download,
   Flame,
   Compass,
+  AlertTriangle,
+  Wrench,
+  RefreshCw,
 } from 'lucide-react';
 
 interface CameraMoveDetail {
@@ -160,6 +166,7 @@ const DEFAULT_CONFIG: H3PromptConfig = {
   sfxText: '',
   suppressMusic: false,
   assistantDirector: true,
+  outputContract: 'official',
   temperatureMode: 'auto',
   manualTemperature: 0.7,
   engineTier: 'pro',
@@ -218,7 +225,26 @@ export default function App() {
   const [savedPrompts, setSavedPrompts] = useState<SavedPromptItem[]>([]);
   const [copiedFull, setCopiedFull] = useState<boolean>(false);
   const [copiedSeries, setCopiedSeries] = useState<boolean>(false);
+  const [copiedComfy, setCopiedComfy] = useState<boolean>(false);
   const [copiedEpisodeIdx, setCopiedEpisodeIdx] = useState<number | null>(null);
+
+  // Single Episode Refine State
+  const [refineTargetIdx, setRefineTargetIdx] = useState<number | null>(null);
+  const [refineInstruction, setRefineInstruction] = useState<string>('');
+  const [refining, setRefining] = useState<boolean>(false);
+
+  // Prompt Audit State
+  const [showAuditDetails, setShowAuditDetails] = useState<boolean>(false);
+
+  const activePrompt = isEditing ? editedPrompt : output?.fullPrompt || '';
+  const currentAudit = React.useMemo(() => {
+    if (!activePrompt) return null;
+    return auditPrompt(activePrompt, {
+      duration: config.duration,
+      cameraMoves: config.cameraMoves,
+      mode: config.mode,
+    });
+  }, [activePrompt, config.duration, config.cameraMoves, config.mode]);
 
   // Camera Motion tabs & view mode state
   const [cameraTabIdx, setCameraTabIdx] = useState<number>(0);
@@ -678,6 +704,75 @@ ${ep.fullPrompt}`;
     a.click();
     URL.revokeObjectURL(url);
     showToast('已匯出全系列分鏡 Markdown 檔案', 'success');
+  };
+
+  const copyComfyUIFormat = () => {
+    if (!output) return;
+    if (output.episodes && output.episodes.length > 0) {
+      const text = output.episodes
+        .map((ep) => {
+          return `# --- [Episode ${ep.episodeIndex}: ${ep.title}] (Duration: ${ep.duration || config.duration}) ---\n${ep.fullPrompt}`;
+        })
+        .join('\n\n---\n\n');
+      copyToClipboard(text, 'ComfyUI 序列工作流格式');
+    } else {
+      copyToClipboard(activePrompt, 'ComfyUI 提示詞');
+    }
+    setCopiedComfy(true);
+    setTimeout(() => setCopiedComfy(false), 2500);
+  };
+
+  const handleRefineEpisode = async (episodeIndex: number) => {
+    if (!output?.episodes || !refineInstruction.trim()) {
+      showToast('請輸入此段分鏡的微調指引', 'info');
+      return;
+    }
+    const targetIdx = output.episodes.findIndex((e) => e.episodeIndex === episodeIndex);
+    if (targetIdx === -1) return;
+    const currentEp = output.episodes[targetIdx];
+    const prevEp = targetIdx > 0 ? output.episodes[targetIdx - 1] : undefined;
+    const nextEp = targetIdx < output.episodes.length - 1 ? output.episodes[targetIdx + 1] : undefined;
+
+    setRefining(true);
+    try {
+      const res = await fetch('/api/refine-series-episode', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          seriesTitle: output.seriesTitle,
+          storyArcSummary: output.storyArcSummary,
+          targetEpisodeIndex: episodeIndex,
+          currentEpisode: currentEp,
+          previousEpisode: prevEp,
+          nextEpisode: nextEp,
+          refineInstruction: refineInstruction.trim(),
+          config: {
+            ...config,
+            engineTier,
+            appMode,
+            ollamaModel,
+            llamacppModel,
+          },
+        }),
+      });
+      const data = await res.json();
+      if (!data.success || !data.refinedEpisode) {
+        throw new Error(data.error || '局部精修失敗');
+      }
+      const updatedEpisodes = [...output.episodes];
+      updatedEpisodes[targetIdx] = data.refinedEpisode;
+      setOutput({
+        ...output,
+        episodes: updatedEpisodes,
+      });
+      setRefineTargetIdx(null);
+      setRefineInstruction('');
+      showToast(`第 ${episodeIndex} 段已依據您的指引完成局部精修！`, 'success');
+    } catch (err: any) {
+      showToast(formatErrorMessage(err.message || '局部精修失敗'), 'error');
+    } finally {
+      setRefining(false);
+    }
   };
 
   const handleSelectPreset = (preset: PresetTemplate) => {
@@ -1229,6 +1324,48 @@ ${ep.fullPrompt}`;
               </div>
             )}
 
+            {/* Output Contract Selector: Official vs Compact */}
+            <div className="pt-2 border-t border-slate-800/60">
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-xs font-medium text-slate-300 flex items-center gap-1.5">
+                  <FileCode className="w-3.5 h-3.5 text-cyan-400" />
+                  輸出契約規格 (Output Contract)
+                </span>
+                <span className="text-[10px] text-purple-400 font-mono">
+                  {config.outputContract === 'compact' ? '⚡ 簡約精煉 (Compact)' : '🏛️ 官方全量 (Official)'}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setConfig({ ...config, outputContract: 'official' })}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                    config.outputContract !== 'compact'
+                      ? 'bg-purple-950/80 border border-purple-500/60 text-purple-200 shadow-sm font-semibold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span>🏛️ 官方全量 (Official)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setConfig({ ...config, outputContract: 'compact' })}
+                  className={`py-1.5 px-2 rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
+                    config.outputContract === 'compact'
+                      ? 'bg-cyan-950/80 border border-cyan-500/60 text-cyan-200 shadow-sm font-semibold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  <span>⚡ 簡約精煉 (Compact)</span>
+                </button>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-1">
+                {config.outputContract === 'compact'
+                  ? '💡 Compact 模式：輸出稠密自然語言描繪與獨立聲音欄位，極致精簡且相容簡約工作流。'
+                  : '💡 Official 模式：輸出 100% 官方標準六段式/三段式完整規格提示詞。'}
+              </p>
+            </div>
+
             {/* Camera Motion Three-Dimension System */}
             <div className="space-y-3 pt-2 border-t border-slate-800/60">
               {/* Header: Title + Counter + Quick Clear */}
@@ -1565,16 +1702,59 @@ ${ep.fullPrompt}`;
           {/* Master Output Header Banner with One-Click Copy */}
           <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-br from-slate-900 via-slate-900 to-purple-950/40 border border-purple-500/30 shadow-2xl space-y-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    H3 規格完全相符
-                  </span>
+              <div className="space-y-1.5 flex-1 min-w-[280px]">
+                <div className="flex items-center gap-2 flex-wrap">
+                  {currentAudit && currentAudit.isValid && currentAudit.issues.length === 0 ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                      H3 官方語法審計通過
+                    </span>
+                  ) : currentAudit && currentAudit.issues.length > 0 ? (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={() => setShowAuditDetails(!showAuditDetails)}
+                        className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 hover:bg-amber-500/30 transition-colors flex items-center gap-1 cursor-pointer"
+                        title="點擊查看審計建議詳情"
+                      >
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                        <span>審計建議 ({currentAudit.issues.length} 項)</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const repaired = repairPrompt(activePrompt, parseFloat(config.duration) || 10);
+                          if (isEditing) {
+                            setEditedPrompt(repaired);
+                          } else if (output) {
+                            setOutput({ ...output, fullPrompt: repaired });
+                          }
+                          showToast('已完成時間戳與洩漏術語一鍵自動修復！', 'success');
+                        }}
+                        className="px-2.5 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-bold transition-all shadow-sm flex items-center gap-1 active:scale-95 cursor-pointer"
+                        title="自動執行時間戳標準化、時長截斷與多模態洩漏術語清理"
+                      >
+                        <Wrench className="w-3 h-3" />
+                        <span>一鍵修復</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
+                      <ShieldCheck className="w-3.5 h-3.5" />
+                      H3 規格完全相符
+                    </span>
+                  )}
+                  {config.outputContract === 'compact' && (
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono bg-cyan-950 text-cyan-300 border border-cyan-700/50">
+                      ⚡ Compact 契約
+                    </span>
+                  )}
                   <h2 className="text-lg font-bold text-white">生成的 MiniMax-H3 最終提示詞</h2>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  100% 符合 MiniMax-H3 官方標準規格之全量提示詞（含實體主體鎖定、運鏡三維度與完整音訊音效），支援一鍵複製貼上至 MiniMax 海螺 / Hailuo 3 AI 視訊生成器。
+                <p className="text-xs text-slate-400">
+                  {config.outputContract === 'compact'
+                    ? '簡約精煉模式：稠密自然語言動作描繪（含三態物理動作）與獨立聲音欄位，支援一鍵複製貼入 MiniMax 或 ComfyUI 工作流。'
+                    : '100% 符合 MiniMax-H3 官方標準規格之全量提示詞（含實體主體鎖定、運鏡三維度與完整音訊音效），支援一鍵複製貼上至 MiniMax 海螺 / Hailuo 3 AI 視訊生成器。'}
                 </p>
               </div>
 
@@ -1603,6 +1783,48 @@ ${ep.fullPrompt}`;
                 )}
               </button>
             </div>
+
+            {/* Expandable Audit Suggestions & Issues Panel */}
+            {showAuditDetails && currentAudit && currentAudit.issues.length > 0 && (
+              <div className="p-3.5 rounded-xl bg-amber-950/40 border border-amber-500/40 space-y-2 text-xs">
+                <div className="flex items-center justify-between text-amber-300 font-bold border-b border-amber-800/50 pb-1.5">
+                  <span className="flex items-center gap-1.5">
+                    <AlertTriangle className="w-4 h-4 text-amber-400" />
+                    MiniMax-H3 官方語法審計報告 ({currentAudit.issues.length} 項建議)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowAuditDetails(false)}
+                    className="text-slate-400 hover:text-white p-0.5"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  {currentAudit.issues.map((issue, idx) => (
+                    <div key={idx} className="p-2 rounded-lg bg-black/50 border border-amber-900/60 space-y-1">
+                      <div className="flex items-center gap-1.5 font-medium text-amber-200">
+                        <span
+                          className={`text-[10px] font-mono px-1.5 py-0.2 rounded font-bold uppercase ${
+                            issue.level === 'error'
+                              ? 'bg-red-950 text-red-300 border border-red-800'
+                              : 'bg-amber-900/60 text-amber-300'
+                          }`}
+                        >
+                          {issue.level}
+                        </span>
+                        <span>{issue.messageZh}</span>
+                      </div>
+                      {issue.suggestionZh && (
+                        <p className="text-[11px] text-slate-300 leading-normal pl-2 border-l border-amber-700/50">
+                          {issue.suggestionZh}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Output Navigation Tabs */}
             <div className="flex items-center justify-between border-b border-slate-800 pt-2 gap-2 overflow-x-auto scrollbar-none">
@@ -1670,6 +1892,25 @@ ${ep.fullPrompt}`;
                         >
                           <Download className="w-3.5 h-3.5 text-cyan-400" />
                           <span>匯出 MD</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={copyComfyUIFormat}
+                          className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-300 hover:text-white border border-slate-700/60 text-xs transition-colors"
+                          title="複製為 ComfyUI 工作流相容格式"
+                        >
+                          {copiedComfy ? (
+                            <>
+                              <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              <span className="text-emerald-400">已複製 Comfy 格式！</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy className="w-3.5 h-3.5 text-purple-400" />
+                              <span>ComfyUI 格式</span>
+                            </>
+                          )}
                         </button>
 
                         <button
@@ -1745,28 +1986,100 @@ ${ep.fullPrompt}`;
                             </span>
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => {
-                              copyToClipboard(currentEp.fullPrompt, `第 ${currentEp.episodeIndex} 段提示詞`);
-                              setCopiedEpisodeIdx(currentEp.episodeIndex);
-                              setTimeout(() => setCopiedEpisodeIdx(null), 2000);
-                            }}
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-xs font-semibold shadow-sm transition-all"
-                          >
-                            {copiedEpisodeIdx === currentEp.episodeIndex ? (
-                              <>
-                                <Check className="w-3.5 h-3.5 text-emerald-400" />
-                                <span className="text-emerald-400">已複製此段！</span>
-                              </>
-                            ) : (
-                              <>
-                                <Copy className="w-3.5 h-3.5 text-cyan-400" />
-                                <span>複製此段提示詞</span>
-                              </>
-                            )}
-                          </button>
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (refineTargetIdx === currentEp.episodeIndex) {
+                                  setRefineTargetIdx(null);
+                                } else {
+                                  setRefineTargetIdx(currentEp.episodeIndex);
+                                  setRefineInstruction('');
+                                }
+                              }}
+                              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold shadow-sm transition-all cursor-pointer ${
+                                refineTargetIdx === currentEp.episodeIndex
+                                  ? 'bg-purple-950 text-purple-200 border-purple-500 shadow-purple-950/60'
+                                  : 'bg-slate-900 hover:bg-slate-800 text-purple-300 border-purple-500/50 hover:border-purple-400'
+                              }`}
+                              title="局部微調精修本段分鏡 (保留前鏡結束姿態)"
+                            >
+                              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                              <span>{refineTargetIdx === currentEp.episodeIndex ? '收合精修' : '✨ 局部精修'}</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => {
+                                copyToClipboard(currentEp.fullPrompt, `第 ${currentEp.episodeIndex} 段提示詞`);
+                                setCopiedEpisodeIdx(currentEp.episodeIndex);
+                                setTimeout(() => setCopiedEpisodeIdx(null), 2000);
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-700/80 text-xs font-semibold shadow-sm transition-all cursor-pointer"
+                            >
+                              {copiedEpisodeIdx === currentEp.episodeIndex ? (
+                                <>
+                                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                                  <span className="text-emerald-400">已複製此段！</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="w-3.5 h-3.5 text-cyan-400" />
+                                  <span>複製此段提示詞</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
                         </div>
+
+                        {/* Inline Surgical Refinement Panel */}
+                        {refineTargetIdx === currentEp.episodeIndex && (
+                          <div className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-500/50 space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-purple-200 flex items-center gap-1.5">
+                                <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+                                第 {currentEp.episodeIndex} 段分鏡局部微調 (In-Place Refinement)
+                              </span>
+                              <span className="text-[10px] text-purple-300 font-mono">
+                                🔗 嚴格鎖定前鏡結束姿態
+                              </span>
+                            </div>
+                            <textarea
+                              value={refineInstruction}
+                              onChange={(e) => setRefineInstruction(e.target.value)}
+                              placeholder="輸入您對此段分鏡的具體修改指令（例如：讓主角改從右手拿出藍光鑰匙卡、將雨勢加劇成暴雨、運鏡改為特寫推進...）"
+                              rows={2}
+                              className="w-full px-3 py-2 rounded-lg bg-slate-950 border border-purple-500/40 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-400"
+                            />
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setRefineTargetIdx(null)}
+                                className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-400 text-xs cursor-pointer"
+                              >
+                                取消
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleRefineEpisode(currentEp.episodeIndex)}
+                                disabled={refining || !refineInstruction.trim()}
+                                className="px-4 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-bold shadow-md transition-all flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                              >
+                                {refining ? (
+                                  <>
+                                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                    <span>AI 精修推理中...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <Sparkles className="w-3.5 h-3.5 text-amber-300" />
+                                    <span>確認精修重算</span>
+                                  </>
+                                )}
+                              </button>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Continuity Note Banner */}
                         {currentEp.continuityNotes && (

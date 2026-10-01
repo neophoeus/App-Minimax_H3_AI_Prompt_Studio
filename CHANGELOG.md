@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v4.1.0] - 2026-10-01
+
+### 🛡️ Prompt Audit & Auto-Repair, Series Single-Episode In-Place Refinement & Dual Output Contracts (提示詞語法審計自癒引擎、連續劇單集局部精修與雙契約旗艦架構)
+
+#### 🛡️ 1. Prompt Audit & Lossless Auto-Repair Engine (語法審計與無損自癒修復引擎)
+- **Deterministic Static Syntax Verification (確定性語法稽核)**:
+  - 借鏡並超越 `duckyshell/ComfyUI-MiniMaxH3-Prompt-Writer` 之時間軸與標籤驗證機制，建立純 TypeScript 正則分析引擎 `src/utils/promptAudit.ts`。
+  - **Timestamp Clamping & Normalization**: 嚴格校驗每個分鏡時間標籤（`MM:SS.mmm` 格式），若超出當前影片時長設定（如 5s 設定下出現 00:08.000），自動修正或標註 warning。
+  - **Leakage Token Scrubbing**: 偵測並無損清除多模態內部除錯標記（例如 `contact sheet`、`sheet cells`、`sampled frame`、`grid layout`），防止干擾 MiniMax-H3 生成。
+  - **Static Camera & Dialogue Tag Consistency**: 驗證相機固定關鍵字（`The camera remains stationary`）與對話/音效標籤格式（如 `[Speech]`、`[Sound Effect]`、`[Ambient Sound]`、`[BGM]`）。
+- **Interactive UI Audit Badge & One-Click Repair (介面即時審計徽章與一鍵修復)**:
+  - 於生成結果卡片即時顯示綠色 `✓ 語法合格` 或琥珀色 `⚠️ N 項需注意` 狀態膠囊。
+  - 展開抽屜可檢視詳細違規項目清單（包含嚴重層級、行號定位、問題說明與修復建議）。
+  - 提供 `⚡ 一鍵自動修復` 按鈕，無損校正標籤並同步更新。後端 API 生成時亦預先通過自癒管線。
+
+#### ✨ 2. Series Single-Episode In-Place Refinement (連續劇單集獨立局部精修)
+- **Surgical Single-Episode Modification (單集外科手術級精修)**:
+  - 針對多集連續劇（Series 模式），每集卡片新增 `✨ 局部精修` 互動面板。
+  - 使用者可輸入針對特定單集的修改指示（例如：「將鏡頭改為特寫」、「在結尾增加雨水滴落聲」），無需整部劇集重新生成。
+- **Physical Posture Lock Continuity (前集物理姿態嚴格鎖定)**:
+  - 精修該集時，若非第一集，系統自動鎖定前一集的終態物理動作與相機位置，嚴禁產生跨集空間與姿勢斷裂。
+- **Dedicated Backend Endpoint (專屬精修端點)**:
+  - 新增 `POST /api/refine-series-episode`，統一支援 Ollama、llama.cpp、Google Gemini 旗艦推論引擎。
+
+#### 📜 3. Dual Output Contracts: Official vs Compact (雙輸出契約架構)
+- **Official Specification (官方標準 6/3 區塊規格)**:
+  - 完整生成符合 MiniMax 官方文檔規範之 6 區塊（T2VA）或 3 區塊（I2VA 等）結構化提示詞，包含客觀物理動態、相機運動、環境光影、主體外觀、音訊伴音設計等。
+- **Compact Dense Narrative (緊湊高密度敘事規格)**:
+  - 借鏡 ComfyUI 常用之高密度連貫敘事段落，將視覺運鏡與動作緊密編織，並於段落末尾附帶簡明音訊軌道指令，適應特定生圖生片工作流需求。
+- **Seamless Engine Conditioning**: 後端動態指令 `buildModularSystemInstruction` 根據使用者切換之契約無縫調整生成指引。
+
+#### 🧩 4. ComfyUI Workflow Format Integration (ComfyUI 工作流格式匯出)
+- **One-Click ComfyUI Formatted Export (一鍵 ComfyUI 格式複製)**:
+  - 連續劇模式新增 `🧩 複製 ComfyUI 工作流格式` 按鈕。
+  - 自動以標準章節分隔線（`=== Episode X: Title (Xs) ===`）整合所有集數提示詞，方便直接貼入 ComfyUI-MiniMaxH3-Prompt-Writer 或對應工作流節點。
+
+#### 🦙 5. Smart Architecture & MTP Auto-Detection for llama.cpp Launcher (start_llama.bat 智慧架構、MTP 自動判定與精準多模態投影配對)
+- **Smart MTP Speculative Inference Decoupling (MTP 投機推理架構自適應分流)**:
+  - 徹底解決非 MTP 架構模型（如 `Gemma4-31B-QAT-Uncensored`、Llama 等）在強制傳遞 `--spec-type draft-mtp` 時導致 `llama-server` 崩潰（`context type MTP requested but model doesn't contain MTP layers`）的致命錯誤。
+  - 啟動器依據模型架構自動判定：
+    - **支援 MTP 架構（如 Qwen3.8-27B）**：自動啟用 `--spec-type draft-mtp`，維持 2.23x 硬體級極速加速。
+    - **無 MTP 架構（如 Gemma4、Llama）**：自動切換至純標準自回歸推理模式，杜絕程序崩潰。
+- **Model-Family-Aware mmproj Pairing (家族級精確多模態視覺投影配對)**:
+  - 依據模型家族特徵（`Gemma4`、`Qwen3.8` 等）優先配對同家族專屬 `mmproj`，徹底解決多模型共存目錄下字母排序（`G` 早於 `Q`）導致的投影誤掛載問題。
+- **Interactive Terminal UI Polish (啟動器終端介面現代化)**:
+  - 終端主模型清單標題更新為「可載入的 GGUF 主模型清單」，條目即時標註各模型之專屬視覺投影掛載狀態與 MTP 加速特性。
+
 ## [v4.0.0] - 2026-10-01
 
 ### 🚀 Full Prompt Direct Generation, Assistant Director Toggle & UI Text Modernization (官方標準全量提示詞直接生成、輔助導演開關與介面文字全面現代化)

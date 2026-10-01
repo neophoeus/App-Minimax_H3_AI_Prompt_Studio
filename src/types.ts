@@ -119,8 +119,26 @@ export type CameraMove = CameraMotionType;
 export type CameraAmplitude = 'default' | 'with small amplitude' | 'with large amplitude';
 export type CameraSpeed = 'default' | 'at slow speed' | 'at fast speed';
 
+export type OutputContract = 'official' | 'compact';
+
 export type TemperatureMode = 'auto' | 'manual';
 export type CreativityLevel = 0 | 1 | 2 | 3;
+
+export interface AuditIssue {
+  level: 'error' | 'warning' | 'info';
+  code: string;
+  messageZh: string;
+  suggestionZh?: string;
+}
+
+export interface AuditResult {
+  isValid: boolean;
+  issues: AuditIssue[];
+  hasLeakage: boolean;
+  hasTimestampError: boolean;
+  hasConstraintViolation: boolean;
+  repairedPrompt?: string;
+}
 
 export interface H3PromptConfig {
   idea: string;
@@ -136,6 +154,7 @@ export interface H3PromptConfig {
   sfxText: string;
   suppressMusic: boolean; // non_diegetic_music: N/A
   assistantDirector?: boolean; // 輔助導演開關 (預設 true: 自動推理補全次生細節)
+  outputContract?: OutputContract; // 'official' (預設 官方全量架構) | 'compact' (簡約精煉模式)
   temperatureMode?: TemperatureMode; // 'auto' (Gemini官方預設, 本機0.7) | 'manual'
   manualTemperature?: number; // 手動溫度 (0.0 ~ 1.5, 預設 0.7)
   creativityLevel?: number; // 向下相容歷史與預設集
@@ -171,18 +190,37 @@ export interface SeriesEpisode {
 
 export interface H3PromptOutput {
   fullPrompt: string;
+  outputContract?: OutputContract;
   explanationZh?: string;
   suggestions?: string[];
   isSeries?: boolean;
   seriesTitle?: string;
   storyArcSummary?: string;
   episodes?: SeriesEpisode[];
+  auditResult?: AuditResult;
   // 向下相容歷史存檔欄位
   block1?: string;
   block2?: string;
   block3?: string;
   temporalTimeline?: TemporalSegment[];
   audioNotes?: string;
+}
+
+export interface RefineSeriesEpisodeRequest {
+  seriesTitle?: string;
+  storyArcSummary?: string;
+  targetEpisodeIndex: number;
+  currentEpisode: SeriesEpisode;
+  previousEpisode?: SeriesEpisode;
+  nextEpisode?: SeriesEpisode;
+  refineInstruction: string;
+  config: Partial<H3PromptConfig>;
+}
+
+export interface RefineSeriesEpisodeResponse {
+  success: boolean;
+  refinedEpisode?: SeriesEpisode;
+  error?: string;
 }
 
 export interface SavedPromptItem {

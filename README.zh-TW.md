@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v4.0.0-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v4.1.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -31,7 +31,13 @@
 
 ## ✨ 核心特色
 
-### 0. 輔助導演開關、雙軌制溫度調控與全量提示詞旗艦架構 (v4.0.0)
+### 0. 語法審計自癒、單集精修、雙契約與 ComfyUI 整合 (v4.1.0)
+- **語法審計與無損自癒修復引擎 (Audit & Auto-Repair)**：內建靜態正則分析引擎 (`promptAudit.ts`)，嚴格校驗時間標籤（`MM:SS.mmm`）、修剪超時分鏡、無損清除多模態除錯標記（`contact sheet`、`sampled frame` 等）、並校正相機固定語法。提供即時介面狀態徽章與一鍵修復按鈕。
+- **系列連續劇單集獨立局部精修 (Series Refinement)**：針對連續劇提供專屬單集局部精修面板，可單獨微調某一集之運鏡或情節，並強制鎖定前集終態實體動作與相機位置以確保連貫。
+- **雙輸出契約架構 (Official vs Compact)**：支援官方 6 區塊/3 區塊結構與緊湊高密度敘事雙契約無縫切換。
+- **ComfyUI 工作流格式匯出 (ComfyUI Format)**：連續劇支援一鍵以章節分隔線匯出格式化提示詞，直接無縫對接 ComfyUI 節點。
+
+### 1. 輔助導演開關、雙軌制溫度調控與全量提示詞旗艦架構 (v4.0.0)
 - **輔助導演開關 (Assistant Director Toggle)**：以直覺開關取代舊版 0~3 滑桿，預設開啟。開啟時忠實維持核心構想，自動推理豐富周邊物理與微動態（水汽、光斑、髮絲、景深分層）；關閉時切換為保守忠實模式，零腦補嚴格轉譯。
 - **雙軌制溫度調控策略 (Dual-Mode Temperature Strategy)**：
   - **Google Gemini**：在「自動模式」下不傳遞溫度參數，採用 Gemini 原廠原生最佳採樣設定。
