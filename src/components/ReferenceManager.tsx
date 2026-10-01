@@ -332,7 +332,7 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
           <div className="flex items-center gap-2">
             <Tag className="w-4 h-4 text-purple-400" />
             <h3 className="text-sm font-semibold text-slate-200">
-              Block 1: 參考素材上傳與聲明 (Ref Notes)
+              多模態參考素材與實體槽位 (Reference Assets)
             </h3>
             <span className="px-2 py-0.5 text-[10px] font-mono rounded bg-purple-500/10 text-purple-300 border border-purple-500/20">
               {references.length} 個素材

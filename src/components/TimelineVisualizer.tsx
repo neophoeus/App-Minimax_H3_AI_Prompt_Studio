@@ -34,7 +34,7 @@ export const TimelineVisualizer: React.FC<TimelineVisualizerProps> = ({
         <div className="flex items-center gap-2">
           <Film className="w-4 h-4 text-cyan-400" />
           <h3 className="text-sm font-semibold text-slate-200">
-            Block 3: 分鏡時間軸故事板 (Temporal Timeline)
+            分鏡時間軸故事板 (Temporal Timeline)
           </h3>
         </div>
         <span className="text-xs text-slate-400 font-mono">

@@ -148,8 +148,9 @@ async function callOllamaChat(params: {
     payload.format = "json";
   }
 
+  const timeoutMs = Number(process.env.OLLAMA_TIMEOUT_MS) || 600000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3-minute timeout
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${OLLAMA_BASE_URL}/api/chat`, {
@@ -172,7 +173,7 @@ async function callOllamaChat(params: {
   } catch (err: any) {
     clearTimeout(timeoutId);
     if (err.name === "AbortError") {
-      throw new Error(`本機 Ollama 請求超時（超過 180 秒）。請確認模型 "${modelToUse}" 是否正在載入或記憶體/顯存負載是否過高。`);
+      throw new Error(`本機 Ollama 請求超時（超過 ${Math.round(timeoutMs / 1000)} 秒）。請確認模型 "${modelToUse}" 是否正在載入或記憶體/顯存負載是否過高。`);
     }
     if (err.code === "ECONNREFUSED" || err.message?.includes("fetch failed") || err.message?.includes("ECONNREFUSED")) {
       throw new Error(`無法連線至本機 Ollama 服務 (${OLLAMA_BASE_URL})。請確認 Ollama 已啟動，且終端或服務正在運行中。`);
@@ -225,8 +226,9 @@ async function callLlamaCppChat(params: {
     payload.response_format = { type: "json_object" };
   }
 
+  const timeoutMs = Number(process.env.LLAMACPP_TIMEOUT_MS) || 600000;
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3-minute timeout
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(`${LLAMACPP_BASE_URL}/v1/chat/completions`, {
@@ -249,7 +251,7 @@ async function callLlamaCppChat(params: {
   } catch (err: any) {
     clearTimeout(timeoutId);
     if (err.name === "AbortError") {
-      throw new Error(`本機 llama.cpp 請求超時（超過 180 秒）。請確認模型 "${modelToUse}" 是否正在載入或記憶體/顯存負載是否過高。`);
+      throw new Error(`本機 llama.cpp 請求超時（超過 ${Math.round(timeoutMs / 1000)} 秒）。請確認模型 "${modelToUse}" 是否正在載入或記憶體/顯存負載是否過高。`);
     }
     if (err.code === "ECONNREFUSED" || err.message?.includes("fetch failed") || err.message?.includes("ECONNREFUSED")) {
       throw new Error(`無法連線至本機 llama.cpp 服務 (${LLAMACPP_BASE_URL})。請確認 llama-server 正在運行（預設端口 8080）。`);
@@ -582,43 +584,81 @@ async function callGeminiDynamic(
   throw lastError || new Error('Gemini API 請求失敗');
 }
 
-// System Instruction strictly adhering to official MiniMax-H3 h3-prompt-writing skill specifications
-const MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION = `
-You are the official MiniMax-H3 Video & Audio Prompt Engineering Assistant, strictly adhering to the MiniMax-H3 (Hailuo 3 / H3) "h3-prompt-writing" skill specification from https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing.
-
-Your mission is to convert user requests into valid, perfectly structured MiniMax-H3 generation prompts adhering 100% to the official rules below.
-
-### 1. Header Alignment Instruction Rules (Part One):
-For Base Modes (I2VA, FL2VA, L2VA), the FIRST LINE of the final prompt string MUST be the exact instruction template specified below, followed by ONE BLANK LINE before the core fields:
-
-- **T2VA**: Has NO instruction header line. Starts directly with "integrated_multimodal_description: [Shot 1] ...".
-- **I2VA**: MUST use the exact first line:
-  For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.
-- **FL2VA**: MUST use the exact first line (replace S.SS with duration formatted to 2 decimals e.g., 10.00):
-  How the reference pictures align with the target video — Picture 1 (from Shot 1) aligns with the 0.00-second mark of the target video; Picture 2 (from Shot N) aligns with the S.SS-second mark of the target video.
-- **L2VA**: MUST use the exact first line (replace S.SS with duration formatted to 2 decimals e.g., 10.00):
-  How the reference pictures align with the target video — <Picture 1> (from [Shot N]) aligns with the S.SS-second mark of the target video.
-
-### 2. Mandatory Field Names & Exact Order:
-
-**For Base Modes (T2VA, I2VA, FL2VA, L2VA):**
-The prompt MUST consist of exactly three core fields (plus the header line for I2VA/FL2VA/L2VA):
+/**
+ * Builds modular System Instruction strictly adhering to official MiniMax-H3 h3-prompt-writing skill specifications
+ * (https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing)
+ * Dynamically tailored per Generation Mode to conserve input tokens and sharpen model focus.
+ */
+function buildModularSystemInstruction(mode: string = "T2VA"): string {
+  let headerAndSectionRules = "";
+  if (mode === "T2VA") {
+    headerAndSectionRules = `
+### 1. Structure & Core Fields for T2VA (Text-to-Video-Audio):
+- Has NO instruction header line. Starts directly with the three core fields:
 integrated_multimodal_description: [Shot 1] ...
 
 overall_soundscape: ...
 
 non_diegetic_music: ...
 
-- "integrated_multimodal_description":
-  - Begins with [Shot 1] (setting visual style and initial composition at the start). Do NOT add a timestamp to Shot 1.
-  - Subsequent shots use strictly increasing cut timecodes: "[Shot 2] At 00:03.500, the camera cuts to..." or "[Shot 2] At 00:05.000, the shot transitions to...".
-  - Standard cut verbs: "the camera cuts to", "the shot cuts to", "the shot transitions to", "the shot changes to", "the shot switches to".
-  - Camera motion MUST be written as a natural English action within the shot (see Section 3 below).
-  - Dialogue MUST use <d>[Language] ...</d> tags with speaker IDs (see Section 4 below).
+- Visual Style: Select and establish visual style and composition directly from user text in [Shot 1].
+- Shot 1 sets initial visual style and composition (DO NOT add a timestamp to Shot 1).
+- Subsequent shots use strictly increasing cut timecodes: "[Shot 2] At 00:03.500, the camera cuts to..." or "[Shot 2] At 00:05.000, the shot transitions to...".
+- Standard cut verbs: "the camera cuts to", "the shot cuts to", "the shot transitions to", "the shot changes to", "the shot switches to".
 - "overall_soundscape": 1–4 English sentences summarizing ambient sound, physical action sounds, and non-verbal human sounds across the entire video. Set to "N/A" only if complete silence is requested.
-- "non_diegetic_music": 1–3 English sentences describing audience-only background music (instrumentation, tempo, dynamics). Set to "N/A" if music is suppressed/disabled.
+- "non_diegetic_music": 1–3 English sentences describing audience-only background music (instrumentation, tempo, dynamics). Set to "N/A" if music is suppressed/disabled.`;
+  } else if (mode === "I2VA") {
+    headerAndSectionRules = `
+### 1. Structure & Core Fields for I2VA (Image-to-Video-Audio):
+- The FIRST LINE of the final prompt string MUST be the exact header template, followed by ONE BLANK LINE before the core fields:
+For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.
 
-**For Full-Reference Mode (Ref2VA):**
+integrated_multimodal_description: [Shot 1] ...
+
+overall_soundscape: ...
+
+non_diegetic_music: ...
+
+- Visual Style: Visual style, lighting, color palette, and initial composition are locked directly from <Picture 1>. Do NOT generate conflicting style descriptors in the prompt.
+- Shot 1 describes motion unfolding from <Picture 1> (DO NOT add a timestamp to Shot 1).
+- Subsequent shots use strictly increasing cut timecodes: "[Shot 2] At 00:03.500, the camera cuts to...".
+- "overall_soundscape": 1–4 English sentences summarizing ambient and physical sounds. Set to "N/A" if silent.
+- "non_diegetic_music": 1–3 English sentences describing audience-only background music, or "N/A".`;
+  } else if (mode === "FL2VA") {
+    headerAndSectionRules = `
+### 1. Structure & Core Fields for FL2VA (First & Last Frame-to-Video-Audio):
+- The FIRST LINE of the final prompt string MUST be the exact header template (replace S.SS with duration formatted to 2 decimals e.g., 10.00), followed by ONE BLANK LINE before the core fields:
+How the reference pictures align with the target video — Picture 1 (from Shot 1) aligns with the 0.00-second mark of the target video; Picture 2 (from Shot N) aligns with the S.SS-second mark of the target video.
+
+integrated_multimodal_description: [Shot 1] ...
+
+overall_soundscape: ...
+
+non_diegetic_music: ...
+
+- Visual Style: Style and atmosphere are locked directly from reference pictures.
+- Shot 1 begins at Picture 1 and progresses toward the final state matching Picture 2.
+- "overall_soundscape": 1–4 English sentences.
+- "non_diegetic_music": 1–3 English sentences, or "N/A".`;
+  } else if (mode === "L2VA") {
+    headerAndSectionRules = `
+### 1. Structure & Core Fields for L2VA (Last Frame-to-Video-Audio):
+- The FIRST LINE of the final prompt string MUST be the exact header template (replace S.SS with duration formatted to 2 decimals e.g., 10.00), followed by ONE BLANK LINE before the core fields:
+How the reference pictures align with the target video — <Picture 1> (from [Shot N]) aligns with the S.SS-second mark of the target video.
+
+integrated_multimodal_description: [Shot 1] ...
+
+overall_soundscape: ...
+
+non_diegetic_music: ...
+
+- Visual Style: Style and atmosphere are anchored from the target endframe reference.
+- "overall_soundscape": 1–4 English sentences.
+- "non_diegetic_music": 1–3 English sentences, or "N/A".`;
+  } else {
+    // Ref2VA
+    headerAndSectionRules = `
+### 1. Structure & Core Fields for Ref2VA (Full-Reference Video-Audio):
 The prompt MUST consist of six sections in this exact order:
 subject_definitions:
 <Subject 1> is ...
@@ -644,90 +684,58 @@ overall_soundscape:
 non_diegetic_music:
 ...
 
-- "subject_definitions": Define reusable assets using angle-bracket labels:
-  - <Subject N>: reusable people, animals, objects, scenes, costumes, styles, actions.
-  - <Picture N>: reference image used as concrete target frame/shot anchor.
-  - <Video N>: reference video providing continuation starting point, editing source, or temporal structure.
-  - <Audio N>: audio track or voice reference. For speaker voice timbre: <Subject N> (Sx) (e.g. <Subject 1> (S1)).
-- "summary": MUST begin with a square-bracketed task type prefix using only official task types combined with " + ":
-  - [keyframe completion]
-  - [reference generation]
-  - [video editing]
-  - [video continuation]
-  - [audio reuse]
-  - [audio reference]
-  (e.g. [reference generation + audio reference], or [video continuation + reference generation] for continuing an existing video).
-- "retention_analysis": MUST strictly use official English relationship markers:
-  - For visible content (<Subject N>, <Picture N>, <Video N>): "fully_preserved", "partially_preserved", "attribute_transfer", "weak_reference".
-  - For audio content (<Audio N>): "fully_copy", "partially_copy", "reference", "weak_reference".
-- "detailed_description": Establish overall visual style in 1-2 English sentences before [Shot 1]. Then shot-by-shot timeline starting with [Shot 1] and subsequent shots with cut timecodes ([Shot 2] At 00:03.500...).
-- "overall_soundscape": 1-4 English sentences.
-- "non_diegetic_music": 1-3 English sentences, or "N/A".
+- "subject_definitions": Define reusable assets using angle-bracket labels (<Subject N>, <Picture N>, <Video N>, <Audio N>). Define each <Subject K> with its detailed appearance as depicted in its physical upload slot <Picture P>, with locked visual identity.
+- "summary": MUST begin with official square-bracketed task type prefix ([reference generation], [keyframe completion], [video continuation], [video editing], [audio reuse], [audio reference]).
+- "retention_analysis": Strictly use official markers: "fully_preserved", "partially_preserved", "attribute_transfer", "weak_reference"; for audio: "fully_copy", "partially_copy", "reference", "weak_reference".
+- "detailed_description": 1-2 English sentences establishing visual style before [Shot 1]. Then shot-by-shot timeline starting with [Shot 1].
+- "overall_soundscape": 1–4 English sentences.
+- "non_diegetic_music": 1–3 English sentences, or "N/A".
 
-### 2.1 MiniMax Multi-Image Physical Upload Mapping Contract (CRITICAL):
-When multiple reference images are uploaded, MiniMax indexes them physically in sequential upload order: <Picture 1> (@image1), <Picture 2> (@image2), <Picture 3> (@image3)...
-1. Character / Subject Reference Images:
-   - When an image serves as a reference for a character or subject (e.g. <Subject 1> aka <Picture 1>, <Subject 2> aka <Picture 2>):
-     - In "subject_definitions": Define <Subject K> with its detailed visual appearance, costume, role, and explicitly state that it is depicted in its corresponding physical upload slot <Picture P> with locked visual identity:
-       e.g., "<Subject 1> is the [detailed facial, hairstyle, clothing, and role description] as depicted in <Picture 1>, with locked visual identity."
-       e.g., "<Subject 2> is the [detailed facial, hairstyle, clothing, and role description] as depicted in <Picture 2>, with locked visual identity."
-     - You may also define <Picture P> as the reference image for <Subject K> (e.g. "<Picture 1> is the character reference image for <Subject 1>.").
-2. Scene / Keyframe Images (e.g. <Picture 3>):
-   - When an image serves as the opening keyframe or scene composition, its Picture index matches its physical upload position (e.g. <Picture 3> if two character images precede it):
-     - In "subject_definitions": Define <Picture 3> as the first keyframe image establishing the scene, lighting, and composition:
-       e.g., "<Picture 3> is the first keyframe image showing [setting, aspect ratio, lighting] with <Subject 1> and <Subject 2>..."
-     - In "summary": Explicitly cite <Picture 3> and the preserved subjects:
-       e.g., "[reference generation] A 15-second ... scene generated from <Picture 3>, preserving <Subject 1> (from <Picture 1>) and <Subject 2> (from <Picture 2>) while ..."
-     - In "retention_analysis": Clearly link retention for both subjects and the keyframe:
-       e.g., "<Subject 1> (appears in [Shot 1]): fully_preserved - [features] remain unchanged (locked from <Picture 1>)."
-       e.g., "<Subject 2> (appears in [Shot 1]): fully_preserved - [features] remain unchanged (locked from <Picture 2>)."
-       e.g., "<Picture 3> (appears in [Shot 1]): fully_preserved - opening composition, camera angle, and environment remain the opening composition."
-     - In "detailed_description": [Shot 1] MUST match the keyframe image:
-       e.g., "[Shot 1] The opening frame matches <Picture 3>: <Subject 2> ... and <Subject 1> ..."
-3. CRITICAL RULE: DO NOT mix up the Picture indices! An image uploaded for Subject 1 is <Picture 1>; an image uploaded for Subject 2 is <Picture 2>; the scene keyframe is <Picture 3>. NEVER label the 3rd image as <Picture 1>!
+### MiniMax Multi-Image Physical Upload Mapping Contract:
+When multiple images are uploaded, MiniMax indexes them physically in sequential upload order: <Picture 1> (@image1), <Picture 2> (@image2), <Picture 3> (@image3)...
+- Character/Subject references: Define <Subject K> as depicted in <Picture P> with locked visual identity.
+- Scene/Keyframe images: Define as opening keyframe image establishing setting and composition. [Shot 1] matches this keyframe image.
+- NEVER mix up Picture indices!`;
+  }
 
-### 3. Camera Motion Three-Dimension Specification:
-A complete camera-motion expression has three dimensions: Motion Type + Amplitude + Speed.
-Medium amplitude and normal speed are usually omitted.
+  return `
+You are the official MiniMax-H3 Video & Audio Prompt Engineering Assistant, strictly adhering to the MiniMax-H3 (Hailuo 3 / H3) "h3-prompt-writing" skill specification from https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing.
 
-**12 Official Motion Types:**
-1. "Zoom In / Zoom Out": The focal length changes while the camera body remains stationary.
-2. "Push In / Pull Out": The camera body moves forward / backward.
-3. "Pan Left / Pan Right": The camera remains in place while the lens pivots horizontally.
-4. "Truck Left / Truck Right": The camera translates horizontally.
-5. "Tilt Up / Tilt Down": The camera remains in place while the lens pivots vertically.
-6. "Pedestal Up / Pedestal Down": The entire camera moves upward / downward.
-7. "Arc Shot": The camera moves in an arc around the subject.
-8. "Tracking Shot": The camera follows a moving subject.
-9. "Static Shot": The camera position and lens remain still.
+Your mission is to convert user requests into valid, perfectly structured MiniMax-H3 generation prompts adhering 100% to the official rules below.
+
+${headerAndSectionRules}
+
+### 2. Camera Motion Three-Dimension Specification:
+A complete camera-motion expression has three dimensions: Motion Type + Amplitude + Speed (Medium amplitude and normal speed are usually omitted).
+
+12 Official Motion Types:
+1. "Zoom In / Zoom Out": Focal length changes while camera body remains stationary.
+2. "Push In / Pull Out": Camera body moves forward / backward.
+3. "Pan Left / Pan Right": Camera remains in place while lens pivots horizontally.
+4. "Truck Left / Truck Right": Camera translates horizontally.
+5. "Tilt Up / Tilt Down": Camera remains in place while lens pivots vertically.
+6. "Pedestal Up / Pedestal Down": Entire camera moves upward / downward.
+7. "Arc Shot": Camera moves in an arc around the subject.
+8. "Tracking Shot": Camera follows a moving subject.
+9. "Static Shot": Camera position and lens remain still.
 10. "Shake Slightly / Shake Strongly": Slight / strong camera shake.
 11. "POV": The subject's point of view.
-12. "Roll Clockwise / Roll Counterclockwise": The camera rolls clockwise / counterclockwise around the lens axis.
+12. "Roll Clockwise / Roll Counterclockwise": Camera rolls clockwise / counterclockwise around lens axis.
 
-**Amplitude Dimension:**
-- "with small amplitude" (Small-range change)
-- "with large amplitude" (Large-range change)
+Amplitude: "with small amplitude", "with large amplitude".
+Speed: "at slow speed", "at fast speed".
 
-**Speed Dimension:**
-- "at slow speed" (Slow movement)
-- "at fast speed" (Fast movement)
+CRITICAL CAMERA GRAMMAR RULE:
+Camera motion MUST be written as a natural English action within the shot narrative, NEVER stacked as separate bracketed labels (e.g. NEVER write "[Push In]" or "[Camera: Arc shot]").
+Example: "The camera pushes in with small amplitude at slow speed toward the folded letter in her hands."
 
-**CRITICAL CAMERA GRAMMAR RULE:**
-Camera motion MUST be written as a natural English action within the shot narrative, NEVER stacked as separate labels or brackets (e.g. NEVER write "[Push In]" or "[Camera: Arc shot]").
-Examples of correct phrasing:
-- "The camera pushes in with small amplitude at slow speed toward the folded letter in her hands."
-- "The camera pans right with large amplitude at fast speed, revealing the open doorway."
-- "The camera holds a static shot as the runner exits the frame."
-- "The camera rolls clockwise with small amplitude at slow speed as the fighter tumbles through the air."
-
-### 3.5 Objective, Literal & Step-by-Step Visual Action Principle (CRITICAL):
-Video diffusion models synthesize physical movement from text tokens. Flowery sentences, poetic metaphors, emotional adjectives, and abstract concepts cause motion confusion and anatomical distortion.
+### 3. Objective, Literal & Step-by-Step Visual Action Principle (CRITICAL):
+Video diffusion models synthesize physical movement from text tokens. Flowery sentences, poetic metaphors, emotional adjectives, and abstract concepts cause motion confusion and distortion.
 - ALL visual actions MUST be specific, literal, and step-by-step:
   - Be specific and literal. Describe what happens, in what order, step by step.
   - DO NOT use flowery language, poetic metaphors, emotional adjectives, or abstract concepts (e.g. NEVER write "ethereal glow", "mysterious aura", "heart-wrenching sorrow", "breathtaking majesty", "symphony of lights", "vibes").
   - Instead of "a ball bouncing around" → "A red ball moves to the right, bounces off the wall, and returns to the center"
   - Instead of "fluid pouring" → "Water flows from the left container through the connecting tube into the right container until both levels are equal"
-  - Instead of "a detective looks around anxiously" → "A detective in a beige trench coat turns his head 45 degrees to the left, pauses for one second, then turns rapidly to the right while glancing at the train door"
 - ALWAYS construct action narratives using the three-state physical framework:
   1. Starting state: Initial position of the subject/object, body posture, what hands are holding, and initial eye gaze.
   2. Action: Objective physical motion, directions, trajectories, speeds, and contacts in chronological step-by-step order.
@@ -737,50 +745,25 @@ Video diffusion models synthesize physical movement from text tokens. Flowery se
 - Speakers who vocalize receive stable IDs: (S1), (S2), or compound (S1,S2). Non-vocalizing characters receive no speaker ID.
 - Dialogue MUST be formatted using <d>[Language] ...</d> tags:
   - Example: "The young woman with a quiet, breathy voice (S1) says: <d>[English] I get off at the next station.</d>"
-  - Example: "The middle-aged baker (S1) says: <d>[Chinese] 這是今天剛出爐的第一批麵包。</d>"
-  - Dialogue words and punctuation MUST be preserved verbatim from user input; NEVER translate dialogue!
+  - Preserve user dialogue verbatim; NEVER translate dialogue!
 - Voiceover MUST use the exact phrase:
   "says in an off-screen voiceover: <d>[Language] ...</d> while his lips remain completely closed."
-- Dialogue continuity across cuts: Use <scenetrans> at connecting points ("continues seamlessly across the cut").
-- Truncated dialogue at the end of the video: Use <cutoff>.
-- On-Screen visible text (neon signs, banners, logos): Place strictly in English double quotes "" (e.g. 'A red neon sign reading "营业中" glows above the doorway.'). Do NOT use double quotes for spoken dialogue!
+- Visible text on-screen: English double quotes "" (e.g. 'A red neon sign reading "Open" glows above the door.'). Do NOT use double quotes for spoken dialogue!
 
-### 5. Official Duration & Long Video Continuation Architecture:
+### 5. Official Duration & Series Continuation Standard:
 - Official native single-generation duration is strictly 4 to 15 seconds.
-- For long videos exceeding 15 seconds, the official H3 standard is to chain clips via [video continuation]:
-  - Use Ref2VA with task type "[video continuation]" in summary.
-  - The preceding clip is labeled as <Video 1> (the continuation starting point), and Shot 1 resumes seamlessly from the end state of <Video 1>.
+- When generating multiple episodes (isSeries: true):
+  - EACH episode prompt MUST be 100% self-contained, valid, and immediately copyable/executable on its own!
+  - Continuity is achieved through concrete physical starting states matching the preceding episode's end state.
 
-### 5.5 Multi-Episode Consecutive Prompts Generation Standard (When seriesCount > 1):
-When generating a sequence/series of prompts (e.g., 5 to 10 episodes):
-- EACH episode prompt MUST be 100% self-contained, valid, and immediately copyable/executable into MiniMax-H3 on its own!
-- NEVER include meta-references to non-existent videos (e.g. NEVER write "Resuming directly from Clip 1" or reference a clip before it exists).
-- Continuity across episodes is achieved purely through concrete physical narrative descriptions:
-  - Episode 1: Establishes the initial scene, subject, and first action sequence.
-  - Episode K (K >= 2): The prompt's initial description/Shot 1 objectively begins with the exact physical posture, position, and held objects that directly continue from where Episode K-1 ended.
-  - All episodes strictly share identical subject definitions (<Subject 1>), identical clothing, hair, facial features, reference image (<Picture 1>), visual style, and ambient soundscape base.
-
-### 6. Absolute Prohibitions Regarding File Names:
-- STRICT RULE: DO NOT include any file names, file extensions (.jpg, .png, .mp4, .wav, etc.), or upload paths anywhere in the generated prompt text (neither in fullPrompt, block1, block2, block3, nor temporalTimeline).
-- In subject_definitions, define items purely by their physical appearance, role, and visual traits (e.g. "<Subject 1> is a cyberpunk detective..."), NEVER by a filename.
+### 6. Absolute Prohibition Regarding File Names:
+- STRICT RULE: DO NOT include any file names, file extensions (.jpg, .png, .mp4, .wav), or upload paths anywhere in the prompt! Define subjects purely by visual traits.
 
 ### 7. Output JSON Format Constraints:
+You MUST output a valid JSON object matching this schema:
 {
-  "mode": "T2VA" | "I2VA" | "FL2VA" | "L2VA" | "Ref2VA",
   "fullPrompt": "The COMPLETE combined prompt string formatted with exact headers, blank lines, and exact field names, ready to copy into MiniMax H3. Ensure NO filenames appear.",
-  "block1": "Formatted Subject Definitions / Keyframe Header Instruction & First Section",
-  "block2": "Formatted Summary & Retention Analysis or Integrated Multimodal Description",
-  "block3": "Formatted Scene-by-Scene Detailed Timeline",
-  "audioNotes": "Formatted overall_soundscape and non_diegetic_music",
-  "temporalTimeline": [
-    {
-      "timeframe": "[Shot 1] / [Shot 2] At 00:03.500",
-      "action": "Literal step-by-step physical action (Starting state -> Action -> End state)...",
-      "camera": "Natural camera movement description (e.g. The camera pushes in with small amplitude at slow speed...)",
-      "audio": "Audio and dialogue with <d>[Language] ...</d> tags..."
-    }
-  ],
-  "explanationZh": "繁體中文解析：說明選用模式的結構編排優勢、三維度運鏡與 Retention Analysis 鎖定特徵",
+  "explanationZh": "繁體中文解析：說明選用模式的結構編排優勢、三維度運鏡與畫面規劃",
   "suggestions": [
     "畫幅與鏡頭節奏建議",
     "MiniMax-H3 官方實用技巧 1",
@@ -804,63 +787,63 @@ When generating a sequence/series of prompts (e.g., 5 to 10 episodes):
     }
   ]
 }
+Return ONLY valid JSON.
 `;
-
-/**
- * Sampling temperature is unified at 1.0 across all engines (Gemini, Ollama, llama.cpp).
- * This ensures peak vocabulary fluency and vivid descriptive phrasing without artificial throttling,
- * while creative liberty is 100% steered by explicit Prompt Directives.
- */
-function getCreativityTemperature(_level?: number): number {
-  return 1.0;
 }
 
+const MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION = buildModularSystemInstruction("T2VA");
+
 /**
- * Builds specific instruction directives for the selected Creativity Level (0 ~ 3)
+ * Builds specific instruction directives for the Assistant Director (輔助導演開關)
+ * Enabled: Autonomously extrapolates and enriches secondary physical interactions and environment.
+ * Disabled: Strictly faithful mode, zero extrapolation beyond user explicit input.
  */
-function getCreativityDirective(level: number): string {
-  switch (level) {
-    case 0:
-      return `
-CRITICAL CREATIVITY GUIDELINE [LEVEL 0 - STRICT & FAITHFUL (保守忠實 / 零腦補)]:
-- ROLE: Precision Technical Transcriber & Spec Compliance Officer.
-- ZERO EXTRAPOLATION: Strictly and literally follow ONLY what the user explicitly requested.
-- ABSOLUTE PROHIBITION: Do NOT introduce any new characters, unmentioned subplots, extra props, or background actions that were not specified in the input.
-- ELEGANT LITERAL PHRASING: While strictly sticking to the user's explicit facts, use natural, professional cinematic English phrasing (avoid robotic word-for-word translation, but introduce zero unasked creative elements).
-- STRUCTURE: Follow the exact three-state physical framework (Starting state -> Action -> End state) for every action. Keep the narrative concise, clean, and 100% faithful.`;
-
-    case 2:
-      return `
-CRITICAL CREATIVITY GUIDELINE [LEVEL 2 - CREATIVE & DYNAMIC (創意靈動 / 變化豐富)]:
-- ROLE: Visionary Feature Film Director & DP.
-- CINEMATIC EXPANSION: Preserve the core subject and setting, but actively introduce compelling visual variations, dramatic tension, and sophisticated cinematic flair:
-  1. Dynamic Camera Perspectives: Incorporate unconventional, high-impact camera angles (e.g. dramatic low-angle tilt reveals, Dutch tilts during tension, tracking shots passing through tight foreground obstructions, sweeping arc reveals).
-  2. Dramatic Lighting & Environmental Shifts: Introduce shifting lighting dynamics (e.g. headlights sweeping across a dark alley, flickering neon casts, high-contrast rim lighting, volumetric shadow projections, sudden atmospheric changes).
-  3. Character Physical Nuances: Enhance the subject's physical actions with emotional weight and intent through posture shifts, sharp eye darts, or sudden kinetic pauses.
-- PHYSICAL GRAMMAR ANCHOR: Every creative variation MUST be described in objective, step-by-step physical actions (Starting state -> Action -> End state) without vague poetic buzzwords.`;
-
-    case 3:
-      return `
-CRITICAL CREATIVITY GUIDELINE [LEVEL 3 - WILD & UNCONSTRAINED (天馬行空 / 奇觀演繹)]:
-- ROLE: Avant-Garde Visual Effects Auteur & Conceptual Surrealist.
-- UNBOUNDED CREATIVE FREEDOM: Treat the user's input purely as a thematic launchpad. You are liberated from conventional realism or linear expectations:
-  1. Surreal / High-Concept Twists: Introduce mind-bending physical phenomena, unexpected visual transformations (e.g. liquids defying gravity, light solidifying into geometric trails, reality dissolving into cybernetic grids, unexpected spatial warping).
-  2. Kinetic Spectacle & Shocking Escalations: Design scenes that feel like high-budget sci-fi/fantasy trailer climaxes, with bold choreography, dramatic physical escalations, and extraordinary visual contrasts.
-  3. Memorable Visual Punchline: Conclude with a striking, iconic ending visual state that leaves a powerful visual impression.
-  4. CRITICAL MINIMAX-H3 COMPLIANCE: Even with wild creativity, the final prompt MUST strictly follow MiniMax-H3 fields and objective physical action descriptions (Starting state -> Action -> End state). Express impossible or surreal wonders through concrete, literal physical movement!`;
-
-    case 1:
-    default:
-      return `
-CRITICAL CREATIVITY GUIDELINE [LEVEL 1 - ENRICH & LOGICAL (邏輯補完 / 畫面充實 - DEFAULT)]:
-- ROLE: Professional Cinematographer & Lighting/Staging Coordinator.
-- FAITHFUL CORE INTENT: Keep the user's primary idea, characters, and narrative goal 100% intact.
-- RICH PHYSICAL LOGIC: Logically complete the physical environment and secondary motions to eliminate any stiffness, dullness, or artificial emptiness:
-  1. Secondary Micro-Motions: Incorporate realistic secondary physical reactions (e.g. hair strands or clothing fluttering in the breeze, steam billows rising and curling from liquid, droplets beading and streaking down surfaces, subtle eyelid twitches, natural breathing rhythm, fingers micro-adjusting grip).
+function getAssistantDirectorDirective(assistantDirector: boolean = true): string {
+  if (assistantDirector) {
+    return `
+### ASSISTANT DIRECTOR DIRECTIVE (ENABLED / 輔助導演開啟):
+- ROLE: Professional Cinematographer & Scene Coordinator.
+- ENRICH PHYSICAL LOGIC: Faithfully maintain the user's core intent, characters, and primary storyline, while automatically extrapolating and enriching realistic physical context and secondary motions:
+  1. Secondary Micro-Motions: Incorporate realistic secondary physical reactions (e.g. hair strands or clothing fluttering in the breeze, steam billows rising from liquid, droplets beading and streaking down surfaces, subtle eyelid twitches, natural breathing rhythm, fingers micro-adjusting grip).
   2. Multi-Plane Spatial Depth: Structure the composition with clear foreground layers (e.g. out-of-focus wet glass, door frame, passing dust particles), midground action, and deep atmospheric background.
   3. Plausible Environmental Interaction: Objects realistically react to the environment (e.g. feet kicking up subtle dust puffs, neon light shimmering in puddle ripples).
 - OBJECTIVE PHRASING: Ensure all enriched details are described strictly as literal physical actions (Starting state -> Action -> End state) without flowery adjectives.`;
+  } else {
+    return `
+### ASSISTANT DIRECTOR DIRECTIVE (DISABLED / 保守忠實模式):
+- ROLE: Precision Technical Transcriber & Spec Compliance Officer.
+- STRICT & FAITHFUL: Follow ONLY what the user explicitly requested without introducing unasked creative extrapolation or secondary elements.
+- STRUCTURE: Follow the exact three-state physical framework (Starting state -> Action -> End state) concisely, cleanly, and faithfully.`;
   }
+}
+
+/**
+ * Resolves sampling temperature per engine according to strategy:
+ * - Google Gemini: Omit temperature (undefined) to use Gemini native default in Auto mode.
+ * - Local Engines (Ollama & llama.cpp): Default to 0.7 in Auto mode.
+ * - Manual mode: Use user-specified manualTemperature (clamped to 0.0 ~ 1.5).
+ */
+function resolveTemperature(
+  provider: 'gemini' | 'ollama' | 'llamacpp',
+  temperatureMode?: string,
+  manualTemperature?: number
+): number | undefined {
+  if (temperatureMode === 'manual' && typeof manualTemperature === 'number' && !isNaN(manualTemperature)) {
+    return Math.max(0.0, Math.min(1.5, manualTemperature));
+  }
+  // Auto mode
+  if (provider === 'gemini') {
+    return undefined; // Model native default
+  }
+  return 0.7; // Local engines default
+}
+
+// Backward compatibility helper
+function getCreativityDirective(level: number): string {
+  return getAssistantDirectorDirective(level !== 0);
+}
+function getCreativityTemperature(_level?: number): number {
+  return 0.7;
 }
 
 // Helper to resolve effective runtime mode and execution tier
@@ -1165,7 +1148,7 @@ app.post("/api/analyze-reference-media", async (req, res) => {
 
     if (appMode === 'ollama') {
       const userPrompt = imageBase64 && imageBase64.includes(",")
-        ? `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Block 1 & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture). Keep it concise and within 60 words.`
+        ? `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Reference Definitions & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture). Keep it concise and within 60 words.`
         : `Provide a concise reference description for file "${fileName || 'Asset'}" with role "${role || 'character'}". Keep it within 50 words.`;
 
       const images = (imageBase64 && imageBase64.includes(","))
@@ -1183,7 +1166,7 @@ app.post("/api/analyze-reference-media", async (req, res) => {
 
     if (appMode === 'llamacpp') {
       const userPrompt = imageBase64 && imageBase64.includes(",")
-        ? `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Block 1 & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture). Keep it concise and within 60 words.`
+        ? `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Reference Definitions & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture). Keep it concise and within 60 words.`
         : `Provide a concise reference description for file "${fileName || 'Asset'}" with role "${role || 'character'}". Keep it within 50 words.`;
 
       const images = (imageBase64 && imageBase64.includes(","))
@@ -1212,7 +1195,7 @@ app.post("/api/analyze-reference-media", async (req, res) => {
             data: base64Data,
           },
         },
-        `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Block 1 & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture). Keep it concise and within 60 words.`
+        `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Reference Definitions & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture). Keep it concise and within 60 words.`
       ];
     } else {
       contents = [`Provide a concise reference description for file "${fileName || 'Asset'}" with role "${role || 'character'}". Keep it within 50 words.`];
@@ -1328,9 +1311,14 @@ app.post("/api/generate-h3-prompt", async (req, res) => {
           .join('\n')
       : 'No reference files provided.';
 
-    const creativityLevel = typeof config.creativityLevel === 'number' ? config.creativityLevel : 1;
-    const creativityDirective = getCreativityDirective(creativityLevel);
-    const dynamicTemperature = getCreativityTemperature(creativityLevel);
+    const assistantDirector = typeof config.assistantDirector === 'boolean'
+      ? config.assistantDirector
+      : (config.creativityLevel !== 0);
+    const assistantDirectorDirective = getAssistantDirectorDirective(assistantDirector);
+
+    const ollamaTemperature = resolveTemperature('ollama', config.temperatureMode, config.manualTemperature);
+    const llamacppTemperature = resolveTemperature('llamacpp', config.temperatureMode, config.manualTemperature);
+    const geminiTemperature = resolveTemperature('gemini', config.temperatureMode, config.manualTemperature);
 
     const isSeriesMode = Boolean(config.isSeriesMode);
     const seriesCount = Math.min(10, Math.max(2, Number(config.seriesCount) || 5));
@@ -1363,22 +1351,26 @@ CRITICAL MULTI-EPISODE SERIES GENERATION PROTOCOL (${seriesCount} CONSECUTIVE EP
 - Set "isSeries": false, "episodes": []
 `;
 
+    const isT2VA = (config.mode || "T2VA") === "T2VA";
+    const styleInstruction = isT2VA
+      ? `- Visual Style: ${config.style || "Cinematic Photorealistic"}\n- Lighting & Atmosphere: ${config.lightingMood || "Cinematic volumetric lighting"}`
+      : `- Visual Style & Lighting: [LOCKED FROM REFERENCE IMAGE] In accordance with MiniMax-H3 official specification, visual style, color palette, rendering quality, and lighting are anchored directly from the reference image(s). Do NOT generate conflicting style descriptors in the prompt.`;
+
     const userPrompt = `
 Generate an optimal MiniMax-H3 prompt based on the following user input:
 - Core Idea/Concept: ${config.idea || "A sleek futuristic scene"}
 - Generation Mode: ${config.mode || "T2VA"}
 - Duration: ${config.duration || "10s"}
 - Aspect Ratio: ${config.aspectRatio || "16:9"}
-- Visual Style: ${config.style || "Cinematic Photorealistic"}
-- Lighting & Atmosphere: ${config.lightingMood || "Cinematic volumetric lighting"}
+${styleInstruction}
 - Preferred Camera Movements (Motion types): ${config.cameraMoves && config.cameraMoves.length > 0 ? config.cameraMoves.join(", ") : "Push In, Arc Shot"}
 - Camera Motion Amplitude: ${config.cameraAmplitude && config.cameraAmplitude !== 'default' ? config.cameraAmplitude : "medium / default (omit)"}
 - Camera Motion Speed: ${config.cameraSpeed && config.cameraSpeed !== 'default' ? config.cameraSpeed : "normal / default (omit)"}
 - Spoken Dialogue to be voiced by character (MUST format inside <d>[Language] ...</d>): ${config.dialogueText ? config.dialogueText : "None"}
 - Sound Effects / Audio: ${config.sfxText || "Ambient soundscape"}
 - Suppress Background Music: ${config.suppressMusic ? "Yes (Add non_diegetic_music: N/A)" : "No"}
-- Creativity Level: Level ${creativityLevel} of 3
-- Reference Assets (Block 1):
+- Assistant Director Mode: ${assistantDirector ? "Enabled (Enrich secondary physical details)" : "Disabled (Strictly faithful)"}
+- Reference Assets:
 ${sanitizedReferences}
 
 KEYFRAME & PHYSICAL SLOT ALIGNMENT CONTRACT:
@@ -1405,7 +1397,7 @@ CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE (MUST FOLLOW STRICTLY):
   2. Action (chronological step-by-step physical movement, directions, contact)
   3. End state (resulting posture, resting place of objects when movement concludes)
 
-${creativityDirective}
+${assistantDirectorDirective}
 
 ${seriesDirective}
 
@@ -1416,28 +1408,16 @@ CRITICAL DIALOGUE RULES:
 - Any character spoken dialogue MUST be placed inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>). Keep the exact user dialogue verbatim.
 - Double quotes "" are strictly reserved for text visibly seen on-screen (e.g. signs, logos).
 CRITICAL PROHIBITION: DO NOT write any file names, file extensions (e.g. .png, .jpg), or local upload names into the output! Define subjects using clear visual descriptions only.
-Ensure English language is used for the actual prompt text (fullPrompt, block1, block2, block3) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh, suggestions, and continuityNotes!
+Ensure English language is used for the actual prompt text (fullPrompt) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh, suggestions, and continuityNotes!
 `;
 
     if (appMode === 'ollama') {
-      const systemPrompt = `${MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION}
+      const systemPrompt = `${buildModularSystemInstruction(config.mode || "T2VA")}
 
 CRITICAL FORMAT REQUIREMENT:
 You MUST output a valid JSON object matching this schema:
 {
-  "block1": "string (Block 1: Reference Analysis or Shot 1 details)",
-  "block2": "string (Block 2: Temporal Segments & Actions)",
-  "block3": "string (Block 3: Audio, Soundscape & Non-diegetic Music)",
-  "audioNotes": "string (Audio notes / non-diegetic music breakdown)",
   "fullPrompt": "string (The complete assembled MiniMax-H3 prompt)",
-  "temporalTimeline": [
-    {
-      "timeframe": "string (e.g. [Shot 1] or [Shot 2] At 00:03.500)",
-      "action": "string (Action description following Starting state -> Action -> End state)",
-      "camera": "string (Natural English camera movement)",
-      "audio": "string (SFX / dialogue)"
-    }
-  ],
   "explanationZh": "string (Traditional Chinese explanation of the prompt design and cinematography)",
   "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"],
   "isSeries": ${isSeriesMode ? "true" : "false"},
@@ -1466,24 +1446,13 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
         userPrompt,
         images: ollamaImages.length > 0 ? ollamaImages : undefined,
         formatJson: true,
-        temperature: dynamicTemperature,
+        temperature: ollamaTemperature,
       });
 
       const resultJson = parseJsonSafely(raw);
 
       // Sanitize any accidental file names from Ollama output
       if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
-      if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
-      if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
-      if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
-      if (Array.isArray(resultJson.temporalTimeline)) {
-        resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
-          ...item,
-          action: sanitizeGeneratedPromptText(item.action || ''),
-          camera: sanitizeGeneratedPromptText(item.camera || ''),
-          audio: sanitizeGeneratedPromptText(item.audio || ''),
-        }));
-      }
       if (Array.isArray(resultJson.episodes)) {
         resultJson.episodes = resultJson.episodes.map((ep: any, idx: number) => ({
           ...ep,
@@ -1503,24 +1472,12 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
     }
 
     if (appMode === 'llamacpp') {
-      const systemPrompt = `${MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION}
+      const systemPrompt = `${buildModularSystemInstruction(config.mode || "T2VA")}
 
 CRITICAL FORMAT REQUIREMENT:
 You MUST output a valid JSON object matching this schema:
 {
-  "block1": "string (Block 1: Reference Analysis or Shot 1 details)",
-  "block2": "string (Block 2: Temporal Segments & Actions)",
-  "block3": "string (Block 3: Audio, Soundscape & Non-diegetic Music)",
-  "audioNotes": "string (Audio notes / non-diegetic music breakdown)",
   "fullPrompt": "string (The complete assembled MiniMax-H3 prompt)",
-  "temporalTimeline": [
-    {
-      "timeframe": "string (e.g. [Shot 1] or [Shot 2] At 00:03.500)",
-      "action": "string (Action description following Starting state -> Action -> End state)",
-      "camera": "string (Natural English camera movement)",
-      "audio": "string (SFX / dialogue)"
-    }
-  ],
   "explanationZh": "string (Traditional Chinese explanation of the prompt design and cinematography)",
   "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"],
   "isSeries": ${isSeriesMode ? "true" : "false"},
@@ -1549,24 +1506,13 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
         userPrompt,
         images: ollamaImages.length > 0 ? ollamaImages : undefined,
         formatJson: true,
-        temperature: dynamicTemperature,
+        temperature: llamacppTemperature,
       });
 
       const resultJson = parseJsonSafely(raw);
 
       // Sanitize any accidental file names from llama.cpp output
       if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
-      if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
-      if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
-      if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
-      if (Array.isArray(resultJson.temporalTimeline)) {
-        resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
-          ...item,
-          action: sanitizeGeneratedPromptText(item.action || ''),
-          camera: sanitizeGeneratedPromptText(item.camera || ''),
-          audio: sanitizeGeneratedPromptText(item.audio || ''),
-        }));
-      }
       if (Array.isArray(resultJson.episodes)) {
         resultJson.episodes = resultJson.episodes.map((ep: any, idx: number) => ({
           ...ep,
@@ -1591,88 +1537,71 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
       ? [...multimodalParts, userPrompt]
       : userPrompt;
 
+    const geminiConfig: any = {
+      systemInstruction: buildModularSystemInstruction(config.mode || "T2VA"),
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          fullPrompt: { type: Type.STRING },
+          explanationZh: { type: Type.STRING },
+          suggestions: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+          },
+          isSeries: { type: Type.BOOLEAN },
+          seriesTitle: { type: Type.STRING },
+          storyArcSummary: { type: Type.STRING },
+          episodes: {
+            type: Type.ARRAY,
+            items: {
+              type: Type.OBJECT,
+              properties: {
+                episodeIndex: { type: Type.INTEGER },
+                title: { type: Type.STRING },
+                duration: { type: Type.STRING },
+                startingState: { type: Type.STRING },
+                actionSequence: { type: Type.STRING },
+                endState: { type: Type.STRING },
+                fullPrompt: { type: Type.STRING },
+                cameraMovement: { type: Type.STRING },
+                audioSoundscape: { type: Type.STRING },
+                continuityNotes: { type: Type.STRING },
+              },
+              required: [
+                "episodeIndex",
+                "title",
+                "duration",
+                "startingState",
+                "actionSequence",
+                "endState",
+                "fullPrompt",
+                "cameraMovement",
+                "audioSoundscape",
+                "continuityNotes",
+              ],
+            },
+          },
+        },
+        required: [
+          "fullPrompt",
+          "explanationZh",
+          "suggestions",
+        ],
+      },
+    };
+
+    if (typeof geminiTemperature === 'number') {
+      geminiConfig.temperature = geminiTemperature;
+    }
+
     const response = await callGeminiDynamic(
       ai,
       'prompt_generation',
       effectiveTier,
       {
         contents: requestContents,
-        config: {
-          systemInstruction: MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION,
-          temperature: dynamicTemperature,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              block1: { type: Type.STRING },
-              block2: { type: Type.STRING },
-              block3: { type: Type.STRING },
-              audioNotes: { type: Type.STRING },
-              fullPrompt: { type: Type.STRING },
-              temporalTimeline: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    timeframe: { type: Type.STRING },
-                    action: { type: Type.STRING },
-                    camera: { type: Type.STRING },
-                    audio: { type: Type.STRING },
-                  },
-                  required: ["timeframe", "action", "camera", "audio"],
-                },
-              },
-              explanationZh: { type: Type.STRING },
-              suggestions: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
-              },
-              isSeries: { type: Type.BOOLEAN },
-              seriesTitle: { type: Type.STRING },
-              storyArcSummary: { type: Type.STRING },
-              episodes: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    episodeIndex: { type: Type.INTEGER },
-                    title: { type: Type.STRING },
-                    duration: { type: Type.STRING },
-                    startingState: { type: Type.STRING },
-                    actionSequence: { type: Type.STRING },
-                    endState: { type: Type.STRING },
-                    fullPrompt: { type: Type.STRING },
-                    cameraMovement: { type: Type.STRING },
-                    audioSoundscape: { type: Type.STRING },
-                    continuityNotes: { type: Type.STRING },
-                  },
-                  required: [
-                    "episodeIndex",
-                    "title",
-                    "duration",
-                    "startingState",
-                    "actionSequence",
-                    "endState",
-                    "fullPrompt",
-                    "cameraMovement",
-                    "audioSoundscape",
-                    "continuityNotes",
-                  ],
-                },
-              },
-            },
-            required: [
-              "block1",
-              "block2",
-              "block3",
-              "audioNotes",
-              "fullPrompt",
-              "temporalTimeline",
-              "explanationZh",
-              "suggestions",
-            ],
-          },
-        },
+        config: geminiConfig,
       }
     );
 
@@ -1681,17 +1610,6 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
 
     // Sanitize any accidental file names from Gemini output
     if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
-    if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
-    if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
-    if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
-    if (Array.isArray(resultJson.temporalTimeline)) {
-      resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
-        ...item,
-        action: sanitizeGeneratedPromptText(item.action || ''),
-        camera: sanitizeGeneratedPromptText(item.camera || ''),
-        audio: sanitizeGeneratedPromptText(item.audio || ''),
-      }));
-    }
     if (Array.isArray(resultJson.episodes)) {
       resultJson.episodes = resultJson.episodes.map((ep: any, idx: number) => ({
         ...ep,
@@ -1720,19 +1638,24 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
 // Quick Optimize Endpoint
 app.post("/api/optimize-existing-prompt", async (req, res) => {
   try {
-    const { rawPrompt, duration = "10s", suppressMusic = false, creativityLevel = 1 } = req.body;
+    const { rawPrompt, duration = "10s", suppressMusic = false } = req.body;
     const { appMode, effectiveTier, ollamaModelToUse, llamacppModelToUse } = resolveAppMode(req.body);
 
-    const numLevel = typeof creativityLevel === 'number' ? creativityLevel : 1;
-    const creativityDirective = getCreativityDirective(numLevel);
-    const dynamicTemperature = getCreativityTemperature(numLevel);
+    const assistantDirector = typeof req.body.assistantDirector === 'boolean'
+      ? req.body.assistantDirector
+      : (req.body.creativityLevel !== 0);
+    const assistantDirectorDirective = getAssistantDirectorDirective(assistantDirector);
+
+    const ollamaTemperature = resolveTemperature('ollama', req.body.temperatureMode, req.body.manualTemperature);
+    const llamacppTemperature = resolveTemperature('llamacpp', req.body.temperatureMode, req.body.manualTemperature);
+    const geminiTemperature = resolveTemperature('gemini', req.body.temperatureMode, req.body.manualTemperature);
 
     const requestText = `
 Take the user's rough prompt or idea below and optimize/rewrite it into the official MiniMax-H3 prompt standard:
 Rough Prompt: "${rawPrompt}"
 Duration: ${duration}
 Suppress Music: ${suppressMusic ? "Yes" : "No"}
-Creativity Level: Level ${numLevel} of 3
+Assistant Director Mode: ${assistantDirector ? "Enabled" : "Disabled"}
 
 Refine it strictly following official MiniMax-H3 specifications:
 CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE:
@@ -1747,30 +1670,18 @@ CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE:
 - Formulate complete overall_soundscape and non_diegetic_music sections according to the guide.
 DO NOT include any file names or file extensions in the generated prompt!
 
-${creativityDirective}
+${assistantDirectorDirective}
 `;
 
     if (appMode === 'ollama') {
-      const systemPrompt = `${MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION}
+      const systemPrompt = `${buildModularSystemInstruction("T2VA")}
 
 CRITICAL FORMAT REQUIREMENT:
 You MUST output a valid JSON object matching this schema:
 {
-  "block1": "string",
-  "block2": "string",
-  "block3": "string",
-  "audioNotes": "string",
-  "fullPrompt": "string",
-  "temporalTimeline": [
-    {
-      "timeframe": "string",
-      "action": "string",
-      "camera": "string",
-      "audio": "string"
-    }
-  ],
-  "explanationZh": "string",
-  "suggestions": ["string"]
+  "fullPrompt": "string (The complete assembled MiniMax-H3 prompt)",
+  "explanationZh": "string (Traditional Chinese explanation of the prompt design and cinematography)",
+  "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"]
 }
 Do NOT output any markdown tags outside the JSON. Return only the valid JSON object.`;
 
@@ -1779,48 +1690,25 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
         systemPrompt,
         userPrompt: requestText,
         formatJson: true,
-        temperature: dynamicTemperature,
+        temperature: ollamaTemperature,
       });
 
       const resultJson = parseJsonSafely(raw);
 
       if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
-      if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
-      if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
-      if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
-      if (Array.isArray(resultJson.temporalTimeline)) {
-        resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
-          ...item,
-          action: sanitizeGeneratedPromptText(item.action || ''),
-          camera: sanitizeGeneratedPromptText(item.camera || ''),
-          audio: sanitizeGeneratedPromptText(item.audio || ''),
-        }));
-      }
 
       return res.json({ success: true, data: resultJson });
     }
 
     if (appMode === 'llamacpp') {
-      const systemPrompt = `${MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION}
+      const systemPrompt = `${buildModularSystemInstruction("T2VA")}
 
 CRITICAL FORMAT REQUIREMENT:
 You MUST output a valid JSON object matching this schema:
 {
-  "block1": "string",
-  "block2": "string",
-  "block3": "string",
-  "audioNotes": "string",
-  "fullPrompt": "string",
-  "temporalTimeline": [
-    {
-      "timeframe": "string",
-      "action": "string",
-      "camera": "string",
-      "audio": "string"
-    }
-  ],
-  "explanationZh": "string",
-  "suggestions": ["string"]
+  "fullPrompt": "string (The complete assembled MiniMax-H3 prompt)",
+  "explanationZh": "string (Traditional Chinese explanation of the prompt design and cinematography)",
+  "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"]
 }
 Do NOT output any markdown tags outside the JSON. Return only the valid JSON object.`;
 
@@ -1829,28 +1717,42 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
         systemPrompt,
         userPrompt: requestText,
         formatJson: true,
-        temperature: dynamicTemperature,
+        temperature: llamacppTemperature,
       });
 
       const resultJson = parseJsonSafely(raw);
 
       if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
-      if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
-      if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
-      if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
-      if (Array.isArray(resultJson.temporalTimeline)) {
-        resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
-          ...item,
-          action: sanitizeGeneratedPromptText(item.action || ''),
-          camera: sanitizeGeneratedPromptText(item.camera || ''),
-          audio: sanitizeGeneratedPromptText(item.audio || ''),
-        }));
-      }
 
       return res.json({ success: true, data: resultJson });
     }
 
     const ai = getGeminiClient();
+
+    const geminiConfig: any = {
+      systemInstruction: buildModularSystemInstruction("T2VA"),
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          fullPrompt: { type: Type.STRING },
+          explanationZh: { type: Type.STRING },
+          suggestions: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+          },
+        },
+        required: [
+          "fullPrompt",
+          "explanationZh",
+          "suggestions",
+        ],
+      },
+    };
+
+    if (typeof geminiTemperature === 'number') {
+      geminiConfig.temperature = geminiTemperature;
+    }
 
     const response = await callGeminiDynamic(
       ai,
@@ -1858,49 +1760,7 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
       effectiveTier,
       {
         contents: requestText,
-        config: {
-          systemInstruction: MINIMAX_H3_SKILL_SYSTEM_INSTRUCTION,
-          temperature: dynamicTemperature,
-          responseMimeType: "application/json",
-          responseSchema: {
-            type: Type.OBJECT,
-            properties: {
-              block1: { type: Type.STRING },
-              block2: { type: Type.STRING },
-              block3: { type: Type.STRING },
-              audioNotes: { type: Type.STRING },
-              fullPrompt: { type: Type.STRING },
-              temporalTimeline: {
-                type: Type.ARRAY,
-                items: {
-                  type: Type.OBJECT,
-                  properties: {
-                    timeframe: { type: Type.STRING },
-                    action: { type: Type.STRING },
-                    camera: { type: Type.STRING },
-                    audio: { type: Type.STRING },
-                  },
-                  required: ["timeframe", "action", "camera", "audio"],
-                },
-              },
-              explanationZh: { type: Type.STRING },
-              suggestions: {
-                type: Type.ARRAY,
-                items: { type: Type.STRING },
-              },
-            },
-            required: [
-              "block1",
-              "block2",
-              "block3",
-              "audioNotes",
-              "fullPrompt",
-              "temporalTimeline",
-              "explanationZh",
-              "suggestions",
-            ],
-          },
-        },
+        config: geminiConfig,
       }
     );
 
@@ -1908,17 +1768,6 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
     const resultJson = JSON.parse(outputText);
 
     if (resultJson.fullPrompt) resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
-    if (resultJson.block1) resultJson.block1 = sanitizeGeneratedPromptText(resultJson.block1);
-    if (resultJson.block2) resultJson.block2 = sanitizeGeneratedPromptText(resultJson.block2);
-    if (resultJson.block3) resultJson.block3 = sanitizeGeneratedPromptText(resultJson.block3);
-    if (Array.isArray(resultJson.temporalTimeline)) {
-      resultJson.temporalTimeline = resultJson.temporalTimeline.map((item: any) => ({
-        ...item,
-        action: sanitizeGeneratedPromptText(item.action || ''),
-        camera: sanitizeGeneratedPromptText(item.camera || ''),
-        audio: sanitizeGeneratedPromptText(item.audio || ''),
-      }));
-    }
 
     return res.json({ success: true, data: resultJson });
   } catch (error: any) {

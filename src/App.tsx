@@ -14,6 +14,7 @@ import {
   CameraSpeed,
   GenerationMode,
   CreativityLevel,
+  TemperatureMode,
   EngineTier,
   AiProvider,
   AppMode,
@@ -24,7 +25,6 @@ import {
 } from './types';
 import { Navbar } from './components/Navbar';
 import { ReferenceManager } from './components/ReferenceManager';
-import { TimelineVisualizer } from './components/TimelineVisualizer';
 import { PromptSyntaxHighlighter } from './components/PromptSyntaxHighlighter';
 import { PresetDrawer } from './components/PresetDrawer';
 import { HistoryDrawer } from './components/HistoryDrawer';
@@ -40,7 +40,6 @@ import {
   Volume2,
   Sliders,
   RotateCcw,
-  Layers,
   Edit3,
   HelpCircle,
   FileCode,
@@ -48,6 +47,7 @@ import {
   Clock,
   LayoutGrid,
   Type,
+  Thermometer,
   Minus,
   Plus,
   X,
@@ -146,65 +146,6 @@ const LIGHTING_PRESETS = [
   'Cinematic dark shadows with directional moonlight',
 ];
 
-const CREATIVITY_LEVEL_SPECS = {
-  0: {
-    level: 0 as const,
-    titleZh: '保守忠實',
-    titleEn: 'Strict',
-    badge: '規格轉譯官・零腦補',
-    sliderBg: 'accent-cyan-500',
-    color: 'from-blue-500 to-cyan-500',
-    activeBorder: 'border-cyan-500/60',
-    activeBg: 'bg-cyan-950/40 text-cyan-200',
-    badgeBg: 'bg-cyan-950/80 text-cyan-300 border-cyan-700/50',
-    textColor: 'text-cyan-400',
-    description: '嚴格遵照使用者原始文字與限制，不增添未提及之人事物，以專業規格化電影語法忠實轉譯。',
-    icon: ShieldCheck,
-  },
-  1: {
-    level: 1 as const,
-    titleZh: '邏輯補完',
-    titleEn: 'Enrich',
-    badge: '細節攝影指導・預設推薦',
-    sliderBg: 'accent-emerald-500',
-    color: 'from-emerald-500 to-teal-400',
-    activeBorder: 'border-emerald-500/60',
-    activeBg: 'bg-emerald-950/40 text-emerald-200',
-    badgeBg: 'bg-emerald-950/80 text-emerald-300 border-emerald-700/50',
-    textColor: 'text-emerald-400',
-    description: '維持核心意圖，主動補齊客觀物理邏輯與環境微動態（水汽、光斑、髮絲、景深分層），畫面充實生動。',
-    icon: Sparkles,
-  },
-  2: {
-    level: 2 as const,
-    titleZh: '創意靈動',
-    titleEn: 'Creative',
-    badge: '院線電影導演・光影張力',
-    sliderBg: 'accent-purple-500',
-    color: 'from-purple-500 to-indigo-500',
-    activeBorder: 'border-purple-500/60',
-    activeBg: 'bg-purple-950/40 text-purple-200',
-    badgeBg: 'bg-purple-950/80 text-purple-300 border-purple-700/50',
-    textColor: 'text-purple-400',
-    description: '保留主題與角色，導入電影級視覺變化：特殊運鏡視角（低角倒影、透視）、戲劇性光影橫掃與肢體反差。',
-    icon: Compass,
-  },
-  3: {
-    level: 3 as const,
-    titleZh: '天馬行空',
-    titleEn: 'Wild',
-    badge: '前衛先鋒藝術家・奇觀演繹',
-    sliderBg: 'accent-amber-500',
-    color: 'from-amber-500 to-rose-500',
-    activeBorder: 'border-amber-500/60',
-    activeBg: 'bg-amber-950/40 text-amber-200',
-    badgeBg: 'bg-amber-950/80 text-amber-300 border-amber-700/50',
-    textColor: 'text-amber-400',
-    description: '以構想為靈感原點釋放極致想像，導入超現實奇觀、重力或物理異變與戲劇性反轉，兼顧 H3 動作語法。',
-    icon: Flame,
-  },
-};
-
 const DEFAULT_CONFIG: H3PromptConfig = {
   idea: '',
   mode: 'T2VA',
@@ -218,7 +159,9 @@ const DEFAULT_CONFIG: H3PromptConfig = {
   dialogueText: '',
   sfxText: '',
   suppressMusic: false,
-  creativityLevel: 1,
+  assistantDirector: true,
+  temperatureMode: 'auto',
+  manualTemperature: 0.7,
   engineTier: 'pro',
   references: [],
   isSeriesMode: false,
@@ -263,7 +206,7 @@ export default function App() {
   const [config, setConfig] = useState<H3PromptConfig>(DEFAULT_CONFIG);
   const [output, setOutput] = useState<H3PromptOutput | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [activeTab, setActiveTab] = useState<'full' | 'blocks' | 'timeline' | 'guide' | 'series'>('full');
+  const [activeTab, setActiveTab] = useState<'full' | 'guide' | 'series'>('full');
   const [selectedEpisodeIdx, setSelectedEpisodeIdx] = useState<number>(0);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editedPrompt, setEditedPrompt] = useState<string>('');
@@ -703,7 +646,7 @@ ${ep.fullPrompt}`;
     const mdLines = [
       `# MiniMax-H3 系列連續提示詞專案: ${output.seriesTitle || config.idea || '未命名系列'}`,
       `> 故事弧概要: ${output.storyArcSummary || '無'}`,
-      `> 生成模式: ${config.mode} | 時長: ${config.duration} | 比例: ${config.aspectRatio} | 創意自由度: Level ${config.creativityLevel ?? 1} (${CREATIVITY_LEVEL_SPECS[(config.creativityLevel ?? 1) as CreativityLevel]?.titleZh || '邏輯補完'})`,
+      `> 生成模式: ${config.mode} | 時長: ${config.duration} | 比例: ${config.aspectRatio} | 輔助導演: ${config.assistantDirector !== false ? '已啟用' : '關閉'} | 採樣溫度: ${config.temperatureMode === 'manual' ? (config.manualTemperature ?? 0.7) : '自動預設'}`,
       `> 建立時間: ${new Date().toLocaleString('zh-TW')}`,
       '',
       '---',
@@ -820,12 +763,6 @@ ${ep.fullPrompt}`;
     showToast(`已添加修飾語: ${tagText}`, 'success');
   };
 
-  const currentCreativityLevel: CreativityLevel = (
-    typeof config.creativityLevel === 'number' && config.creativityLevel >= 0 && config.creativityLevel <= 3
-      ? config.creativityLevel
-      : 1
-  ) as CreativityLevel;
-
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-purple-500/30">
       {/* Top Navigation Bar */}
@@ -906,106 +843,122 @@ ${ep.fullPrompt}`;
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-950 border border-slate-800 text-slate-100 placeholder-slate-600 focus:outline-none focus:border-purple-500 transition-all resize-y min-h-[240px]"
             />
 
-            {/* Creativity Level Slider (0: 保守忠實 ~ 3: 天馬行空) */}
-            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/90 space-y-3 shadow-inner">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5">
-                  <Sliders className="w-3.5 h-3.5 text-purple-400" />
-                  <label className="text-xs font-semibold text-slate-200">
-                    創意自由度 (Creativity Slider)
-                  </label>
+            {/* Assistant Director & Temperature Configurator */}
+            <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800/90 space-y-3.5 shadow-inner">
+              {/* Assistant Director Toggle */}
+              <div className="flex items-start justify-between gap-3">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-1.5">
+                    <Wand2 className="w-3.5 h-3.5 text-purple-400" />
+                    <label className="text-xs font-semibold text-slate-200">
+                      輔助導演開關 (Assistant Director)
+                    </label>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    {config.assistantDirector !== false
+                      ? '已啟用：AI 自動推理補充周邊環境動態、光影、次生物理細節（髮絲、水氣、景深分層）與運鏡流暢度。'
+                      : '已關閉：規格直譯模式，100% 嚴格忠於原始輸入，零額外腦補與情節增添。'}
+                  </p>
                 </div>
-                <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setConfig({ ...config, assistantDirector: config.assistantDirector === false })}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${
+                    config.assistantDirector !== false ? 'bg-purple-600' : 'bg-slate-800'
+                  }`}
+                  role="switch"
+                  aria-checked={config.assistantDirector !== false}
+                >
                   <span
-                    className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border flex items-center gap-1 transition-all ${
-                      CREATIVITY_LEVEL_SPECS[currentCreativityLevel].badgeBg
+                    aria-hidden="true"
+                    className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
+                      config.assistantDirector !== false ? 'translate-x-5' : 'translate-x-0'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {/* Sampling Temperature Control */}
+              <div className="pt-2.5 border-t border-slate-800/70 space-y-2">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Thermometer className="w-3.5 h-3.5 text-cyan-400" />
+                    <label className="text-xs font-semibold text-slate-300">
+                      採樣溫度 (Temperature)
+                    </label>
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {config.temperatureMode === 'manual' && (
+                      <button
+                        type="button"
+                        onClick={() => setConfig({ ...config, temperatureMode: 'auto', manualTemperature: 0.7 })}
+                        className="text-[10px] text-slate-400 hover:text-cyan-300 transition-colors underline decoration-dotted"
+                        title="恢復自動推薦預設值"
+                      >
+                        恢復預設
+                      </button>
+                    )}
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-cyan-800/60 bg-cyan-950/70 text-cyan-300 font-bold">
+                      {config.temperatureMode === 'manual'
+                        ? `${(config.manualTemperature ?? 0.7).toFixed(2)} (手動)`
+                        : appMode === 'ai_studio' || appMode === 'paid_api'
+                        ? 'Gemini 官方預設'
+                        : '0.70 (本地推薦)'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Mode Selector Tabs: Auto vs Manual */}
+                <div className="grid grid-cols-2 gap-1 bg-slate-900/90 p-0.5 rounded-lg border border-slate-800/80">
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, temperatureMode: 'auto' })}
+                    className={`py-1 text-[11px] font-medium rounded-md transition-all ${
+                      config.temperatureMode !== 'manual'
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold'
+                        : 'text-slate-400 hover:text-slate-200'
                     }`}
                   >
-                    Level {currentCreativityLevel}: {CREATIVITY_LEVEL_SPECS[currentCreativityLevel].titleZh}
-                  </span>
+                    自動模式 (Auto)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setConfig({ ...config, temperatureMode: 'manual' })}
+                    className={`py-1 text-[11px] font-medium rounded-md transition-all ${
+                      config.temperatureMode === 'manual'
+                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold'
+                        : 'text-slate-400 hover:text-slate-200'
+                    }`}
+                  >
+                    手動自訂 (Manual)
+                  </button>
                 </div>
-              </div>
 
-              {/* Range Slider Track */}
-              <div className="space-y-1.5 px-0.5">
-                <input
-                  type="range"
-                  min="0"
-                  max="3"
-                  step="1"
-                  value={currentCreativityLevel}
-                  onChange={(e) =>
-                    setConfig({
-                      ...config,
-                      creativityLevel: (parseInt(e.target.value, 10) as CreativityLevel) || 0,
-                    })
-                  }
-                  className={`w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer ${
-                    CREATIVITY_LEVEL_SPECS[currentCreativityLevel].sliderBg
-                  } focus:outline-none transition-all`}
-                />
-                <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                  <span className={currentCreativityLevel === 0 ? 'text-cyan-400 font-bold' : ''}>0 (保守)</span>
-                  <span className={currentCreativityLevel === 1 ? 'text-emerald-400 font-bold' : 'text-slate-400 font-medium'}>
-                    1 (預設推薦)
-                  </span>
-                  <span className={currentCreativityLevel === 2 ? 'text-purple-400 font-bold' : ''}>2 (創意)</span>
-                  <span className={currentCreativityLevel === 3 ? 'text-amber-400 font-bold' : ''}>3 (天馬行空)</span>
-                </div>
-              </div>
-
-              {/* 4 Discrete Segmented Quick-Select Buttons */}
-              <div className="grid grid-cols-4 gap-1.5 pt-0.5">
-                {([0, 1, 2, 3] as const).map((lvl) => {
-                  const spec = CREATIVITY_LEVEL_SPECS[lvl];
-                  const Icon = spec.icon;
-                  const isSelected = currentCreativityLevel === lvl;
-                  return (
-                    <button
-                      key={lvl}
-                      type="button"
-                      onClick={() => setConfig({ ...config, creativityLevel: lvl })}
-                      className={`py-1.5 px-1 rounded-lg border text-center transition-all flex flex-col items-center justify-center gap-0.5 ${
-                        isSelected
-                          ? `${spec.activeBg} ${spec.activeBorder} shadow-sm ring-1 ring-white/10`
-                          : 'bg-slate-900/60 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-                      }`}
-                    >
-                      <div className="flex items-center gap-1">
-                        <Icon className={`w-3 h-3 ${isSelected ? spec.textColor : 'text-slate-500'}`} />
-                        <span className={`text-[11px] font-bold ${isSelected ? 'text-white' : 'text-slate-300'}`}>
-                          {lvl} {spec.titleZh}
-                        </span>
-                      </div>
-                      <span className="text-[9px] text-slate-500 font-mono truncate max-w-full">
-                        {lvl === 1 ? '預設推薦' : spec.titleEn}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Dynamic Level Explanation Card */}
-              <div
-                className={`p-2.5 rounded-lg border text-[11px] leading-relaxed transition-all ${
-                  CREATIVITY_LEVEL_SPECS[currentCreativityLevel].activeBg
-                } ${CREATIVITY_LEVEL_SPECS[currentCreativityLevel].activeBorder}`}
-              >
-                <div className="flex items-center gap-1.5 font-semibold mb-1">
-                  <span className={CREATIVITY_LEVEL_SPECS[currentCreativityLevel].textColor}>
-                    {CREATIVITY_LEVEL_SPECS[currentCreativityLevel].badge}
-                  </span>
-                  <span className="text-slate-500">•</span>
-                  <span className="text-slate-300">
-                    {currentCreativityLevel === 0 && '原意保真度 100%'}
-                    {currentCreativityLevel === 1 && '補足客觀物理微動態'}
-                    {currentCreativityLevel === 2 && '電影感運鏡與光影變化'}
-                    {currentCreativityLevel === 3 && '極高自由度探索奇觀'}
-                  </span>
-                </div>
-                <p className="text-slate-300/90">
-                  {CREATIVITY_LEVEL_SPECS[currentCreativityLevel].description}
-                </p>
+                {/* Manual Slider (only shown when manual mode is active) */}
+                {config.temperatureMode === 'manual' && (
+                  <div className="space-y-1 pt-1">
+                    <input
+                      type="range"
+                      min="0.0"
+                      max="1.5"
+                      step="0.05"
+                      value={config.manualTemperature ?? 0.7}
+                      onChange={(e) =>
+                        setConfig({
+                          ...config,
+                          manualTemperature: parseFloat(e.target.value),
+                        })
+                      }
+                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none"
+                    />
+                    <div className="flex justify-between text-[10px] text-slate-500 font-mono">
+                      <span>0.0 (精準收斂)</span>
+                      <span className="text-cyan-400 font-bold">0.7 (平衡)</span>
+                      <span>1.5 (高發散度)</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1161,7 +1114,7 @@ ${ep.fullPrompt}`;
             </div>
           </div>
 
-          {/* Block 1: Reference Asset Manager */}
+          {/* Multi-Modal Reference Asset Manager */}
           <ReferenceManager
             references={config.references}
             onChange={(refs) => setConfig({ ...config, references: refs })}
@@ -1242,30 +1195,39 @@ ${ep.fullPrompt}`;
               </div>
             </div>
 
-            {/* Style Selector */}
-            <div>
-              <label className="text-xs font-medium text-slate-300 block mb-1">
-                視覺畫風與渲染 (Style & Rendering)
-              </label>
-              <select
-                value={config.style}
-                onChange={(e) => setConfig({ ...config, style: e.target.value })}
-                className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-purple-500 mb-1.5"
-              >
-                {STYLE_PRESETS.map((st, i) => (
-                  <option key={i} value={st}>
-                    {st}
-                  </option>
-                ))}
-              </select>
-              <input
-                type="text"
-                value={config.style}
-                onChange={(e) => setConfig({ ...config, style: e.target.value })}
-                placeholder="自訂畫風描述..."
-                className="w-full px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-purple-500"
-              />
-            </div>
+            {/* Style Selector: T2VA Only */}
+            {config.mode === 'T2VA' ? (
+              <div>
+                <label className="text-xs font-medium text-slate-300 block mb-1">
+                  視覺畫風與渲染 (Style & Rendering - T2VA 專用)
+                </label>
+                <select
+                  value={config.style}
+                  onChange={(e) => setConfig({ ...config, style: e.target.value })}
+                  className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-purple-500 mb-1.5"
+                >
+                  {STYLE_PRESETS.map((st, i) => (
+                    <option key={i} value={st}>
+                      {st}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="text"
+                  value={config.style}
+                  onChange={(e) => setConfig({ ...config, style: e.target.value })}
+                  placeholder="自訂畫風描述..."
+                  className="w-full px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                />
+              </div>
+            ) : (
+              <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] flex items-center gap-2 text-slate-400">
+                <span className="text-base shrink-0">🖼️</span>
+                <span>
+                  <strong className="text-slate-300">視覺畫風由參考圖片自動錨定</strong>：依官方 H3 規範，圖片模式（{config.mode}）風格直接繼承參考素材，無須手動指定。
+                </span>
+              </div>
+            )}
 
             {/* Camera Motion Three-Dimension System */}
             <div className="space-y-3 pt-2 border-t border-slate-800/60">
@@ -1612,7 +1574,7 @@ ${ep.fullPrompt}`;
                   <h2 className="text-lg font-bold text-white">生成的 MiniMax-H3 最終提示詞</h2>
                 </div>
                 <p className="text-xs text-slate-400 mt-1">
-                  包含 Block 1 素材標籤、Block 2 核心主題與 Block 3 鏡頭時間軸，支援一鍵複製貼上至 MiniMax 海螺 / Hailuo 3 AI 視訊生成器。
+                  100% 符合 MiniMax-H3 官方標準規格之全量提示詞（含實體主體鎖定、運鏡三維度與完整音訊音效），支援一鍵複製貼上至 MiniMax 海螺 / Hailuo 3 AI 視訊生成器。
                 </p>
               </div>
 
@@ -1650,9 +1612,7 @@ ${ep.fullPrompt}`;
                     ? [{ id: 'series', label: `🎬 系列分鏡 (${output.episodes.length} 段)`, icon: Film }]
                     : []),
                   { id: 'full', label: '全量提示詞 (Full Prompt)', icon: FileCode },
-                  { id: 'blocks', label: '三段式拆解 (Blocks)', icon: Layers },
-                  { id: 'timeline', label: '分鏡故事板 (Timeline)', icon: Clock },
-                  { id: 'guide', label: 'Skill 解析 (Guide)', icon: HelpCircle },
+                  { id: 'guide', label: '設計備註 (Notes)', icon: HelpCircle },
                 ].map((tab) => {
                   const Icon = tab.icon;
                   const active = activeTab === tab.id;
@@ -1949,85 +1909,30 @@ ${ep.fullPrompt}`;
                     </div>
                   </div>
                 </div>
-              ) : activeTab === 'blocks' ? (
-                /* Tab 2: 3-Block Inspector */
-                <div className="space-y-4 text-xs">
-                  {/* Block 1 */}
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-purple-300 font-mono">
-                        Block 1: Reference Material Notes
-                      </span>
-                      <button
-                        onClick={() => copyToClipboard(output.block1, 'Block 1 素材聲明')}
-                        className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white"
-                      >
-                        複製 Block 1
-                      </button>
-                    </div>
-                    <p className="font-mono text-slate-300 whitespace-pre-wrap">{output.block1}</p>
-                  </div>
-
-                  {/* Block 2 */}
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-indigo-300 font-mono">
-                        Block 2: Core Idea
-                      </span>
-                      <button
-                        onClick={() => copyToClipboard(output.block2, 'Block 2 核心主題')}
-                        className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white"
-                      >
-                        複製 Block 2
-                      </button>
-                    </div>
-                    <p className="font-mono text-slate-300 whitespace-pre-wrap">{output.block2}</p>
-                  </div>
-
-                  {/* Block 3 */}
-                  <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-cyan-300 font-mono">
-                        Block 3: Scene-by-Scene Description
-                      </span>
-                      <button
-                        onClick={() => copyToClipboard(output.block3, 'Block 3 時間軸分鏡')}
-                        className="px-2 py-0.5 rounded bg-slate-800 text-slate-300 hover:text-white"
-                      >
-                        複製 Block 3
-                      </button>
-                    </div>
-                    <p className="font-mono text-slate-300 whitespace-pre-wrap">{output.block3}</p>
-                  </div>
-                </div>
-              ) : activeTab === 'timeline' ? (
-                /* Tab 3: Timeline Visualizer */
-                <TimelineVisualizer
-                  timeline={output.temporalTimeline}
-                  onCopyText={copyToClipboard}
-                />
-              ) : (
-                /* Tab 4: H3 Skill Guide & Traditional Chinese Explanations */
+              ) : activeTab === 'guide' ? (
+                /* Tab: H3 Skill Guide & Traditional Chinese Explanations */
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 space-y-4 text-xs leading-relaxed">
                   <div>
                     <h4 className="font-bold text-purple-300 text-sm mb-1">
                       💡 MiniMax-H3 Prompt 結構設計解析
                     </h4>
-                    <p className="text-slate-300 whitespace-pre-wrap">{output.explanationZh}</p>
+                    <p className="text-slate-300 whitespace-pre-wrap">{output.explanationZh || '已為您依 MiniMax-H3 官方標準格式生成最優提示詞。'}</p>
                   </div>
 
-                  <div className="pt-3 border-t border-slate-800 space-y-2">
-                    <h4 className="font-bold text-cyan-300">
-                      🚀 提示詞生成建議與 H3 最佳實踐 Tips:
-                    </h4>
-                    <ul className="list-disc pl-4 space-y-1 text-slate-300">
-                      {output.suggestions.map((sug, i) => (
-                        <li key={i}>{sug}</li>
-                      ))}
-                    </ul>
-                  </div>
+                  {output.suggestions && output.suggestions.length > 0 && (
+                    <div className="pt-3 border-t border-slate-800 space-y-2">
+                      <h4 className="font-bold text-cyan-300">
+                        🚀 提示詞生成建議與 H3 最佳實踐 Tips:
+                      </h4>
+                      <ul className="list-disc pl-4 space-y-1 text-slate-300">
+                        {output.suggestions.map((sug, i) => (
+                          <li key={i}>{sug}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
-              )}
+              ) : null}
             </div>
           </div>
         </section>

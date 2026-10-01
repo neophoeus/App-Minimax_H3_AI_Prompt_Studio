@@ -119,6 +119,7 @@ export type CameraMove = CameraMotionType;
 export type CameraAmplitude = 'default' | 'with small amplitude' | 'with large amplitude';
 export type CameraSpeed = 'default' | 'at slow speed' | 'at fast speed';
 
+export type TemperatureMode = 'auto' | 'manual';
 export type CreativityLevel = 0 | 1 | 2 | 3;
 
 export interface H3PromptConfig {
@@ -134,7 +135,10 @@ export interface H3PromptConfig {
   dialogueText: string;
   sfxText: string;
   suppressMusic: boolean; // non_diegetic_music: N/A
-  creativityLevel?: CreativityLevel; // 0: 保守忠實, 1: 邏輯補完(預設), 2: 創意靈動, 3: 天馬行空
+  assistantDirector?: boolean; // 輔助導演開關 (預設 true: 自動推理補全次生細節)
+  temperatureMode?: TemperatureMode; // 'auto' (Gemini官方預設, 本機0.7) | 'manual'
+  manualTemperature?: number; // 手動溫度 (0.0 ~ 1.5, 預設 0.7)
+  creativityLevel?: number; // 向下相容歷史與預設集
   engineTier?: EngineTier;
   provider?: AiProvider;
   appMode?: AppMode;
@@ -155,29 +159,30 @@ export interface TemporalSegment {
 export interface SeriesEpisode {
   episodeIndex: number; // 1-indexed (e.g. 1, 2, 3, ...)
   title: string;        // 段落標題 (例如: 第 1 段：初始開場與主體錨定)
-  duration: string;     // 例如 5s 或 10s
-  startingState: string;// 起始狀態 (具體畫面位置、物件與初始姿態)
-  actionSequence: string;// 連續動作 (客觀步驟化物理位移與動作)
-  endState: string;     // 結束狀態 (動作停止時的畫面靜態落點)
   fullPrompt: string;   // 100% 獨立合法、立即可貼入 MiniMax-H3 生成的完整提示詞
-  cameraMovement: string;// 運鏡描述 (三維度自然英文動作)
-  audioSoundscape: string;// 音效與環境音
-  continuityNotes: string;// 承接說明 (如何純文字客觀承接上一段結束狀態)
+  duration?: string;     // 例如 5s 或 10s
+  startingState?: string;// 起始狀態 (具體畫面位置、物件與初始姿態)
+  actionSequence?: string;// 連續動作 (客觀步驟化物理位移與動作)
+  endState?: string;     // 結束狀態 (動作停止時的畫面靜態落點)
+  cameraMovement?: string;// 運鏡描述 (三維度自然英文動作)
+  audioSoundscape?: string;// 音效與環境音
+  continuityNotes?: string;// 承接說明 (如何純文字客觀承接上一段結束狀態)
 }
 
 export interface H3PromptOutput {
   fullPrompt: string;
-  block1: string;
-  block2: string;
-  block3: string;
-  temporalTimeline: TemporalSegment[];
-  audioNotes: string;
-  explanationZh: string;
-  suggestions: string[];
+  explanationZh?: string;
+  suggestions?: string[];
   isSeries?: boolean;
   seriesTitle?: string;
   storyArcSummary?: string;
   episodes?: SeriesEpisode[];
+  // 向下相容歷史存檔欄位
+  block1?: string;
+  block2?: string;
+  block3?: string;
+  temporalTimeline?: TemporalSegment[];
+  audioNotes?: string;
 }
 
 export interface SavedPromptItem {

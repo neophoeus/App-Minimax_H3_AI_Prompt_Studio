@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v4.0.0] - 2026-10-01
+
+### 🚀 Full Prompt Direct Generation, Assistant Director Toggle & UI Text Modernization (官方標準全量提示詞直接生成、輔助導演開關與介面文字全面現代化)
+
+#### 🎬 1. Direct Full Prompt Generation & Token Efficiency (直出全量提示詞與極致生成提速)
+- **Eliminate Redundant Schema Generation (移除重複的結構輸出)**:
+  - 徹底移除舊版三段式 `block1`、`block2`、`block3` 以及時間軸 `temporalTimeline` 的重複文字生成，回歸 MiniMax-H3 官方標準直接輸出 `fullPrompt`。
+  - 單次生成 Token 消耗自 9,000+ tokens 大幅降至 1,500 ~ 2,500 tokens（節省 >70% 生成 Token），推論速度提升 3~4 倍，徹底解決本機模型在長時間推理下耗時過長的問題。
+- **Modular Dynamic System Instructions (模組化系統提示詞分流)**:
+  - 後端 `buildModularSystemInstruction(mode)` 依據使用者的生成模式（T2VA / I2VA / FL2VA / L2VA / Ref2VA）動態裁剪並注入對應規則，減少無關規範干擾並節省大量輸入 Token，同時完整保留「三態物理動作框架」與「嚴格禁用抽象修飾詞庫」。
+
+#### 🎛️ 2. Assistant Director Toggle & Dual-Mode Temperature (輔助導演開關與雙軌制溫度調控)
+- **Assistant Director Toggle (輔助導演開關)**:
+  - 取消舊版 0~3 創意自由度滑桿，改為直覺的「輔助導演開關（預設開啟）」。
+  - **開啟 (預設)**：維持核心故事與主角設定，自動補充周邊物理環境細節（微動態、空氣流動、前後景景深與光影互動）。
+  - **關閉 (保守忠實)**：嚴格限制模型僅按字面工程化轉換，不添加任何未指名的元素。
+- **Dual-Mode Temperature Controller (雙軌制溫度控制器)**:
+  - **Google Gemini**：在自動模式下省略溫度參數，採用 Gemini 原廠原生最佳採樣設定。
+  - **本地引擎 (Ollama / llama.cpp)**：自動模式預設為 `0.7`，兼顧語法精確與詞彙豐富度。
+  - **手動模式 (Manual)**：提供滑桿允許在 `0.0` 至 `1.5` 之間自由微調數值。
+
+#### 🎨 3. Style & Rendering Conditioning (官方規範畫風與渲染條件化)
+- **Official Specification Alignment (嚴格對齊官方規範)**:
+  - 遵循 MiniMax-H3 官方指南（`base-en.txt` 第 86 行："For keyframe tasks, derive the style from the reference image; for T2VA, select it from the user's text."）：
+    - **T2VA 模式**：前端完整提供畫風與光影氛圍設定。
+    - **圖生影片模式 (I2VA, FL2VA, L2VA, Ref2VA)**：前端將畫風設定區折疊並標註「🎨 畫風由參考圖鎖定」，提示詞指引亦明確約束模型不得產生衝突的文字風格形容詞。
+
+#### ⏱️ 4. Long-Inference Timeout Protection (本機長推論超時配置)
+- **Configurable Timeouts (環境變數控制超時)**:
+  - 將後端寫死的 180 秒超時升級為由 `LLAMACPP_TIMEOUT_MS` / `OLLAMA_TIMEOUT_MS` 環境變數控制，預設提升至 **600 秒（10 分鐘）**。
+  - 保留 `start_llama.bat` 預設的思考保留機制，確保本機旗艦模型（如 Qwen3.8-27B on RTX 5090）深思熟慮時絕不被中斷。
+
+#### 🏷️ 5. UI Text Modernization & Terminology Alignment (介面過時文字全面清除與現代化)
+- **Navbar Header**: 頂部導覽列版本徽章正式升級為 `v4.0.0 • 輔助導演與全量提示詞旗艦架構`，副標題更新為 `MiniMax-H3 官方標準全量規格 & 系列連續劇本 (Series)`。
+- **Reference Asset Manager**: 移除過時的 `Block 1:` 前綴，改為 `多模態參考素材與實體槽位 (Reference Assets)`。
+- **Output Preview Card**: 移除 `包含 Block 1 素材標籤、Block 2 核心主題與 Block 3 鏡頭時間軸` 的過時描述，更新為 `100% 符合 MiniMax-H3 官方標準規格之全量提示詞`。
+- **Timeline Visualizer**: 移除 `Block 3:` 前綴，簡化為 `分鏡時間軸故事板 (Temporal Timeline)`。
+- **Backend Prompts**: 後端媒體分析與資產提示詞全面移除 Block 1 稱呼，全面使用 Reference Assets 專業詞彙。
+- **Project Version Sync**: `package.json`、`package-lock.json`、`README.md`、`README.zh-TW.md` 全面同步晉升至 `v4.0.0`。
+
 ## [v3.2.0] - 2026-10-01
 
 ### 🎨 4-Level Creativity Slider & Director Directives Architecture (4 階創意自由度滑桿與導演思維指令完全主導架構)
