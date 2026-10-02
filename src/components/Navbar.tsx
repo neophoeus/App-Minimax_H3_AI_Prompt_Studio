@@ -71,7 +71,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </h1>
               <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-full bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-cyan-500/20 text-purple-200 border border-purple-400/40 shadow-sm shadow-purple-500/20 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                v5.0.0 • 四大獨立引擎架構、語法審計自癒與系列故事板旗艦
+                v5.0.1 • 四大獨立引擎架構、語法審計自癒與系列故事板旗艦
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">

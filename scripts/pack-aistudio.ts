@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import zlib from "zlib";
 
 function copyRecursive(src: string, dest: string) {
   const stat = fs.statSync(src);
@@ -20,7 +21,110 @@ function copyRecursive(src: string, dest: string) {
   }
 }
 
-export function packAiStudio(rootDir: string = process.cwd(), outDirName: string = "dist-aistudio") {
+interface ZipEntryItem {
+  relativePath: string;
+  data: Buffer;
+}
+
+function getAllFiles(dir: string, baseDir: string = dir): ZipEntryItem[] {
+  let results: ZipEntryItem[] = [];
+  const entries = fs.readdirSync(dir, { withFileTypes: true });
+  for (const entry of entries) {
+    const fullPath = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      results = results.concat(getAllFiles(fullPath, baseDir));
+    } else if (entry.isFile()) {
+      // Force POSIX forward slash path representation for all entries
+      const rel = path.relative(baseDir, fullPath).replace(/\\/g, "/");
+      results.push({
+        relativePath: rel,
+        data: fs.readFileSync(fullPath),
+      });
+    }
+  }
+  return results;
+}
+
+/**
+ * Standard PKZIP 2.0 Writer using Node native zlib
+ * Enforces POSIX forward slashes ('/') in all entry names for Google AI Studio cloud compatibility.
+ */
+export function createStandardZip(sourceDir: string, zipFilePath: string): void {
+  const files = getAllFiles(sourceDir);
+  const localParts: Buffer[] = [];
+  const centralParts: Buffer[] = [];
+  let offset = 0;
+
+  for (const file of files) {
+    const nameBuf = Buffer.from(file.relativePath, "utf8");
+    const content = file.data;
+    const crc = zlib.crc32(content);
+    const compressed = zlib.deflateRawSync(content);
+
+    // 1. Local File Header (30 bytes)
+    const localHeader = Buffer.alloc(30);
+    localHeader.writeUInt32LE(0x04034b50, 0); // Local header signature
+    localHeader.writeUInt16LE(20, 4);         // Version needed: 2.0 (Deflate)
+    localHeader.writeUInt16LE(0x0800, 6);     // Bit 11 set: UTF-8 filename encoding
+    localHeader.writeUInt16LE(8, 8);          // Compression method: 8 (Deflate)
+    localHeader.writeUInt16LE(0, 10);         // Last mod file time
+    localHeader.writeUInt16LE(0, 12);         // Last mod file date
+    localHeader.writeUInt32LE(crc, 14);       // CRC-32
+    localHeader.writeUInt32LE(compressed.length, 18); // Compressed size
+    localHeader.writeUInt32LE(content.length, 22);    // Uncompressed size
+    localHeader.writeUInt16LE(nameBuf.length, 26);    // Filename length
+    localHeader.writeUInt16LE(0, 28);                 // Extra field length
+
+    localParts.push(localHeader, nameBuf, compressed);
+
+    // 2. Central Directory Header (46 bytes)
+    const centralHeader = Buffer.alloc(46);
+    centralHeader.writeUInt32LE(0x02014b50, 0);       // Central directory signature
+    centralHeader.writeUInt16LE(0x0314, 4);           // Made by UNIX, version 2.0
+    centralHeader.writeUInt16LE(20, 6);               // Version needed: 2.0
+    centralHeader.writeUInt16LE(0x0800, 8);           // Bit 11 set: UTF-8 filename encoding
+    centralHeader.writeUInt16LE(8, 10);               // Compression method: 8 (Deflate)
+    centralHeader.writeUInt16LE(0, 12);               // Last mod file time
+    centralHeader.writeUInt16LE(0, 14);               // Last mod file date
+    centralHeader.writeUInt32LE(crc, 16);             // CRC-32
+    centralHeader.writeUInt32LE(compressed.length, 20); // Compressed size
+    centralHeader.writeUInt32LE(content.length, 24);    // Uncompressed size
+    centralHeader.writeUInt16LE(nameBuf.length, 28);    // Filename length
+    centralHeader.writeUInt16LE(0, 30);                 // Extra field length
+    centralHeader.writeUInt16LE(0, 32);                 // File comment length
+    centralHeader.writeUInt16LE(0, 34);                 // Disk number start
+    centralHeader.writeUInt16LE(0, 36);                 // Internal file attributes
+    centralHeader.writeUInt32LE((0o100644 * 0x10000) >>> 0, 38); // External file attributes (UNIX regular file 0644)
+    centralHeader.writeUInt32LE(offset, 42);            // Relative offset of local header
+
+    centralParts.push(centralHeader, nameBuf);
+
+    offset += localHeader.length + nameBuf.length + compressed.length;
+  }
+
+  const centralOffset = offset;
+  const centralSize = centralParts.reduce((acc, p) => acc + p.length, 0);
+
+  // 3. End of Central Directory Record (22 bytes)
+  const eocd = Buffer.alloc(22);
+  eocd.writeUInt32LE(0x06054b50, 0);       // EOCD signature
+  eocd.writeUInt16LE(0, 4);                // Disk number
+  eocd.writeUInt16LE(0, 6);                // Disk with central dir
+  eocd.writeUInt16LE(files.length, 8);     // Total entries on this disk
+  eocd.writeUInt16LE(files.length, 10);    // Total entries
+  eocd.writeUInt32LE(centralSize, 12);     // Size of central directory
+  eocd.writeUInt32LE(centralOffset, 16);   // Offset of central directory
+  eocd.writeUInt16LE(0, 20);               // Comment length
+
+  const finalZipBuffer = Buffer.concat([...localParts, ...centralParts, eocd]);
+  fs.writeFileSync(zipFilePath, finalZipBuffer);
+}
+
+export function packAiStudio(
+  rootDir: string = process.cwd(),
+  outDirName: string = "dist-aistudio",
+  zipFileName: string = "minimax-h3-aistudio.zip"
+) {
   const targetDir = path.join(rootDir, outDirName);
 
   console.log(`[AI Studio Packager] Initializing pure AI Studio distribution in: ${targetDir}`);
@@ -69,7 +173,7 @@ export function packAiStudio(rootDir: string = process.cwd(), outDirName: string
   const purePkg = {
     name: "minimax-h3-ai-prompt-studio",
     private: true,
-    version: rawPkg.version || "5.0.0",
+    version: rawPkg.version || "5.0.1",
     type: "module",
     scripts: {
       dev: "tsx server.ts",
@@ -95,8 +199,17 @@ AI_STUDIO_MODE=true
     "utf-8"
   );
 
+  // 7. Compress into Standard POSIX Forward-Slash Zip
+  const zipPath = path.join(rootDir, zipFileName);
+  console.log(`[AI Studio Packager] Compressing pure files into standard forward-slash zip: ${zipPath} ...`);
+  if (fs.existsSync(zipPath)) {
+    fs.rmSync(zipPath, { force: true });
+  }
+  createStandardZip(targetDir, zipPath);
+
   console.log("[AI Studio Packager] ✅ Pure AI Studio distribution package created successfully!");
   console.log(`[AI Studio Packager] Target directory: ${targetDir}`);
+  console.log(`[AI Studio Packager] Output zip: ${zipPath}`);
 }
 
 // Self execution when invoked via CLI

@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v5.0.1] - 2026-10-02
+
+### 🩹 Google AI Studio POSIX Path Fix & Zero-Dependency PKZIP 2.0 Packager (Google AI Studio 雲端正斜線路徑支援與原生純淨打包修復)
+
+#### 📦 1. Pure Node.js PKZIP 2.0 Packager (`scripts/pack-aistudio.ts` & `pack_aistudio.bat`)
+- **Enforce POSIX Forward-Slash (`/`) Normalization (強制 ZIP 條目路徑正斜線正規化)**:
+  - 徹底解決 Windows PowerShell `Compress-Archive` 在 Windows 檔案系統產生反斜線 `\` 檔頭條目（如 `src\App.tsx`），造成 Google AI Studio 雲端 Linux 容器解壓時將反斜線視為檔案名一部分而破壞目錄結構的問題。
+  - 使用 Node.js 內建原生模組（`node:fs` 與 `node:zlib` 中的 `zlib.crc32()` / `zlib.deflateRawSync()`），以零外部依賴實作標準 PKZIP 2.0 封裝器，強制將所有條目路徑正規化為標準 POSIX 正斜線 `/`（如 `src/App.tsx`、`server/core/prompts.ts`）。
+  - 自動寫入 Local File Header、Central Directory（啟用 UTF-8 旗標 `0x0800` 與 UNIX 屬性 `0o100644`）與 End of Central Directory 紀錄。
+- **Batch Script Streamlining**:
+  - `pack_aistudio.bat` 移除 PowerShell `Compress-Archive` 指令，改為調用 TypeScript 打包核心一步到位產出 `dist-aistudio/` 及 `minimax-h3-aistudio.zip`，保持 100% Pure ASCII。
+
+#### 🧪 2. Packager Automated Verification Suite (`tests/export/packAistudio.test.ts`)
+- **Direct ZIP Header Parsing & Integrity Verification**:
+  - 擴充自動化測試套件，直接二進位解析生成的 `minimax-h3-aistudio.zip` Central Directory 檔頭，嚴格斷言：
+    - 所有條目路徑絕無 Windows 反斜線 `\`。
+    - 所有條目路徑不以 `./` 起首。
+    - 完整包含 `src/App.tsx`、`server/server-aistudio.ts` 等雲端必備模組。
+
 ## [v5.0.0] - 2026-10-02
 
 ### 🚀 Quad-Engine Decoupled Architecture, Dedicated UI & Pure AI Studio Packager (四大獨立引擎架構全面解耦、介面專屬化、純淨導出工具與端到端自動化測試套件)
