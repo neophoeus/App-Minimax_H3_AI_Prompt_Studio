@@ -1,44 +1,112 @@
 @echo off
-chcp 65001 >nul
+if "%1"=="--server" goto :LLAMA_SERVER_MODE
+
+title MiniMax-H3 Studio [Local llama.cpp RTX 5090 Studio]
+cls
+
+echo ======================================================================
+echo           MiniMax-H3 AI Prompt Studio
+echo           Engine: Local llama.cpp (RTX 5090 - http://127.0.0.1:8080)
+echo ======================================================================
+echo.
+
+where node >nul 2>nul
+if %errorlevel% neq 0 (
+    echo [ERROR] Node.js is not found on your system.
+    pause
+    exit /b 1
+)
+
+echo [*] Checking local llama.cpp server (port 8080) status...
+curl -s -m 2 http://127.0.0.1:8080/v1/models >nul 2>nul
+if %errorlevel% equ 0 (
+    echo [+] Local llama.cpp server is ONLINE
+    goto :START_STUDIO
+)
+curl -s -m 2 http://127.0.0.1:8080/health >nul 2>nul
+if %errorlevel% equ 0 (
+    echo [+] Local llama.cpp server is ONLINE
+    goto :START_STUDIO
+)
+
+echo [i] Local llama.cpp server is not running on port 8080.
+if exist "C:\llama.cpp\llama-server.exe" goto :LAUNCH_MODEL_SERVER
+where llama-server >nul 2>nul
+if %errorlevel% equ 0 goto :LAUNCH_MODEL_SERVER
+
+echo [WARNING] C:\llama.cpp\llama-server.exe or llama-server was not found.
+echo Please ensure llama.cpp is running on http://127.0.0.1:8080.
+goto :START_STUDIO
+
+:LAUNCH_MODEL_SERVER
+echo [*] Opening llama.cpp model selector in a new window...
+start "llama.cpp Model Server" "%~f0" --server
+
+echo [*] Waiting for llama-server to load model and become ready...
+for /l %%i in (1,1,30) do (
+    ping 127.0.0.1 -n 2 >nul
+    curl -s -m 2 http://127.0.0.1:8080/health >nul 2>nul && goto :LLAMA_READY
+    curl -s -m 2 http://127.0.0.1:8080/v1/models >nul 2>nul && goto :LLAMA_READY
+)
+echo [!] Timed out waiting for llama-server. Proceeding to start Studio...
+goto :START_STUDIO
+
+:LLAMA_READY
+echo [+] Local llama.cpp server is ready [ONLINE]
+
+:START_STUDIO
+echo.
+echo [*] Starting llama.cpp Studio Server on http://localhost:3000 ...
+start "" cmd /c "timeout /t 3 /nobreak >nul && start http://localhost:3000"
+
+call npx tsx server-llamacpp.ts
+pause
+exit /b 0
+
+:: ======================================================================
+::  LLAMA.CPP Model Server Launcher (RTX 5090 Accelerated)
+:: ======================================================================
+:LLAMA_SERVER_MODE
 title llama.cpp Server [RTX 5090]
 setlocal enabledelayedexpansion
 
 cd /d C:\llama.cpp
 
+cls
 echo ======================================================================
-echo           MiniMax-H3 AI Prompt Studio - 本地 llama.cpp 引擎
-echo           智慧多模態與極速加速啟動器 [RTX 5090 - 32GB VRAM]
+echo           MiniMax-H3 AI Prompt Studio - Local llama.cpp Engine
+echo           Model Selector & Acceleration Launcher [RTX 5090 - 32GB VRAM]
 echo ======================================================================
 echo.
 
 if not exist "llama-server.exe" (
-    echo [錯誤] 找不到 C:\llama.cpp\llama-server.exe，請確認 llama.cpp 路徑。
+    echo [ERROR] C:\llama.cpp\llama-server.exe not found.
     pause
     exit /b 1
 )
 
 if not exist "models\" (
-    echo [錯誤] 找不到 C:\llama.cpp\models 目錄。
+    echo [ERROR] C:\llama.cpp\models directory not found.
     pause
     exit /b 1
 )
 
-REM 檢查背景是否有殘留的 llama-server 佔用 8080 端口
+:: Terminate old running llama-server if port 8080 is occupied
 for /f "tokens=2" %%p in ('tasklist ^| findstr /i "llama-server.exe"') do (
     set "RUNNING_PID=%%p"
 )
 if defined RUNNING_PID (
-    echo [!] 偵測到已有 llama-server 正在運行中 [PID: !RUNNING_PID!]。
-    set /p kill_old="是否終止舊程序以載入新模型？ [Y/n, 直接按 Enter 預設 Y]: "
+    echo [!] Detected existing llama-server running [PID: !RUNNING_PID!].
+    set /p kill_old="Terminate old process to load new model? [Y/n, Default: Y]: "
     if "!kill_old!"=="" set "kill_old=Y"
     if /i "!kill_old!"=="Y" (
-        echo [*] 正在終止舊程序...
+        echo [*] Terminating old process...
         taskkill /f /pid !RUNNING_PID! >nul 2>nul
         timeout /t 1 /nobreak >nul
     )
 )
 
-echo [*] 正在智慧掃描 C:\llama.cpp\models 主模型與視覺投影組件 [mmproj]...
+echo [*] Scanning C:\llama.cpp\models for GGUF models and mmproj vision projectors...
 echo.
 
 set count=0
@@ -55,8 +123,7 @@ for /r "C:\llama.cpp\models" %%f in (*.gguf) do (
                 set "dir_!count!=%%~dpf"
                 set "name_!count!=%%~nxf"
                 
-                REM 檢查該模型所屬目錄是否有對應架構的 mmproj 視覺投影
-                set "has_mmproj_!count!=無"
+                set "has_mmproj_!count!=None"
                 set "item_tag="
                 echo !fname! | findstr /i "Gemma4" >nul && set "item_tag=Gemma4"
                 if not defined item_tag (
@@ -70,20 +137,19 @@ for /r "C:\llama.cpp\models" %%f in (*.gguf) do (
                 )
                 if defined item_tag (
                     for /f "delims=" %%m in ('dir /b "%%~dpf*mmproj*!item_tag!*.gguf" 2^>nul') do (
-                        set "has_mmproj_!count!=有 [%%~nxm]"
+                        set "has_mmproj_!count!=Matched [%%~nxm]"
                     )
                 )
-                if "!has_mmproj_!count!"=="無" (
+                if "!has_mmproj_!count!"=="None" (
                     for /f "delims=" %%m in ('dir /b "%%~dpfmmproj*.gguf" 2^>nul') do (
-                        set "has_mmproj_!count!=有 [%%~nxm]"
+                        set "has_mmproj_!count!=Matched [%%~nxm]"
                     )
                 )
                 
-                REM 標註 MTP 支援狀態
-                set "mtp_tag_!count!=標準自回歸 (無 MTP 層)"
+                set "mtp_tag_!count!=Standard Autoregressive"
                 echo !fname! | findstr /i "Qwen3.8 DeepSeek-V3 FastMTP MTP" >nul
                 if not errorlevel 1 (
-                    set "mtp_tag_!count!=原生 MTP (2.23x 加速)"
+                    set "mtp_tag_!count!=Embedded MTP (2.23x Speedup)"
                 )
             )
         )
@@ -91,27 +157,27 @@ for /r "C:\llama.cpp\models" %%f in (*.gguf) do (
 )
 
 if %count%==0 (
-    echo [錯誤] 找不到任何可用 GGUF 主模型，請確認 C:\llama.cpp\models 路徑。
+    echo [ERROR] No GGUF models found in C:\llama.cpp\models.
     pause
     exit /b 1
 )
 
 echo ----------------------------------------------------------------------
-echo 可載入的 GGUF 主模型清單:
+echo Available GGUF Models:
 echo ----------------------------------------------------------------------
 for /l %%i in (1,1,%count%) do (
     echo   [%%i] !name_%%i!
-    echo       ├─ 視覺投影: !has_mmproj_%%i!
-    echo       └─ 加速特性: !mtp_tag_%%i!
+    echo       Vision Projector: !has_mmproj_%%i!
+    echo       Acceleration:     !mtp_tag_%%i!
     echo.
 )
 echo ----------------------------------------------------------------------
 
-set /p choice="請輸入要載入的模型編號 [1-%count%, 直接按 Enter 預設載入 1]: "
+set /p choice="Enter model number to load [1-%count%, Default: 1]: "
 if "!choice!"=="" set "choice=1"
 
 if not defined file_%choice% (
-    echo [錯誤] 輸入編號無效，已退出。
+    echo [ERROR] Invalid selection. Exiting.
     pause
     exit /b 1
 )
@@ -120,7 +186,7 @@ set "SELECTED_MODEL=!file_%choice%!"
 set "MODEL_DIR=!dir_%choice%!"
 set "MODEL_NAME=!name_%choice%!"
 
-REM 自動定位配對 mmproj 視覺投影 (優先依架構家族精準配對)
+:: Auto-pair mmproj
 set "MMPROJ_FILE="
 set "MMPROJ_NAME="
 set "MMPROJ_ARG="
@@ -147,7 +213,6 @@ if defined SEARCH_TAG (
     )
 )
 
-REM 若無架構專屬匹配，則在當前目錄尋找任何 mmproj
 if not defined MMPROJ_FILE (
     for /f "delims=" %%m in ('dir /b "!MODEL_DIR!mmproj*.gguf" 2^>nul') do (
         if not defined MMPROJ_FILE (
@@ -158,7 +223,6 @@ if not defined MMPROJ_FILE (
     )
 )
 
-REM 若當前目錄無 mmproj，全目錄備援搜尋 (優先依架構)
 if not defined MMPROJ_FILE if defined SEARCH_TAG (
     for /f "delims=" %%m in ('dir /b /s "C:\llama.cpp\models\*mmproj*!SEARCH_TAG!*.gguf" 2^>nul') do (
         if not defined MMPROJ_FILE (
@@ -179,35 +243,36 @@ if not defined MMPROJ_FILE (
     )
 )
 
-REM 智慧架構與 MTP 加速判定 (僅 Qwen3.8 等原生內建 MTP 層之模型啟用)
+:: MTP acceleration flag
 set "MTP_ARG="
 set "MTP_DESC="
 echo !MODEL_NAME! | findstr /i "Qwen3.8 DeepSeek-V3 FastMTP MTP" >nul
 if not errorlevel 1 (
     set "MTP_ARG=--spec-type draft-mtp"
-    set "MTP_DESC=原生 Embedded MTP [雙倍極速 2.23x 加速，官方通用相容]"
+    set "MTP_DESC=Embedded MTP [2.23x Speedup]"
 ) else (
     set "MTP_ARG="
-    set "MTP_DESC=標準自回歸推理模式 [該模型無 MTP 層，已自動切換安全標準模式]"
+    set "MTP_DESC=Standard Autoregressive"
 )
 
 cls
 echo ======================================================================
-echo           MiniMax-H3 AI Prompt Studio - llama.cpp 伺服器啟動中
+echo           MiniMax-H3 AI Prompt Studio - llama.cpp Server Launching
 echo ======================================================================
-echo [*] 模型路徑: !SELECTED_MODEL!
+echo [*] Model:        !SELECTED_MODEL!
 if defined MMPROJ_NAME (
-    echo [+] 視覺投影: !MMPROJ_NAME! [已自動精準配對掛載，支援多模態圖片/影片分析]
+    echo [+] Projector:    !MMPROJ_NAME! [Multi-modal Vision Ready]
 ) else (
-    echo [i] 視覺投影: 未偵測到相容 mmproj 投影檔 [純文字推理模式]
+    echo [i] Projector:    None [Text Inference Mode]
 )
-echo [+] 推理加速: !MTP_DESC!
-echo [*] GPU 卸載: -ngl 99 [RTX 5090 32GB VRAM 全層載入]
-echo [*] 加速技術: --flash-attn on, -c 32768 [32K 旗艦上下文]
-echo [*] 連線端點: http://127.0.0.1:8080
+echo [+] Acceleration: !MTP_DESC!
+echo [*] GPU Offload:  -ngl 99 [RTX 5090 32GB VRAM Full Layers]
+echo [*] Optimizations: --flash-attn on, -c 32768 [32K Context]
+echo [*] Endpoint:     http://127.0.0.1:8080
 echo ======================================================================
 echo.
 
 llama-server.exe -m "!SELECTED_MODEL!" !MMPROJ_ARG! !MTP_ARG! -ngl 99 --flash-attn on -c 32768 --host 127.0.0.1 --port 8080
 
 pause
+exit /b 0

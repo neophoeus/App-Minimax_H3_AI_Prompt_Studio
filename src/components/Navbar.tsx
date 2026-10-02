@@ -17,7 +17,6 @@ import { EngineTier, AppMode, SystemModeStatus, OllamaModelItem, LlamaCppModelIt
 
 interface NavbarProps {
   appMode: AppMode;
-  onChangeAppMode: (mode: AppMode) => void;
   systemStatus: SystemModeStatus | null;
   onRefreshStatus: () => void;
   engineTier: EngineTier;
@@ -36,7 +35,6 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({
   appMode,
-  onChangeAppMode,
   systemStatus,
   onRefreshStatus,
   engineTier,
@@ -52,18 +50,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onResetOptions,
   savedCount,
 }) => {
-  const [showModeInfo, setShowModeInfo] = useState(false);
   const [showTierInfo, setShowTierInfo] = useState(false);
   const [showPaidApiInfo, setShowPaidApiInfo] = useState(false);
-
-  const modeLabels: Record<AppMode, string> = {
-    ai_studio: 'AI Studio 雲端引擎',
-    ollama: '本地 Ollama 離線引擎',
-    llamacpp: '本地 llama.cpp 離線引擎',
-    paid_api: 'Gemini Paid API 直通引擎',
-  };
-
-  const isAutoSelected = systemStatus?.recommendedMode === appMode;
 
   return (
     <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 px-4 lg:px-8 py-3.5">
@@ -81,8 +69,9 @@ export const Navbar: React.FC<NavbarProps> = ({
               <h1 className="text-lg font-bold bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
                 MiniMax-H3 AI 提示詞工作室
               </h1>
-              <span className="px-2 py-0.5 text-[10px] font-mono font-semibold rounded-full bg-purple-500/10 text-purple-300 border border-purple-500/30">
-                v4.1.0 • 語法審計自癒、單集精修與雙契約旗艦架構
+              <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-full bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-cyan-500/20 text-purple-200 border border-purple-400/40 shadow-sm shadow-purple-500/20 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
+                v5.0.0 • 四大獨立引擎架構、語法審計自癒與系列故事板旗艦
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
@@ -101,98 +90,173 @@ export const Navbar: React.FC<NavbarProps> = ({
           </div>
         </div>
 
-        {/* Operating Mode Switcher & Controls */}
+        {/* Active Dedicated Engine Status & Controls */}
         <div className="flex items-center flex-wrap gap-2.5 sm:gap-3">
-          {/* Tri-Engine Primary Pill Switcher */}
-          <div className="flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-700/80 shadow-inner">
-            {/* Engine 1: AI Studio 雲端引擎 (Priority 1) */}
-            <button
-              type="button"
-              onClick={() => onChangeAppMode('ai_studio')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                appMode === 'ai_studio'
-                  ? 'bg-gradient-to-r from-indigo-600/30 to-purple-600/30 text-purple-200 border border-purple-500/50 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="引擎一：AI Studio 雲端運行 (優先級 1，免額度最佳化路由)"
-            >
-              <Layers className="w-3.5 h-3.5 text-indigo-400" />
-              <span>AI Studio 引擎</span>
-              {systemStatus?.detectedModes.ai_studio ? (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="已偵測到 AI Studio 環境" />
-              ) : null}
-            </button>
+          {/* 1. Paid API Direct Flagship Engine */}
+          {appMode === 'paid_api' && (
+            <div className="relative flex items-center bg-slate-900/90 px-3 py-1.5 rounded-xl border border-teal-500/40 shadow-inner gap-2">
+              <Key className="w-4 h-4 text-teal-400" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs font-semibold text-teal-200">Gemini Paid API 直通引擎</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-950/80 border border-teal-500/30 text-teal-300 font-mono">
+                  3.8 Flash 旗艦
+                </span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/30 text-amber-300 font-mono hidden sm:inline-flex items-center gap-0.5">
+                  <Zap className="w-2.5 h-2.5" /> High Thinking
+                </span>
+                {systemStatus?.detectedModes.paid_api ? (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="已配置 GEMINI_API_KEY (線上就緒)" />
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-amber-400" title="未設定 GEMINI_API_KEY" />
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPaidApiInfo(!showPaidApiInfo)}
+                className="p-1 rounded text-slate-400 hover:text-teal-300 transition-colors"
+                title="查看 Paid API 直通引擎說明"
+              >
+                <HelpCircle className="w-3.5 h-3.5" />
+              </button>
 
-            {/* Engine 2: Gemini Paid API 直通引擎 (Priority 2) */}
-            <button
-              type="button"
-              onClick={() => onChangeAppMode('paid_api')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                appMode === 'paid_api'
-                  ? 'bg-gradient-to-r from-emerald-600/30 to-teal-600/30 text-emerald-200 border border-emerald-500/50 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="引擎二：Paid API 直通 (優先級 2，使用自備 Gemini API Key 直通高速推理)"
-            >
-              <Key className="w-3.5 h-3.5 text-teal-400" />
-              <span>Paid API 直通引擎</span>
-              {systemStatus?.detectedModes.paid_api ? (
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="已配置 Gemini API Key" />
-              ) : null}
-            </button>
-
-            {/* Engine 3: 本地 Ollama 離線引擎 (Priority 3) */}
-            <button
-              type="button"
-              onClick={() => onChangeAppMode('ollama')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                appMode === 'ollama'
-                  ? 'bg-gradient-to-r from-amber-600/30 to-orange-600/30 text-amber-200 border border-amber-500/50 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="引擎三：本地 Ollama 離線模型 (優先級 3，動態探索本地模型)"
-            >
-              <Cpu className="w-3.5 h-3.5 text-amber-400" />
-              <span>本地 Ollama 引擎</span>
-              {systemStatus?.detectedModes.ollama ? (
-                <span
-                  className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"
-                  title={`本機 Ollama 線上 (${systemStatus.details.ollamaModelCount} 個模型)`}
-                />
-              ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" title="本機 Ollama 離線或未偵測到模型" />
+              {/* Paid API Info Modal */}
+              {showPaidApiInfo && (
+                <div className="absolute right-0 top-full mt-2 w-80 p-3.5 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-50 text-xs text-slate-300 space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-bold text-white flex items-center gap-1.5">
+                      <Key className="w-3.5 h-3.5 text-teal-400" />
+                      Gemini Paid API 直通引擎說明
+                    </span>
+                    <button
+                      onClick={() => setShowPaidApiInfo(false)}
+                      className="text-slate-500 hover:text-slate-300 text-[11px]"
+                    >
+                      關閉
+                    </button>
+                  </div>
+                  <div className="space-y-1.5 leading-relaxed text-[11px]">
+                    <p>
+                      <strong className="text-teal-300">🔑 按量計費 (Pay-as-you-go)</strong>：使用您自行在 Google Cloud 綁定信用卡建立的 Paid API Key，具備高並發配額。
+                    </p>
+                    <p>
+                      <strong className="text-emerald-400">⚡ 旗艦全核心解鎖</strong>：不受 Google 訂閱制免費額度約束，對話、視覺分析與提示詞生成皆直接呼叫旗艦級 <code className="text-amber-300">gemini-3.8-flash</code> 進行深度推理，無需降級或進行 3.5-lite 分流。
+                    </p>
+                  </div>
+                </div>
               )}
-            </button>
+            </div>
+          )}
 
-            {/* Engine 4: 本地 llama.cpp 離線引擎 (Priority 4) */}
-            <button
-              type="button"
-              onClick={() => onChangeAppMode('llamacpp')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                appMode === 'llamacpp'
-                  ? 'bg-gradient-to-r from-sky-600/30 to-blue-600/30 text-sky-200 border border-sky-500/50 shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
-              }`}
-              title="引擎四：本地 llama.cpp 離線模型 (優先級 4，極致 C/C++ 顯存加速，RTX 5090 原生適配)"
-            >
-              <Terminal className="w-3.5 h-3.5 text-sky-400" />
-              <span>本地 llama.cpp 引擎</span>
-              {systemStatus?.detectedModes.llamacpp ? (
-                <span
-                  className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"
-                  title={`本機 llama.cpp 線上 (${systemStatus.details.llamacppModelCount} 個模型/插槽)`}
-                />
-              ) : (
-                <span className="w-1.5 h-1.5 rounded-full bg-rose-400" title="本機 llama.cpp 離線 (預設端口 8080)" />
-              )}
-            </button>
-          </div>
+          {/* 2. Local Ollama Offline Engine */}
+          {appMode === 'ollama' && (
+            <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-amber-500/40 shadow-inner">
+              <Cpu className="w-4 h-4 text-amber-400" />
+              <div className="flex items-center gap-1.5 mr-0.5">
+                <span className="text-xs font-semibold text-amber-200">本地 Ollama 離線引擎</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/80 border border-amber-500/30 text-amber-300 font-mono">
+                  {ollamaModels.length > 0 ? `${ollamaModels.length} 模型在線` : '離線'}
+                </span>
+                {systemStatus?.details.ollamaOnline ? (
+                  <span
+                    className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
+                    title={`本機 Ollama 線上 (${systemStatus.details.ollamaModelCount} 個模型)`}
+                  />
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-rose-400" title="本機 Ollama 離線 (未偵測到 11434 端口)" />
+                )}
+              </div>
+              <select
+                value={ollamaModel}
+                onChange={(e) => onChangeOllamaModel(e.target.value)}
+                className="bg-slate-950 border border-slate-700 text-amber-200 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-amber-500 max-w-[210px] sm:max-w-[260px] truncate"
+                title="選擇本地 Ollama 模型"
+              >
+                {ollamaModels.length === 0 ? (
+                  <option value="">
+                    {systemStatus?.details.ollamaOnline ? '未發現已安裝模型' : 'Ollama 離線 (未偵測到服務)'}
+                  </option>
+                ) : (
+                  ollamaModels.map((m) => {
+                    const param = m.details?.parameter_size ? ` (${m.details.parameter_size})` : '';
+                    const quant = m.details?.quantization_level ? ` [${m.details.quantization_level}]` : '';
+                    return (
+                      <option key={m.name} value={m.name}>
+                        {m.name}{param}{quant}
+                      </option>
+                    );
+                  })
+                )}
+              </select>
+              <button
+                type="button"
+                onClick={onRefreshStatus}
+                className="p-1 rounded text-slate-400 hover:text-amber-300 transition-colors"
+                title="重新偵測本機 Ollama 服務與模型"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
 
-          {/* Sub-selector / Options per Mode */}
-          {/* 1. If AI Studio Mode: Subscription Tier Selector (Pro, Ultra 5x, Ultra 20x) */}
+          {/* 3. Local llama.cpp Offline Engine */}
+          {appMode === 'llamacpp' && (
+            <div className="flex items-center gap-2 bg-slate-900/90 px-3 py-1.5 rounded-xl border border-sky-500/40 shadow-inner">
+              <Terminal className="w-4 h-4 text-sky-400" />
+              <div className="flex items-center gap-1.5 mr-0.5">
+                <span className="text-xs font-semibold text-sky-200">本地 llama.cpp 離線引擎</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-sky-950/80 border border-sky-500/30 text-sky-300 font-mono">
+                  RTX 5090 • 32GB
+                </span>
+                {systemStatus?.details.llamacppOnline ? (
+                  <span
+                    className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"
+                    title={`本機 llama.cpp 線上 (${systemStatus.details.llamacppModelCount} 個模型/插槽)`}
+                  />
+                ) : (
+                  <span className="w-2 h-2 rounded-full bg-rose-400" title="本機 llama.cpp 離線 (預設端口 8080)" />
+                )}
+              </div>
+              <select
+                value={llamacppModel}
+                onChange={(e) => onChangeLlamaCppModel(e.target.value)}
+                className="bg-slate-950 border border-slate-700 text-sky-200 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-sky-500 max-w-[210px] sm:max-w-[260px] truncate"
+                title="選擇本地 llama.cpp 載入模型"
+              >
+                {llamacppModels.length === 0 ? (
+                  <option value="default">
+                    {systemStatus?.details.llamacppOnline ? 'llama-server (活躍中)' : 'llama.cpp 離線 (未偵測到 8080 端口)'}
+                  </option>
+                ) : (
+                  llamacppModels.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name || m.id}
+                    </option>
+                  ))
+                )}
+              </select>
+              <button
+                type="button"
+                onClick={onRefreshStatus}
+                className="p-1 rounded text-slate-400 hover:text-sky-300 transition-colors"
+                title="重新偵測本機 llama.cpp 服務與模型"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
+
+          {/* 4. Google AI Studio Cloud Engine */}
           {appMode === 'ai_studio' && (
-            <div className="relative flex items-center bg-slate-900/90 p-1 rounded-xl border border-slate-700/80 shadow-inner">
-              <div className="flex items-center gap-1">
+            <div className="relative flex items-center bg-slate-900/90 px-3 py-1.5 rounded-xl border border-purple-500/40 shadow-inner gap-2">
+              <Layers className="w-4 h-4 text-indigo-400" />
+              <div className="flex items-center gap-1.5 mr-1">
+                <span className="text-xs font-semibold text-purple-200">AI Studio 雲端引擎</span>
+                <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 font-mono hidden sm:inline-block">
+                  Google AI Studio
+                </span>
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="AI Studio 雲端環境就緒" />
+              </div>
+              <div className="flex items-center gap-1 border-l border-slate-700/80 pl-2">
                 <button
                   type="button"
                   onClick={() => onChangeEngineTier('pro')}
@@ -270,214 +334,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                 </div>
               )}
-            </div>
-          )}
-
-          {/* 2. If Ollama Mode: Dynamic Model Selector */}
-          {appMode === 'ollama' && (
-            <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-700/80 shadow-inner">
-              <div className="flex items-center gap-1">
-                <Cpu className="w-3.5 h-3.5 text-amber-400 ml-1.5" />
-                <select
-                  value={ollamaModel}
-                  onChange={(e) => onChangeOllamaModel(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 text-amber-200 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-amber-500 max-w-[210px] sm:max-w-[260px] truncate"
-                  title="選擇本地 Ollama 模型"
-                >
-                  {ollamaModels.length === 0 ? (
-                    <option value="">
-                      {systemStatus?.details.ollamaOnline ? '未發現已安裝模型' : 'Ollama 離線 (未偵測到服務)'}
-                    </option>
-                  ) : (
-                    ollamaModels.map((m) => {
-                      const param = m.details?.parameter_size ? ` (${m.details.parameter_size})` : '';
-                      const quant = m.details?.quantization_level ? ` [${m.details.quantization_level}]` : '';
-                      return (
-                        <option key={m.name} value={m.name}>
-                          {m.name}{param}{quant}
-                        </option>
-                      );
-                    })
-                  )}
-                </select>
-
-                <button
-                  type="button"
-                  onClick={onRefreshStatus}
-                  className="p-1 rounded text-slate-400 hover:text-amber-300 transition-colors"
-                  title="重新偵測本機 Ollama 服務與模型"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowModeInfo(!showModeInfo)}
-                  className="p-1 rounded text-slate-500 hover:text-slate-300 transition-colors"
-                  title="查看四引擎架構與優先調度說明"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 3. If llama.cpp Mode: Dynamic Model Selector & Status */}
-          {appMode === 'llamacpp' && (
-            <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-700/80 shadow-inner">
-              <div className="flex items-center gap-1">
-                <Terminal className="w-3.5 h-3.5 text-sky-400 ml-1.5" />
-                <select
-                  value={llamacppModel}
-                  onChange={(e) => onChangeLlamaCppModel(e.target.value)}
-                  className="bg-slate-950 border border-slate-700 text-sky-200 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-sky-500 max-w-[210px] sm:max-w-[260px] truncate"
-                  title="選擇本地 llama.cpp 載入模型"
-                >
-                  {llamacppModels.length === 0 ? (
-                    <option value="default">
-                      {systemStatus?.details.llamacppOnline ? 'llama-server (活躍中)' : 'llama.cpp 離線 (未偵測到 8080 端口)'}
-                    </option>
-                  ) : (
-                    llamacppModels.map((m) => (
-                      <option key={m.id} value={m.id}>
-                        {m.name || m.id}
-                      </option>
-                    ))
-                  )}
-                </select>
-
-                <button
-                  type="button"
-                  onClick={onRefreshStatus}
-                  className="p-1 rounded text-slate-400 hover:text-sky-300 transition-colors"
-                  title="重新偵測本機 llama.cpp 服務與模型"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowModeInfo(!showModeInfo)}
-                  className="p-1 rounded text-slate-500 hover:text-slate-300 transition-colors"
-                  title="查看四引擎架構與優先調度說明"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* 4. If Paid API Mode: Direct Pay-As-You-Go Flagship Badge */}
-          {appMode === 'paid_api' && (
-            <div className="relative flex items-center bg-slate-900/90 px-2.5 py-1 rounded-xl border border-slate-700/80 shadow-inner">
-              <div className="flex items-center gap-1.5 text-xs">
-                <span className="w-1.5 h-1.5 rounded-full bg-teal-400 animate-pulse" />
-                <span className="text-teal-300 font-medium">Gemini 3.8 旗艦直通</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-950/80 border border-teal-500/30 text-teal-200">
-                  按量計費 / 無訂閱配額限制
-                </span>
-                <button
-                  type="button"
-                  onClick={() => setShowPaidApiInfo(!showPaidApiInfo)}
-                  className="p-1 rounded text-slate-500 hover:text-slate-300 transition-colors"
-                  title="查看 Paid API 直通引擎說明"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Paid API Info Modal */}
-              {showPaidApiInfo && (
-                <div className="absolute right-0 top-full mt-2 w-80 p-3.5 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-50 text-xs text-slate-300 space-y-2.5">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-white flex items-center gap-1.5">
-                      <Key className="w-3.5 h-3.5 text-teal-400" />
-                      Gemini Paid API 直通引擎說明
-                    </span>
-                    <button
-                      onClick={() => setShowPaidApiInfo(false)}
-                      className="text-slate-500 hover:text-slate-300 text-[11px]"
-                    >
-                      關閉
-                    </button>
-                  </div>
-                  <div className="space-y-1.5 leading-relaxed text-[11px]">
-                    <p>
-                      <strong className="text-teal-300">🔑 按量計費 (Pay-as-you-go)</strong>：使用您自行在 Google Cloud 綁定信用卡建立的 Paid API Key，具備高頻發配額。
-                    </p>
-                    <p>
-                      <strong className="text-emerald-400">⚡ 旗艦全核心解鎖</strong>：不受 Google 訂閱制免費額度約束，對話、視覺分析與提示詞生成皆直接呼叫旗艦級 <code className="text-amber-300">gemini-3.8-flash</code> 進行深度推理，無需降級或進行 3.5-lite 分流。
-                    </p>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Mode Info Modal (Explains Quad-Engine & Auto-detection Priority) */}
-          {showModeInfo && (
-            <div className="absolute right-4 top-16 w-88 sm:w-96 p-4 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-50 text-xs text-slate-300 space-y-3">
-              <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                <span className="font-bold text-white flex items-center gap-1.5">
-                  <Sparkles className="w-4 h-4 text-purple-400" />
-                  四引擎自動偵測與優先調度架構
-                </span>
-                <button
-                  onClick={() => setShowModeInfo(false)}
-                  className="text-slate-500 hover:text-slate-300 text-[11px]"
-                >
-                  關閉
-                </button>
-              </div>
-
-              <div className="space-y-2 text-[11px] leading-relaxed">
-                <div className="p-2 rounded-lg bg-slate-950/80 border border-slate-800 space-y-1">
-                  <div className="font-semibold text-slate-200">🏆 系統自動優先判定次序：</div>
-                  <div className="text-slate-400">
-                    <span className="text-purple-300 font-bold">1. AI Studio 雲端引擎</span> ＞{' '}
-                    <span className="text-teal-300 font-bold">2. Gemini Paid API 直通引擎</span> ＞{' '}
-                    <span className="text-amber-300 font-bold">3. 本地 Ollama 離線引擎</span> ＞{' '}
-                    <span className="text-sky-300 font-bold">4. 本地 llama.cpp 離線引擎</span>
-                  </div>
-                  {systemStatus && (
-                    <div className="mt-1 pt-1 border-t border-slate-800/80 flex items-center justify-between text-[10px]">
-                      <span>當前自動推薦：</span>
-                      <span className="text-emerald-400 font-mono font-bold">
-                        {modeLabels[systemStatus.recommendedMode]}
-                        {isAutoSelected ? ' (正在使用)' : ' (已手動覆蓋)'}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <strong className="text-purple-300">1. AI Studio 雲端引擎 (優先級 1)</strong>
-                  <p className="text-slate-400 mt-0.5">
-                    運行於 Google AI Studio 或 Cloud Run 訂閱環境。支援 AI Pro、AI Ultra 5x、AI Ultra 20x 階梯算力，內建 Web UI 免額度最佳化分流策略。
-                  </p>
-                </div>
-
-                <div>
-                  <strong className="text-teal-300">2. Gemini Paid API 直通引擎 (優先級 2)</strong>
-                  <p className="text-slate-400 mt-0.5">
-                    本機端點連線搭配使用者自備之 Google Gemini Paid API Key，採按量計費，全模組直通旗艦級 Gemini 3.8 Flash 深度推理，不受訂閱額度限制。
-                  </p>
-                </div>
-
-                <div>
-                  <strong className="text-amber-300">3. 本地 Ollama 離線引擎 (優先級 3)</strong>
-                  <p className="text-slate-400 mt-0.5">
-                    連線至本機 <code className="text-amber-200">127.0.0.1:11434</code>。自動動態探索所有已下載模型（原生支援 Qwen3.8-27B 等），免聯網、100% 隱私離線深度推理。
-                  </p>
-                </div>
-
-                <div>
-                  <strong className="text-sky-300">4. 本地 llama.cpp 離線引擎 (優先級 4)</strong>
-                  <p className="text-slate-400 mt-0.5">
-                    連線至本機 <code className="text-sky-200">127.0.0.1:8080</code> (llama-server)。極致純 C/C++ 顯存加速，支援 Flash Attention (<code className="text-sky-200">-fa</code>)、32K 超大上下文與 <code className="text-sky-200">mmproj</code> 多模態視覺投影，RTX 5090 原生極限優化。
-                  </p>
-                </div>
-              </div>
             </div>
           )}
 

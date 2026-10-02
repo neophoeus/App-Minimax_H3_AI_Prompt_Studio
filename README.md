@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v4.1.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v5.0.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -21,17 +21,22 @@
 
 Adhering 100% to the official MiniMax-H3 [`h3-prompt-writing`](https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing) skill specification, the studio transforms high-level creative concepts into production-ready, perfectly formatted prompts with one-click copy functionality.
 
-Featuring a **Quad-Engine Operating Architecture with Priority Auto-Detection**, users can run the studio across four distinct environments:
-1. **🏢 AI Studio Cloud Engine (`ai_studio`, Priority 1)**: Tailored for Google AI Studio / Cloud Run subscription environments, featuring selectable quota tiers (**AI Pro**, **AI Ultra 5x**, **AI Ultra 20x**) with smart model routing and zero rate limits.
-2. **🔑 Local Paid API Direct Engine (`paid_api`, Priority 2)**: Direct pay-as-you-go execution utilizing the user's paid Google Gemini API key, unlocking full-core flagship `gemini-3.8-flash` deep reasoning across all tasks without subscription quota constraints.
-3. **💻 Local Ollama Offline Engine (`ollama`, Priority 3)**: 100% private and offline on `http://127.0.0.1:11434`, with **dynamic local model discovery** (automatically scans all installed models like `Qwen3.8-27B-Uncensored` in `q8_0`, `q6_K`, `q5_K_M` without hardcoding).
-4. **⚡ Local llama.cpp Offline Engine (`llamacpp`, Priority 4)**: Pure C/C++ ultra-low latency offline inference connecting directly to `http://127.0.0.1:8080` (`llama-server`). Equipped with Flash Attention (`-fa`), 32K context windows, and `mmproj` multimodal vision support natively tailored for top-tier GPUs like the NVIDIA RTX 5090 (32GB VRAM).
-
-The studio automatically detects the environment and auto-selects the highest priority engine on startup (**AI Studio > Paid API > Ollama > llama.cpp**), while preserving the ability to manually switch engines anytime.
+Featuring a **Quad-Engine Independent Architecture with Dedicated UI Panels**:
+1. **🏢 AI Studio Cloud Engine (`server-aistudio.ts`)**: Built for Google AI Studio cloud deployment, accompanied by a pure export tool (`pack_aistudio.bat`) yielding standalone zip bundles with selectable quota tiers (**AI Pro**, **AI Ultra 5x**, **AI Ultra 20x**).
+2. **🔑 Local Paid API Direct Engine (`start_paid_api.bat` / `server-paid-api.ts`)**: Direct pay-as-you-go execution utilizing the user's paid Google Gemini API key, unlocking full-core flagship `gemini-3.8-flash` deep reasoning across all tasks without subscription quota constraints.
+3. **💻 Local Ollama Offline Engine (`start_ollama.bat` / `server-ollama.ts`)**: 100% private and offline on `http://127.0.0.1:11434`, with **dynamic local model discovery** (automatically scans all installed models like `Qwen3.8-27B-Uncensored`).
+4. **⚡ Local llama.cpp Offline Engine (`start_llamacpp.bat` / `server-llamacpp.ts`)**: Pure C/C++ ultra-low latency offline inference for the NVIDIA RTX 5090 (32GB VRAM), with Flash Attention, 32K context windows, and `mmproj` multimodal vision support.
 
 ## ✨ Key Features
 
-### 0. Prompt Audit, Auto-Repair, Series Refinement & Dual Contracts (v4.1.0)
+### 0. Quad-Engine Independent Architecture, Dedicated UI & Pure Packager (v5.0.0)
+- **Independent Dedicated Entrypoints**: Fully decoupled monolithic routers into standalone server entrypoints (`server-paid-api.ts`, `server-ollama.ts`, `server-llamacpp.ts`, `server-aistudio.ts`).
+- **Dedicated UI Status & Controls**: Frontend UI dynamically locks to the active independent backend with custom indicator panels and a global studio footer.
+- **Pure AI Studio Cloud Packager (`pack_aistudio.bat`)**: Zero-offline-artifact exporter creating lightweight deployable bundles.
+- **Pure ASCII Batch Scripts**: 100% immune to Windows cmd.exe byte-offset drift and crash bugs.
+- **End-to-End Test Suite**: 40 automated tests covering official prompt specifications, syntax auto-repair, and packaging isolation.
+
+### 1. Prompt Audit, Auto-Repair, Series Refinement & Dual Contracts (v4.1.0)
 - **Prompt Audit & Lossless Auto-Repair Engine**: Integrated a static regex syntax auditor (`promptAudit.ts`) verifying timeline bounds, normalizing timestamps (`MM:SS.mmm`), scrubbing multimodal leakage tokens (`contact sheet`, `sampled frame`, etc.), and enforcing stationary camera syntax with live UI badges and one-click auto-repair.
 - **Series Single-Episode In-Place Refinement**: Surgically refine any individual episode within a multi-episode series via `POST /api/refine-series-episode` while strictly locking the preceding episode's physical ending posture.
 - **Dual Output Contracts (Official vs Compact)**: Seamlessly toggle between MiniMax official 6-section/3-section structured prompts and compact dense narrative prose.
@@ -156,18 +161,18 @@ The studio automatically detects the environment and auto-selects the highest pr
 
 ## 🚀 Getting Started
 
-### ⚡ Windows One-Click Quick Start (Recommended)
+### ⚡ Windows One-Click Launchers (Select by Engine)
 
-Simply double-click the **`start.bat`** file in the project root!
-It will autonomously:
-1. Verify the Node.js runtime environment.
-2. Initialize `.env` from `.env.example` if not present.
-3. Automatically install missing npm packages if `node_modules` is not found.
-4. Detect local Ollama and llama.cpp service status; if offline, auto-launches service windows (`start_llama.bat` with one-click model selection).
-5. Launch the application and automatically open `http://localhost:3000` in your default browser.
+Double-click the dedicated launcher for your target AI inference backend:
 
-> **💡 Dedicated llama.cpp Launcher (`start_llama.bat`)**:
-> You can also run `start_llama.bat` directly at any time. It scans `C:\llama.cpp\models`, auto-pairs matching `mmproj` vision projectors and Embedded MTP acceleration, and launches `llama-server` with a single tap of the Enter key.
+1. **🔑 Gemini Paid API Direct Studio**: Double-click **`start_paid_api.bat`**
+   - Direct flagship Gemini 3.8 Flash execution with deep reasoning for API key owners.
+2. **💻 Local Ollama Offline Studio**: Double-click **`start_ollama.bat`**
+   - Automatically wakes the local Ollama service and scans all installed models.
+3. **⚡ Local llama.cpp (RTX 5090) Offline Studio**: Double-click **`start_llamacpp.bat`**
+   - 2-in-1 intelligent launcher! Scans `C:\llama.cpp\models` for GGUF models, auto-pairs `mmproj` vision projections, enables Embedded MTP 2.23x acceleration, and launches the web studio.
+4. **📦 Google AI Studio Pure Packager**: Double-click **`pack_aistudio.bat`**
+   - Filters all local dependencies and exports a clean, lightweight (~80KB) `minimax-h3-aistudio.zip` ready for instant upload to Google AI Studio!
 
 ### 💻 Manual Setup
 
@@ -205,15 +210,27 @@ It will autonomously:
 
 ## 📜 Available Scripts
 
+### 🎛️ Windows Launchers
+| Script | Description |
+| :--- | :--- |
+| `start_paid_api.bat` | **Gemini Paid API Direct**: Flagship 3.8 Flash direct execution |
+| `start_ollama.bat` | **Local Ollama Studio**: Auto-starts Ollama service and web studio |
+| `start_llamacpp.bat` | **Local llama.cpp Studio**: 2-in-1 launcher with RTX 5090 model scanner |
+| `pack_aistudio.bat` | **AI Studio Pure Packager**: Generates `minimax-h3-aistudio.zip` for AI Studio |
+
+### 💻 NPM Commands
 | Command | Description |
 | :--- | :--- |
-| `start.bat` | **Windows One-Click Launcher**: Auto environment check, dependency install, and browser launch |
-| `npm run dev` | Starts the Express server with Vite middleware in development mode |
-| `npm run build` | Builds the client SPA bundle and compiles `server.ts` with esbuild |
-| `npm run start` | Runs the production-built application (`dist/server.cjs`) |
+| `npm test` | **Runs the automated behavior test suite** (40 tests across 5 domains) |
+| `npm run dev` | Starts the multi-engine server in development mode |
+| `npm run dev:paid-api` | Starts the dedicated Paid API server |
+| `npm run dev:ollama` | Starts the dedicated Ollama server |
+| `npm run dev:llamacpp` | Starts the dedicated llama.cpp server |
+| `npm run dev:aistudio` | Starts the dedicated AI Studio cloud server |
+| `npm run pack:aistudio` | Exports the pure AI Studio distribution (`dist-aistudio/`) |
+| `npm run build` | Builds client bundle and compiles `server.ts` |
+| `npm run build:aistudio`| Builds pure AI Studio distribution server bundle |
 | `npm run lint` | Runs TypeScript static type checking (`tsc --noEmit`) |
-| `npm run preview` | Previews the production Vite build locally |
-| `npm run clean` | Removes build artifacts (`dist/` directory) |
 
 ---
 

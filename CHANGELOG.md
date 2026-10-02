@@ -2,6 +2,46 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v5.0.0] - 2026-10-02
+
+### 🚀 Quad-Engine Decoupled Architecture, Dedicated UI & Pure AI Studio Packager (四大獨立引擎架構全面解耦、介面專屬化、純淨導出工具與端到端自動化測試套件)
+
+#### ⚡ 1. Quad-Engine Independent Entrypoints & Decoupling (四大獨立引擎全面解耦)
+- **Eliminate Monolithic Router (徹底移除單體四合一路由相容層)**:
+  - 刪除舊版單體伺服器 `server.ts` 中的 `UnifiedQuadStudioEngine`，不再於單一伺服器內跨 4 引擎動態分流。
+  - 簡化 `server/core/appFactory.ts` 伺服器核心工廠，移除 `engineResolver`，直接綁定單一獨立 `StudioEngine` 實例。
+- **Four Fully Dedicated Server Entries (四大專屬服務入口)**:
+  - `server-paid-api.ts`：直連 Google Gemini 官方付費 API 旗艦入口 (`gemini-3.8-flash` + High Thinking 深度推理)。
+  - `server-ollama.ts`：本機 100% 離線 Ollama 引擎，自動動態探索本機模型。
+  - `server-llamacpp.ts`：專為 RTX 5090 (32GB VRAM) 打造的純 C/C++ 顯存加速引擎 (MTP 2.23x 加速 + `mmproj` 視覺投影)。
+  - `server-aistudio.ts`：專為 Google AI Studio 雲端打造之雲端引擎 (AI Pro 最佳化 / Ultra 5x / Ultra 20x 訂閱階梯)。
+
+#### 🎨 2. Dedicated UI Panels & Modern Studio Experience (介面專屬化與無干擾工作站體驗)
+- **Remove Cross-Engine Switcher from UI (移除跨引擎混淆切換)**:
+  - 徹底移除頂部導覽列的四合一按鈕切換器與優先級排定說明彈窗，使用者開啟哪一個引擎，介面即專注呈現該引擎。
+- **Active Dedicated Engine Status Bars (專屬引擎狀態與控制列)**:
+  - **Gemini Paid API (`paid_api`)**：顯示專屬「Gemini Paid API 直通引擎」標籤、3.8 Flash 旗艦徽章、綠色連線呼吸燈與 API 說明彈窗。
+  - **本地 Ollama (`ollama`)**：顯示「本地 Ollama 離線引擎」標籤、連線燈、動態模型探索下拉選單與模型重新整理按鈕。
+  - **本地 llama.cpp (`llamacpp`)**：顯示「本地 llama.cpp 離線引擎 (RTX 5090)」標籤、8080 端口狀態燈、模型下拉選單與重新整理按鈕。
+  - **Google AI Studio (`ai_studio`)**：顯示「AI Studio 雲端引擎」標籤、Pro 最佳化 / Ultra 5x / Ultra 20x 訂閱階梯切換按鈕與算力說明彈窗。
+- **Studio Global Footer (全域工作站狀態底欄)**:
+  - 於應用程式底端增設專業工作站底欄，提供系統版本 `v5.0.0`、當前獨立引擎運行狀態、官方規範對齊認證與快捷跳轉。
+
+#### 📦 3. Pure Google AI Studio Packager (`pack_aistudio.bat` & `scripts/pack-aistudio.ts`)
+- **Zero-Offline-Artifact Cloud Export (純淨雲端打包)**:
+  - 一鍵打包生成 `minimax-h3-aistudio.zip`（~80KB），自動過濾所有本機離線引擎（Ollama / llama.cpp）與 Windows `.bat` 腳本。
+  - 自動將 `server-aistudio.ts` 配置為雲端獨立根入口 `server.ts`，可直接上傳 Google AI Studio 或 Cloud Run 部署。
+
+#### 🛡️ 4. Windows Pure ASCII Launcher Reliability (Windows Pure ASCII 批次檔架構)
+- **Eliminate CMD Byte-Offset Drift (根除 Windows CMD 位元組指標錯位)**:
+  - 全面將 `start_paid_api.bat`、`start_ollama.bat`、`start_llamacpp.bat`、`pack_aistudio.bat` 重構為 100% Pure ASCII（無任何多字節中文字元，CRLF 換行），徹底根除 Windows `cmd.exe` 讀取指標偏移導致的指令截斷（如 `RT_STUDIO`, `0.1`, `cho`）與開檔閃退問題。
+- **Consolidate Obsolete Launchers**:
+  - 刪除舊版 `start.bat` 與 `start_llama.bat`，整合為單一旗艦版 `start_llamacpp.bat`（RTX 5090 自動模型探測、視覺關聯、MTP 加速與 Web 介面啟動二合一）。
+
+#### 🧪 5. Automated Unit & Integration Test Suite (40+ 端到端測試套件)
+- **Rock-Solid Quality Gate (`npm test`)**:
+  - 建立 40 個自動化測試涵蓋 MiniMax-H3 官方提示詞語法規範 (T2VA/I2VA/FL2VA/L2VA/Ref2VA)、輸出清洗器 (Think 標籤過濾)、提示詞審計自癒器、各獨立引擎狀態隔離性、以及 AI Studio 純淨導出工具。
+
 ## [v4.1.0] - 2026-10-01
 
 ### 🛡️ Prompt Audit & Auto-Repair, Series Single-Episode In-Place Refinement & Dual Output Contracts (提示詞語法審計自癒引擎、連續劇單集局部精修與雙契約旗艦架構)

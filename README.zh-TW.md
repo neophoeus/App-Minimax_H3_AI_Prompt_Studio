@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v4.1.0-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v5.0.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -21,17 +21,24 @@
 
 本工具 100% 嚴格遵循 MiniMax-H3 官方 [`h3-prompt-writing`](https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing) 技能規範，能將使用者的創意概念一鍵轉化為符合模型最佳理解結構的生產級提示詞，並提供一鍵複製功能。
 
-具備全新 **四引擎架構與自動優先判定 (Quad-Engine Architecture)**，支援跨四大環境無縫協作：
-1. **🏢 訂閱制度 AI Studio 雲端引擎 (`ai_studio`, 優先級 1)**：專為 Google AI Studio 或 Cloud Run 訂閱環境打造，具備可選配額階梯方案（**AI Pro 最佳化**、**AI Ultra 5x**、**AI Ultra 20x**），內建 Web UI 免額度最佳化分流策略，自動重試與降級。
-2. **🔑 本地 Paid API 直通引擎 (`paid_api`, 優先級 2)**：本機運行搭配使用者自己的付費 Google Gemini API Key，採按量計費（Pay-as-you-go）直通模式，全核心直接調用旗艦級 `gemini-3.8-flash` 深度推理，不受訂閱額度限制。
-3. **💻 本地 Ollama 離線引擎 (`ollama`, 優先級 3)**：連線至本機端點 `http://127.0.0.1:11434`，具備 **本地已安裝模型動態探索 (Dynamic Model Discovery)** 機制，不寫死任何模型，自動掃描並列出所有本機安裝模型（包含 `Qwen3.8-27B-Uncensored` 之 `q8_0`、`q6_K`、`q5_K_M` 等）。
-4. **⚡ 本地 llama.cpp 離線引擎 (`llamacpp`, 優先級 4)**：連線至本機端點 `http://127.0.0.1:8080` (`llama-server`)。採用純 C/C++ 極致顯存加速，支援 Flash Attention (`-fa`)、32K 超大上下文長度與 `mmproj` 多模態視覺投影，原生深度適配 NVIDIA RTX 5090 等頂級硬體，完全離線 0 配額消耗。
+具備全新 **四大獨立引擎架構與專屬入口 (Quad-Engine Independent Architecture)**：
+1. **🏢 訂閱制度 AI Studio 雲端引擎 (`server-aistudio.ts`)**：專為 Google AI Studio 雲端打造，提供一鍵打包工具 (`pack_aistudio.bat`) 產出純淨 Zip 包。支援配額階梯方案（**AI Pro 最佳化**、**AI Ultra 5x**、**AI Ultra 20x**）。
+2. **🔑 本地 Paid API 直通引擎 (`start_paid_api.bat` / `server-paid-api.ts`)**：本機運行搭配使用者自己的付費 Google Gemini API Key，採按量計費（Pay-as-you-go）直通模式，全核心直接調用旗艦級 `gemini-3.8-flash` 深度推理。
+3. **💻 本地 Ollama 離線引擎 (`start_ollama.bat` / `server-ollama.ts`)**：連線至本機端點 `http://127.0.0.1:11434`，具備 **本地已安裝模型動態探索機制**，自動掃描並列出所有本機安裝模型（包含 `Qwen3.8-27B-Uncensored` 等）。
+4. **⚡ 本地 llama.cpp 離線引擎 (`start_llamacpp.bat` / `server-llamacpp.ts`)**：專為 NVIDIA RTX 5090 (32GB VRAM) 打造。自動掃描 `C:\llama.cpp\models` 內的 GGUF、配對 `mmproj` 視覺投影器，並啟用 MTP (Multi-Token Prediction) 2.23x 加速。
 
-系統啟動時主動探索本機與環境狀態，若同時偵測到多種引擎，嚴格依據 **AI Studio ＞ 本地 Paid API ＞ 本地 Ollama ＞ 本地 llama.cpp** 優先次序推薦預設引擎，同時保留使用者於導航列隨時手動點選切換的完全自由。
+前端介面與後端完全解耦獨立化，介面自動依據當前啟動之專屬引擎展示狀態徽章與控制欄，杜絕跨進程切換的混淆。
 
 ## ✨ 核心特色
 
-### 0. 語法審計自癒、單集精修、雙契約與 ComfyUI 整合 (v4.1.0)
+### 0. 四大獨立引擎全面解耦、介面專屬化與純淨打包工具 (v5.0.0)
+- **四大專屬服務入口解耦**：徹底移除單體四合一路由相容層，全面採用獨立單引擎入口（`server-paid-api.ts`、`server-ollama.ts`、`server-llamacpp.ts`、`server-aistudio.ts`），架構精簡純淨。
+- **介面專屬化無干擾控制列**：頂部導覽列依據當前啟動之獨立後端呈現專屬面板（Paid API 3.8 旗艦思考鏈標記、Ollama 動態模型探測計數、llama.cpp RTX 5090 32GB 顯存標記、AI Studio 雲端階梯高亮），並增設全域 Studio 狀態底欄。
+- **Google AI Studio 純淨導出工具 (`pack_aistudio.bat`)**：一鍵過濾離線依賴與 Windows 腳本，產出標準純淨 Zip 包。
+- **Windows Pure ASCII 批次檔可靠性**：100% 杜絕 Windows `cmd.exe` 字節偏移截斷與開檔閃退問題。
+- **40+ 端到端自動化測試套件 (`npm test`)**：全面鎖定官方提示詞語法、輸出清洗與純淨打包隔離性。
+
+### 1. 語法審計自癒、單集精修、雙契約與 ComfyUI 整合 (v4.1.0)
 - **語法審計與無損自癒修復引擎 (Audit & Auto-Repair)**：內建靜態正則分析引擎 (`promptAudit.ts`)，嚴格校驗時間標籤（`MM:SS.mmm`）、修剪超時分鏡、無損清除多模態除錯標記（`contact sheet`、`sampled frame` 等）、並校正相機固定語法。提供即時介面狀態徽章與一鍵修復按鈕。
 - **系列連續劇單集獨立局部精修 (Series Refinement)**：針對連續劇提供專屬單集局部精修面板，可單獨微調某一集之運鏡或情節，並強制鎖定前集終態實體動作與相機位置以確保連貫。
 - **雙輸出契約架構 (Official vs Compact)**：支援官方 6 區塊/3 區塊結構與緊湊高密度敘事雙契約無縫切換。
@@ -114,7 +121,7 @@
     - **硬體級極速加速**：針對 NVIDIA RTX 5090 (32GB VRAM) 頂級硬體優化，支援 `-ngl 99` 全層 GPU 卸載、Flash Attention (`--flash-attn on`) 與 32K 旗艦上下文 (`-c 32768`)。
     - **多模態視覺投影 (`mmproj`)**：100% 自動配對掛載 `mmproj-*.gguf`，實現零額度負擔的本機離線分鏡與參考圖片視覺分析。
     - **原生 Embedded MTP 雙倍極速 (`--spec-type draft-mtp`)**：無須第三方補丁，直接深度調用 Qwen3.8 原生 NextN 多 Token 預測架構，立即享有 **2.23x (+123.4%)** 極速生成提升！
-- **優先級自動偵測與智慧判定**：啟動時自動偵測執行環境並優先選用最高層級架構（**AI Studio > Paid API > Ollama > llama.cpp**），同時保留完整自由手動切換能力，選擇自動保存於 `localStorage`。
+- **專屬獨立服務與狀態自動鎖定**：後端服務採用完全獨立之單引擎實例啟動，前端自動依當前連線之獨立後端鎖定運作模式，免去跨引擎設定衝突。
 - **指數退避重試與隨機抖動 (1s ➔ 2s)**：針對短暫的 `429 RESOURCE_EXHAUSTED` 或 `503 UNAVAILABLE` 暫態限流，自動執行最多 2 次指數退避重試（含隨機微小抖動），有效平抑瞬間爆發請求（Burst）。
 - **無縫自動容錯降級**：重試耗盡或遇配額瓶頸時，後端自動切換至備援模型鏈（`gemini-3.8-flash` ➔ `gemini-3.6-flash` ➔ `gemini-3.5-flash-lite`）；若遇 404 等永久錯誤則自動快切跳過重試，保障 100% 請求成功率。
 - **最寬鬆安全性門檻 (`HarmBlockThreshold.BLOCK_NONE`)**：全面解除五大危害類別（騷擾、仇恨、性暗示、危險內容、誠信）的常規過濾限制，極致釋放影視劇作、暗黑科幻、動作衝突的分鏡創作自由度。
@@ -135,7 +142,7 @@
 - **專屬提示詞編輯工具列**：在檢視區上方增設獨立工具列，支援「語法亮顯 / 手動微調」雙態切換、即時字元計數與一鍵還原 AI 初版生成結果。
 - **自適應生成模式網格**：自適應 `grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2`，確保各尺寸螢幕下按鈕文字清晰不截斷破折。
 - **寬裕且可調字級之創意思路畫布**：大幅加高文字框（`rows={8}`、`min-h-[240px]`），支援 5 段字級調控（12px ~ 20px）、步進按鈕與 `localStorage` 記憶。
-- **AI 驅動引擎與算力切換器**：頂部導覽列隨時切換 AI Studio、Ollama、llama.cpp 與 Paid API 引擎，具備氣泡提示指引，偏好自動保存於 `localStorage`。
+- **專屬獨立引擎狀態與控制面板**：頂部導覽列依據當前啟動之引擎呈現專屬控制欄（Paid API 旗艦標籤、Ollama 模型探索、llama.cpp 狀態、AI Studio 算力階梯），專注無干擾。
 - **全域 Toast 浮動通知**：現代化非阻塞式操作回饋。
 - **場景預設庫與時序分鏡軸**：內建豐富場景預設與互動式可視化分鏡軸。
 - **一鍵導出**：支援一鍵複製完整 Prompt 或分區塊複製，即貼即用。
@@ -157,18 +164,18 @@
 
 ## 🚀 快速開始
 
-### ⚡ Windows 一鍵快速啟動（推薦）
+### ⚡ Windows 一鍵快速啟動（依需求選擇）
 
-直接雙擊專案根目錄下的 **`start.bat`** 即可！
-啟動腳本將全自動完成：
-1. 自動檢查本機 Node.js 執行環境。
-2. 若無 `.env` 自動由 `.env.example` 複製初始化。
-3. 若無 `node_modules` 自動執行 `npm install`。
-4. 探測本機 Ollama 與 llama.cpp 狀態；若離線則自動嘗試喚起服務並等待就緒（未啟動時會主動喚起專屬 `start_llama.bat` 供一鍵選取模型）。
-5. 啟動工作室並在 3 秒後自動調用預設瀏覽器開啟 `http://localhost:3000`。
+依據您欲使用的 AI 引擎，直接雙擊專案根目錄下對應的啟動腳本：
 
-> **💡 專屬 llama.cpp 啟動器 (`start_llama.bat`)**：
-> 您亦可隨時單獨雙擊 `start_llama.bat`，系統會自動掃描 `C:\llama.cpp\models`，自動配對 `mmproj` 視覺投影與 Embedded MTP 雙倍極速，直接敲 Enter 鍵即可瞬間啟動服務！
+1. **🔑 Gemini Paid API 直通工作室**：雙擊 **`start_paid_api.bat`**
+   - 適合擁有 Google Gemini API 金鑰之使用者，直接調用旗艦 3.8 Flash 深度推理。
+2. **💻 本地 Ollama 離線推論工作室**：雙擊 **`start_ollama.bat`**
+   - 自動檢測並喚起本機 Ollama 服務，動態探索並載入本機所有已安裝模型。
+3. **⚡ 本地 llama.cpp (RTX 5090) 離線推論工作室**：雙擊 **`start_llamacpp.bat`**
+   - 二合一智慧啟動器！若 llama-server 未啟動，自動掃描 `C:\llama.cpp\models` 並提供編號選擇，自動精準配對 `mmproj` 視覺投影與 Embedded MTP 2.23x 加速，隨後無縫喚起工作室與瀏覽器。
+4. **📦 Google AI Studio 純淨打包器**：雙擊 **`pack_aistudio.bat`**
+   - 自動過濾本機離線依賴與 Windows 腳本，產出輕量化（約 80KB）的 `minimax-h3-aistudio.zip`，可直接上傳 Google AI Studio！
 
 ### 💻 手動安裝與啟動
 
@@ -204,17 +211,29 @@
 
 ---
 
-## 📜 常用指令
+## 📜 常用指令與獨立引擎啟動
 
+### 🎛️ 本地啟動腳本 (Windows Batch)
+| 腳本 | 說明 |
+| :--- | :--- |
+| `start_paid_api.bat` | **Gemini Paid API 直通專用啟動器**：直接運行 Flagship 3.8 Flash，高推理深度 |
+| `start_ollama.bat` | **本地 Ollama 專用啟動器**：自動喚醒本機 Ollama 服務並啟動專用離線環境 |
+| `start_llamacpp.bat` | **本地 llama.cpp 專用啟動器**：二合一智慧啟動（含 RTX 5090 模型掃描與 Web 服務） |
+| `pack_aistudio.bat` | **Google AI Studio 純淨打包器**：一鍵過濾本機檔案並產出純淨上傳包 `minimax-h3-aistudio.zip` |
+
+### 💻 NPM 開發與驗證指令
 | 指令 | 說明 |
 | :--- | :--- |
-| `start.bat` | **Windows 一鍵啟動器**：自動環境檢測、依賴安裝與啟動瀏覽器 |
-| `npm run dev` | 以開發模式啟動 Express 伺服器與 Vite 中介層 |
-| `npm run build` | 建置前端 SPA 產物並透過 esbuild 編譯 `server.ts` |
-| `npm run start` | 執行正式環境打包產物 (`dist/server.cjs`) |
+| `npm test` | **執行自動化行為鎖定測試套件**（覆蓋 5 大面向 40 個測試） |
+| `npm run dev` | 以開發模式啟動四合一多引擎伺服器 |
+| `npm run dev:paid-api` | 啟動獨立 Paid API 伺服器 (`server-paid-api.ts`) |
+| `npm run dev:ollama` | 啟動獨立 Ollama 伺服器 (`server-ollama.ts`) |
+| `npm run dev:llamacpp` | 啟動獨立 llama.cpp 伺服器 (`server-llamacpp.ts`) |
+| `npm run dev:aistudio` | 啟動獨立 AI Studio 雲端伺服器 (`server-aistudio.ts`) |
+| `npm run pack:aistudio` | 導出純淨 AI Studio 雲端目錄 (`dist-aistudio/`) |
+| `npm run build` | 建置前端 SPA 產物並透過 esbuild 編譯四合一 `server.ts` |
+| `npm run build:aistudio`| 編譯純淨 AI Studio 輕量化伺服器產物 |
 | `npm run lint` | 執行 TypeScript 靜態類型檢查 (`tsc --noEmit`) |
-| `npm run preview` | 本地預覽 Vite 生產建置結果 |
-| `npm run clean` | 清除建置產物目錄 (`dist/`) |
 
 ---
 
@@ -222,19 +241,25 @@
 
 ```text
 App-Minimax_H3_AI_Prompt_Studio/
-├── src/
-│   ├── components/       # UI 元件（頂部欄、模式選擇器、Prompt 輸出面板等）
-│   ├── data/             # 預設範本與鏡頭運鏡設定資料
-│   ├── types.ts          # TypeScript 類型定義
-│   ├── App.tsx           # 主頁面狀態與佈局控制
-│   ├── main.tsx          # React 入口程式
-│   └── index.css         # Tailwind CSS 樣式
-├── server.ts             # Express 後端與 Gemini 3.8 Flash 整合服務
-├── CHANGELOG.md          # 版本更新紀錄與遷移日誌
-├── README.md             # 英文說明文件
-├── README.zh-TW.md       # 繁體中文說明文件
-├── package.json          # 專案依賴與版本資訊 (v4.0.0)
-└── tsconfig.json         # TypeScript 設定檔
+├── server/
+│   ├── core/             # 共用核心（提示詞規範、輸出淨化、Express/Vite 工廠、型別）
+│   └── engines/          # 獨立推論引擎（AI Studio、Paid API、Ollama、llama.cpp、Gemini Core）
+├── tests/                # 行為鎖定測試套件（提示詞規格、淨化、稽核、引擎調度、導出包驗證）
+├── scripts/
+│   └── pack-aistudio.ts  # Google AI Studio 純淨導出腳本
+├── src/                  # React 19 + Vite 前端使用者介面
+├── server.ts             # 四合一多引擎整合入口
+├── server-aistudio.ts    # AI Studio 獨立入口（上傳包預設核心）
+├── server-paid-api.ts    # Paid API 直通獨立入口
+├── server-ollama.ts      # 本機 Ollama 獨立入口
+├── server-llamacpp.ts    # 本機 llama.cpp 獨立入口
+├── pack_aistudio.bat     # AI Studio 一鍵打包批次檔 (產出 minimax-h3-aistudio.zip)
+├── start.bat             # 四合一多引擎啟動檔
+├── start_paid_api.bat    # Paid API 直通啟動檔
+├── start_ollama.bat      # 本機 Ollama 啟動檔
+├── start_llamacpp.bat    # 本機 llama.cpp 啟動檔
+├── package.json          # 專案依賴與腳本定義
+└── metadata.json         # Google AI Studio Web Applet 元資料宣告
 ```
 
 ---

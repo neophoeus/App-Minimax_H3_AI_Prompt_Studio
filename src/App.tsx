@@ -357,11 +357,14 @@ export default function App() {
         });
       }
 
-      // If user hasn't explicitly set a manual mode in localStorage, auto-select by recommended priority
-      const savedManualMode = localStorage.getItem('minimax_h3_app_mode');
-      if (!savedManualMode && data.recommendedMode) {
-        setAppMode(data.recommendedMode);
-      }
+      const activeMode = data.fixedMode || data.recommendedMode || 'paid_api';
+      setAppMode(activeMode);
+      const provider: AiProvider = activeMode === 'ollama' ? 'ollama' : activeMode === 'llamacpp' ? 'llamacpp' : 'gemini';
+      setConfig((prev) => ({
+        ...prev,
+        appMode: activeMode,
+        provider,
+      }));
 
       if (notify) {
         const modeLabels: Record<AppMode, string> = {
@@ -370,43 +373,20 @@ export default function App() {
           ollama: '本地 Ollama 離線引擎',
           llamacpp: '本地 llama.cpp 離線引擎',
         };
-        const localCount = (data.ollamaModels?.length || 0) + (data.llamacppModels?.length || 0);
-        showToast(
-          `偵測完成！系統優先推薦【${modeLabels[data.recommendedMode]}】（共探測到 ${localCount} 個本地模型/插槽）`,
-          'success'
-        );
+        const currentLabel = modeLabels[activeMode] || '獨立引擎';
+        if (activeMode === 'ollama') {
+          showToast(`已重新整理本地 Ollama 狀態 (探測到 ${data.ollamaModels?.length || 0} 個模型)`, 'success');
+        } else if (activeMode === 'llamacpp') {
+          showToast(`已重新整理本地 llama.cpp 狀態 (8080 端口: ${data.details.llamacppOnline ? '線上' : '離線'})`, 'success');
+        } else {
+          showToast(`已更新引擎狀態【${currentLabel}】`, 'success');
+        }
       }
     } catch (e: any) {
       console.error('Failed to check system status:', e);
       if (notify) {
         showToast('無法取得系統引擎狀態，請確認伺服器已啟動', 'error');
       }
-    }
-  };
-
-  const handleAppModeChange = (mode: AppMode) => {
-    setAppMode(mode);
-    const provider: AiProvider = mode === 'ollama' ? 'ollama' : mode === 'llamacpp' ? 'llamacpp' : 'gemini';
-    setConfig((prev) => ({
-      ...prev,
-      appMode: mode,
-      provider,
-    }));
-    try {
-      localStorage.setItem('minimax_h3_app_mode', mode);
-      localStorage.setItem('minimax_h3_ai_provider', provider);
-    } catch (e) {
-      console.error('Failed to save app mode to localStorage', e);
-    }
-    const modeLabels: Record<AppMode, string> = {
-      ai_studio: 'AI Studio 雲端引擎',
-      ollama: '本地 Ollama 離線引擎',
-      llamacpp: '本地 llama.cpp 離線引擎',
-      paid_api: 'Gemini Paid API 直通引擎',
-    };
-    showToast(`已手動切換至【${modeLabels[mode]}】`, 'info');
-    if (mode === 'ollama' || mode === 'llamacpp') {
-      checkSystemStatus(false);
     }
   };
 
@@ -863,7 +843,6 @@ ${ep.fullPrompt}`;
       {/* Top Navigation Bar */}
       <Navbar
         appMode={appMode}
-        onChangeAppMode={handleAppModeChange}
         systemStatus={systemStatus}
         onRefreshStatus={() => checkSystemStatus(true)}
         engineTier={engineTier}
@@ -2250,6 +2229,65 @@ ${ep.fullPrompt}`;
           </div>
         </section>
       </main>
+
+      {/* Studio Global Footer (v5.0.0) */}
+      <footer className="mt-auto border-t border-slate-900 bg-slate-950/90 backdrop-blur-md px-4 lg:px-8 py-3.5 text-xs text-slate-500">
+        <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+          {/* Left: Brand, Version & Verification */}
+          <div className="flex items-center flex-wrap gap-2.5">
+            <span className="font-semibold text-slate-300 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+              MiniMax-H3 AI Prompt Studio
+            </span>
+            <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-mono font-bold text-purple-300">
+              v5.0.0 Flagship
+            </span>
+            <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-md">
+              <ShieldCheck className="w-3 h-3 text-emerald-400" />
+              100% 官方標準語法對齊認證
+            </span>
+          </div>
+
+          {/* Center: Active Engine Indicator */}
+          <div className="flex items-center gap-2 text-[11px]">
+            <span className="text-slate-400">當前獨立引擎：</span>
+            <span className="font-mono font-semibold text-slate-200">
+              {appMode === 'paid_api'
+                ? 'Gemini Paid API Direct (旗艦 3.8 Flash)'
+                : appMode === 'ollama'
+                ? `本地 Ollama (${ollamaModel || '未選擇模型'})`
+                : appMode === 'llamacpp'
+                ? `本地 llama.cpp RTX 5090 (${llamacppModel || '活躍端口 8080'})`
+                : 'Google AI Studio 雲端引擎'}
+            </span>
+          </div>
+
+          {/* Right: Spec Links & Audit Info */}
+          <div className="flex items-center gap-3 text-[11px]">
+            <a
+              href="https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing"
+              target="_blank"
+              rel="noreferrer"
+              className="text-slate-400 hover:text-cyan-300 transition-colors"
+            >
+              MiniMax-H3 Skill 規格
+            </a>
+            <span className="text-slate-700">•</span>
+            <a
+              href="https://github.com/MiniMax-AI/MiniMax-H3"
+              target="_blank"
+              rel="noreferrer"
+              className="text-slate-400 hover:text-purple-300 transition-colors"
+            >
+              MiniMax-H3 官方倉庫
+            </a>
+            <span className="text-slate-700">•</span>
+            <span className="text-slate-500 font-mono text-[10px]">
+              Prompt Audit Engine Ready
+            </span>
+          </div>
+        </div>
+      </footer>
 
       {/* Drawers */}
       <PresetDrawer

@@ -58,6 +58,7 @@ export interface SystemModeStatus {
     llamacppModelCount: number;
   };
   recommendedMode: AppMode;
+  fixedMode?: AppMode;
   ollamaModels: OllamaModelItem[];
   defaultOllamaModel?: string;
   llamacppModels: LlamaCppModelItem[];
