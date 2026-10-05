@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v5.1.0] - 2026-10-05
+
+### 🎯 Universal Visual Reference Decoupling & Official MiniMax-H3 Spec Alignment (通用視覺參考解耦與 MiniMax-H3 官方全參考規範修復)
+
+#### 🖼️ 1. Decouple General Subject References from Opening Keyframes (`server/core/prompts.ts`)
+- **Keyframe Decoupling (首幀解耦)**:
+  - 徹底移除過去當未指定首幀時無條件 fallback 預設 `<Picture 1>` 為開場關鍵幀的錯誤邏輯。
+  - 明確限定僅當素材角色指名為 `first_keyframe`、`keyframe` 或 `composition` 時，才將該素材判定為開場關鍵幀。
+- **Ref2VA MiniMax-H3 Official Specification Compliance (`ref-en.txt`)**:
+  - **當無指定開場關鍵幀時**：
+    - `subject_definitions`：將素材物理槽位 `<Picture P>` 直接內嵌於主體條目中宣告（例如 `<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity.`），**嚴格杜絕輸出獨立的 `<Picture 1> is the first keyframe...` 定義行**。
+    - `summary`：任務類型強制宣告為 `[reference generation]`（而非 `[keyframe completion]`），且不輸出 `Generated from <Picture 1>`。
+    - `retention_analysis`：直接分析 `<Subject 1>` 的保留度（`fully_preserved`），避免對 `<Picture 1>` 產生冗餘條目。
+    - `detailed_description`：`[Shot 1]` 依據分鏡與劇本自然演出，不再強制鎖定 `<Picture 1>` 的參考圖構圖或姿勢。
+  - **當指定首幀時**：
+    - 保留正規 `[keyframe completion + reference generation]` 規範，精準對齊開場首幀。
+
+#### 🎨 2. Format-Neutral Universal Reference Philosophy (`server/core/prompts.ts` & `src/components/ReferenceManager.tsx`)
+- **Universal Reference Handling (通用格式中立)**:
+  - 取消在提示詞與模型引導中過度強調「三視圖」或「角色設定圖」的格式偏誤，將 Subject 統一作為「通用視覺參考圖（General Visual Reference）」，無縫相容人物、物件、載具、建築、場景及風格等多模態圖像。
+  - 在多模態視覺提示詞中明確指示：「該圖為通用視覺特徵參考，非開場首幀」。
+- **UI Tooltip & Slot Badging**:
+  - 在 `ReferenceManager.tsx` 的實體槽位徽章 Tooltip 中標明：`（通用視覺參考圖，非開場首幀）`，提供直觀清晰的素材語意指示。
+
+#### 🧪 3. Automated Spec & Regression Test Suite (`tests/core/prompts.test.ts`)
+- **Subject Reference Decoupling Test**:
+  - 新增測試 `Ref2VA with general subject reference image does NOT declare Picture as first keyframe`，嚴格斷言提示詞指示不包含首幀定義、不包含第一幀匹配，且要求 `[reference generation]` 任務類型。
+- **Explicit Keyframe Completion Test**:
+  - 新增測試 `Ref2VA with explicit first_keyframe instructs keyframe completion`，確保正規首幀補全能力依然 100% 完整運作。
+
 ## [v5.0.1] - 2026-10-02
 
 ### 🩹 Google AI Studio POSIX Path Fix & Zero-Dependency PKZIP 2.0 Packager (Google AI Studio 雲端正斜線路徑支援與原生純淨打包修復)

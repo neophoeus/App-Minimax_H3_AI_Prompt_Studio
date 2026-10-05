@@ -2230,7 +2230,7 @@ ${ep.fullPrompt}`;
         </section>
       </main>
 
-      {/* Studio Global Footer (v5.0.1) */}
+      {/* Studio Global Footer (v5.1.0) */}
       <footer className="mt-auto border-t border-slate-900 bg-slate-950/90 backdrop-blur-md px-4 lg:px-8 py-3.5 text-xs text-slate-500">
         <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Left: Brand, Version & Verification */}
@@ -2240,7 +2240,7 @@ ${ep.fullPrompt}`;
               MiniMax-H3 AI Prompt Studio
             </span>
             <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-mono font-bold text-purple-300">
-              v5.0.1 Flagship
+              v5.1.0 Flagship
             </span>
             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-md">
               <ShieldCheck className="w-3 h-3 text-emerald-400" />

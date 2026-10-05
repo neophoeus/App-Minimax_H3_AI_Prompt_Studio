@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v5.0.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v5.1.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -29,7 +29,13 @@ Featuring a **Quad-Engine Independent Architecture with Dedicated UI Panels**:
 
 ## ✨ Key Features
 
-### 0. Quad-Engine Independent Architecture, Dedicated UI & Pure Packager (v5.0.0)
+### 0. Universal Visual Reference Decoupling & MiniMax-H3 Spec Alignment (v5.1.0)
+- **Subject General Reference Decoupling**: Completely decoupled `<Subject N>` general reference images from opening keyframes (`<Picture N>`). Unless explicitly assigned a keyframe role (`first_keyframe`, `keyframe`, `composition`), uploaded images are never erroneously declared as first keyframes.
+- **Strict MiniMax-H3 Official Spec Compliance (`ref-en.txt`)**: In `Ref2VA`, visual reference images are cleanly cited inside `<Subject K>` definitions; suppresses redundant standalone picture declarations, mandates `[reference generation]` task types, and ensures `[Shot 1]` unfolds freely based on story action.
+- **Universal Format-Neutral Support**: General visual referencing across characters, objects, vehicles, scenes, and styles without restrictive layout or turnaround assumptions.
+- **Automated Regression Suite**: 42 automated tests ensuring specification compliance and packaging isolation.
+
+### 1. Quad-Engine Independent Architecture, Dedicated UI & Pure Packager (v5.0.0)
 - **Independent Dedicated Entrypoints**: Fully decoupled monolithic routers into standalone server entrypoints (`server-paid-api.ts`, `server-ollama.ts`, `server-llamacpp.ts`, `server-aistudio.ts`).
 - **Dedicated UI Status & Controls**: Frontend UI dynamically locks to the active independent backend with custom indicator panels and a global studio footer.
 - **Pure AI Studio Cloud Packager (`pack_aistudio.bat`)**: Zero-offline-artifact exporter creating lightweight deployable bundles.

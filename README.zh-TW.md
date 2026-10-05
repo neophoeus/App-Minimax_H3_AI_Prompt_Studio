@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v5.0.1-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v5.1.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -31,7 +31,13 @@
 
 ## ✨ 核心特色
 
-### 0. 四大獨立引擎全面解耦、介面專屬化與純淨打包工具 (v5.0.0)
+### 0. 通用視覺參考解耦與 MiniMax-H3 官方規範對齊 (v5.1.0)
+- **通用視覺參考圖（Subject）與首幀解耦**：徹底解除過去未指定首幀時將 `<Picture 1>` 誤判為開場關鍵幀的限制。除非使用者明確指明 `first_keyframe`、`keyframe` 或 `composition`，否則上傳圖片絕不被強制視為首幀關鍵幀。
+- **嚴格遵循 MiniMax-H3 官方全參考規範 (`ref-en.txt`)**：在 `Ref2VA` 模式中將素材物理槽位 `<Picture P>` 直接內嵌於 `<Subject K>` 條目，自動抑制獨立 Picture 條目，強制指定任務類型為 `[reference generation]`，並確保開場 `[Shot 1]` 依據劇情自由發揮、不受參考圖構圖限制。
+- **通用格式中立（Format-Neutral）**：取消對「三視圖」或「角色設定圖」的格式偏誤，全面以通用視覺特徵參考定位，無縫相容人物、物件、載具、建築、場景及風格等多模態圖像。
+- **端到端測試套件擴充**：42 項自動化測試覆蓋主體參考解耦與純淨導出驗證。
+
+### 1. 四大獨立引擎全面解耦、介面專屬化與純淨打包工具 (v5.0.0)
 - **四大專屬服務入口解耦**：徹底移除單體四合一路由相容層，全面採用獨立單引擎入口（`server-paid-api.ts`、`server-ollama.ts`、`server-llamacpp.ts`、`server-aistudio.ts`），架構精簡純淨。
 - **介面專屬化無干擾控制列**：頂部導覽列依據當前啟動之獨立後端呈現專屬面板（Paid API 3.8 旗艦思考鏈標記、Ollama 動態模型探測計數、llama.cpp RTX 5090 32GB 顯存標記、AI Studio 雲端階梯高亮），並增設全域 Studio 狀態底欄。
 - **Google AI Studio 純淨導出工具 (`pack_aistudio.bat`)**：一鍵過濾離線依賴與 Windows 腳本，產出標準純淨 Zip 包。

@@ -173,7 +173,7 @@ export function packAiStudio(
   const purePkg = {
     name: "minimax-h3-ai-prompt-studio",
     private: true,
-    version: rawPkg.version || "5.0.1",
+    version: rawPkg.version || "5.1.0",
     type: "module",
     scripts: {
       dev: "tsx server.ts",

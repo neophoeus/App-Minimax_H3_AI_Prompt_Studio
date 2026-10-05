@@ -88,7 +88,7 @@ non_diegetic_music: ...
 The prompt MUST consist of six sections in this exact order:
 subject_definitions:
 <Subject 1> is ...
-<Picture 1> is ...
+<Picture 2> is ... (ONLY if an image explicitly serves as a standalone keyframe / frame anchor)
 <Video 1> is ...
 <Audio 1> is ...
 
@@ -110,17 +110,22 @@ overall_soundscape:
 non_diegetic_music:
 ...
 
-- "subject_definitions": Define reusable assets using angle-bracket labels (<Subject N>, <Picture N>, <Video N>, <Audio N>). Define each <Subject K> with its detailed appearance as depicted in its physical upload slot <Picture P>, with locked visual identity.
-- "summary": MUST begin with official square-bracketed task type prefix ([reference generation], [keyframe completion], [video continuation], [video editing], [audio reuse], [audio reference]).
-- "retention_analysis": Strictly use official markers: "fully_preserved", "partially_preserved", "attribute_transfer", "weak_reference"; for audio: "fully_copy", "partially_copy", "reference", "weak_reference".
+- "subject_definitions": Define reusable assets using angle-bracket labels (<Subject N>, <Picture N>, <Video N>, <Audio N>).
+  * <Subject N>: Used for reusable visual content (characters, objects, scenes, styles). If an uploaded image <Picture P> provides the visual reference for <Subject K>, cite it inside the subject's definition: e.g. "<Subject 1> is the ... in <Picture 1>, with [detailed appearance traits], with locked visual identity."
+  * <Picture N>: Used as a standalone definition ONLY when the reference image itself explicitly serves as a shot's first frame, keyframe, last frame, or composition anchor (e.g. "<Picture 2> is the first frame of [Shot 1]..."). If an image is used only to provide general visual reference for a subject, DO NOT create a standalone picture definition line! NEVER define a general subject reference image as a first keyframe!
+- "summary": MUST begin with official square-bracketed task type prefix:
+  * Use "[reference generation]" when reference images provide visual traits for subjects without anchoring a keyframe frame.
+  * Use "[keyframe completion]" ONLY when an image genuinely serves as a target video first frame or keyframe anchor.
+  * Other official types: [video continuation], [video editing], [audio reuse], [audio reference].
+- "retention_analysis": Strictly use official markers: "fully_preserved", "partially_preserved", "attribute_transfer", "weak_reference"; for audio: "fully_copy", "partially_copy", "reference", "weak_reference". If an image only identifies the source of a <Subject N>, analyze <Subject N> directly; do NOT create a separate retention entry for that source image.
 - "detailed_description": 1-2 English sentences establishing visual style before [Shot 1]. Then shot-by-shot timeline starting with [Shot 1].
 - "overall_soundscape": 1–4 English sentences.
 - "non_diegetic_music": 1–3 English sentences, or "N/A".
 
 ### MiniMax Multi-Image Physical Upload Mapping Contract:
 When multiple images are uploaded, MiniMax indexes them physically in sequential upload order: <Picture 1> (@image1), <Picture 2> (@image2), <Picture 3> (@image3)...
-- Character/Subject references: Define <Subject K> as depicted in <Picture P> with locked visual identity.
-- Scene/Keyframe images: Define as opening keyframe image establishing setting and composition. [Shot 1] matches this keyframe image.
+- Subject visual references: Define <Subject K> with its objective visual characteristics as depicted in its physical upload slot <Picture P> with locked visual identity.
+- Keyframe images: ONLY images explicitly designated as keyframes establish frame composition for [Shot 1].
 - NEVER mix up Picture indices!`;
   }
 
@@ -257,12 +262,16 @@ export function buildH3UserPrompt(config: any): {
   const rawRefs: any[] = Array.isArray(config.references) ? config.references : [];
 
   const openingKeyframeRef = rawRefs.find((r: any) =>
-    ['first_keyframe', 'keyframe', 'composition'].includes(r.role) || (r.tag && r.tag.startsWith('<Picture'))
+    ['first_keyframe', 'keyframe', 'composition'].includes(r.role)
   );
-  const openingKeyframeTag = openingKeyframeRef?.physicalTag || openingKeyframeRef?.tag || '<Picture 1>';
+  const hasOpeningKeyframe = Boolean(openingKeyframeRef);
+  const openingKeyframeTag = openingKeyframeRef?.physicalTag || openingKeyframeRef?.tag;
+
+  const firstUploadedImageRef = rawRefs.find((r: any) => r.fileType === 'image' && !r.isPureSubject);
+  const i2vaOpeningTag = openingKeyframeTag || firstUploadedImageRef?.physicalTag || '<Picture 1>';
 
   const lastKeyframeRef = rawRefs.find((r: any) => r.role === 'last_keyframe');
-  const firstKeyframePic = (openingKeyframeRef?.physicalTag || '<Picture 1>').replace(/[<>]/g, '');
+  const firstKeyframePic = (openingKeyframeTag || firstUploadedImageRef?.physicalTag || '<Picture 1>').replace(/[<>]/g, '');
   const lastKeyframePic = (lastKeyframeRef?.physicalTag || '<Picture 2>').replace(/[<>]/g, '');
 
   const sanitizedReferences = (rawRefs.length > 0)
@@ -293,9 +302,9 @@ export function buildH3UserPrompt(config: any): {
 
               if (r.physicalTag && r.tag && r.tag.startsWith('<Subject')) {
                 multimodalParts.push(
-                  `[Visual Reference Image attached above is physical upload slot ${r.physicalTag} (@image${r.pictureIndex}), providing the character/subject visual reference for ${r.tag} (Role: ${r.role}, Label: ${cleanName}). Inspect its real facial structure, hairstyle, clothing, colors, and materials. In "subject_definitions", define ${r.tag} using its physical traits as depicted in ${r.physicalTag} (e.g. "${r.tag} is the [detailed appearance traits] as depicted in ${r.physicalTag}, with locked visual identity."). In "retention_analysis", state that ${r.tag} is fully_preserved from ${r.physicalTag}. Do NOT use any file names.]`
+                  `[Visual Reference Image attached above is physical upload slot ${r.physicalTag} (@image${r.pictureIndex}), providing the general visual reference for ${r.tag} (Role: ${r.role}, Label: ${cleanName}). Inspect its real visual characteristics (appearance, colors, style, texture, structure). In "subject_definitions", define ${r.tag} using its physical traits as depicted in ${r.physicalTag} (e.g. "${r.tag} is the [detailed appearance traits] as depicted in ${r.physicalTag}, with locked visual identity."). CRITICAL: ${r.physicalTag} is a general visual reference for ${r.tag} and is NOT an opening keyframe! Do NOT declare "${r.physicalTag} is the first keyframe image...". In "retention_analysis", state that ${r.tag} is fully_preserved from ${r.physicalTag}. Do NOT add a standalone ${r.physicalTag} keyframe entry. Do NOT use any file names.]`
                 );
-              } else if (r.physicalTag && r.tag && r.tag.startsWith('<Picture')) {
+              } else if (r.physicalTag && (['first_keyframe', 'keyframe', 'composition'].includes(r.role) || (r.tag && r.tag.startsWith('<Picture')))) {
                 multimodalParts.push(
                   `[Visual Reference Image attached above is physical upload slot ${r.physicalTag} (@image${r.pictureIndex}) (Role: ${r.role}, Label: ${cleanName}). This image is the target keyframe/composition frame (${r.tag}). In "subject_definitions", define ${r.tag} as the first keyframe image showing the setting, lighting, atmosphere, and composition. In "summary" and "detailed_description" [Shot 1], explicitly reference this frame (${r.tag}). Do NOT use any file names.]`
                 );
@@ -331,7 +340,7 @@ CRITICAL MULTI-EPISODE SERIES GENERATION PROTOCOL (${seriesCount} CONSECUTIVE EP
 - Continuity across episodes MUST be achieved purely through literal step-by-step physical descriptions:
   * Episode 1: Establishes initial scene, character appearance, and opening physical action sequence.
   * Episode K (K >= 2): The prompt's initial description/Shot 1 objectively begins with the exact physical posture, position, and held objects that directly continue from where Episode K-1 ended.
-  * All episodes strictly share identical subject definitions (<Subject 1>), clothing, hair, facial features, reference image (${openingKeyframeTag}), visual style, and ambient soundscape base.
+  * All episodes strictly share identical subject definitions (<Subject 1>), clothing, hair, facial features, ${hasOpeningKeyframe ? `opening keyframe (${openingKeyframeTag}), ` : ''}visual style, and ambient soundscape base.
 - You MUST populate the "episodes" array with exactly ${seriesCount} items:
   * episodeIndex: 1, 2, ... ${seriesCount}
   * title: Traditional Chinese title (e.g. "第 1 段：初始開場與動作錨定", "第 2 段：情節承接與實體位移")
@@ -375,16 +384,20 @@ ${sanitizedReferences}
 KEYFRAME & PHYSICAL SLOT ALIGNMENT CONTRACT:
 - If Generation Mode is I2VA:
   The prompt MUST begin with the exact header line:
-  For the target video, at 0.00 seconds into the target video, ${openingKeyframeTag} (from [Shot 1]) is fully referenced.
+  For the target video, at 0.00 seconds into the target video, ${i2vaOpeningTag} (from [Shot 1]) is fully referenced.
 - If Generation Mode is FL2VA:
   The prompt MUST begin with the exact header line:
   How the reference pictures align with the target video — ${firstKeyframePic} (from Shot 1) aligns with the 0.00-second mark of the target video; ${lastKeyframePic} (from Shot N) aligns with the ${durationSec.toFixed(2)}-second mark of the target video.
 - If Generation Mode is Ref2VA:
   Follow the MiniMax Multi-Image Physical Upload Mapping Contract:
-  * In "subject_definitions": Define each <Subject K> as depicted in its corresponding <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity."). Define the keyframe image as ${openingKeyframeTag} (e.g. "${openingKeyframeTag} is the first keyframe image showing...").
-  * In "summary": Generated from ${openingKeyframeTag}, preserving <Subject 1> (from <Picture 1>), <Subject 2> (from <Picture 2>)...
+${hasOpeningKeyframe ? `  * In "subject_definitions": Define each <Subject K> as depicted in its corresponding <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity."). Define the keyframe image as ${openingKeyframeTag} (e.g. "${openingKeyframeTag} is the first keyframe image showing...").
+  * In "summary": [keyframe completion + reference generation] Generated from ${openingKeyframeTag}, preserving <Subject 1> (from <Picture 1>), <Subject 2> (from <Picture 2>)...
   * In "retention_analysis": Analyze retention for both <Subject K> (from <Picture P>) and ${openingKeyframeTag}.
-  * In "detailed_description" [Shot 1]: The opening frame matches ${openingKeyframeTag}.
+  * In "detailed_description" [Shot 1]: The opening frame matches ${openingKeyframeTag}.` : `  * In "subject_definitions": Define each <Subject K> with its objective visual characteristics as depicted in its physical upload slot <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity.").
+    CRITICAL: ${rawRefs.filter((r: any) => r.physicalTag).map((r: any) => r.physicalTag).join(', ') || '<Picture 1>'} is purely a general visual reference for the subject and is NOT an opening keyframe! Do NOT generate any standalone "<Picture N> is ..." definition lines, and do NOT declare any Picture as the first keyframe image!
+  * In "summary": MUST begin with [reference generation] (or [reference generation + other types]). Summarize the scene featuring <Subject 1> with visual traits from its reference image. Do NOT write "Generated from <Picture 1>" and do NOT treat any picture as an initial keyframe!
+  * In "retention_analysis": Analyze retention for <Subject K> (e.g. "<Subject 1> (appears in [Shot 1]): fully_preserved - visual characteristics maintained from <Picture 1>"). Do NOT create a separate retention entry for <Picture 1>.
+  * In "detailed_description" [Shot 1]: Objectively describe the opening shot according to the narrative. [Shot 1] does NOT match any picture as an opening frame.`}
 
 CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE (MUST FOLLOW STRICTLY):
 - Be specific and literal. Describe what happens, in what order, step by step.

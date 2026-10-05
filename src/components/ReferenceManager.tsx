@@ -339,7 +339,7 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
             </span>
           </div>
           <p className="text-xs text-slate-400 mt-1">
-            支援多圖實體槽位自動對齊：角色圖自動映射為 &lt;Subject 1 aka Picture 1&gt; (@image1)，開場首幀自動累計為 &lt;Picture 3&gt; (@image3)，徹底杜絕模型序號錯位。
+            支援多圖實體槽位自動對齊：通用參考圖自動映射為 &lt;Subject 1 aka Picture 1&gt; (@image1)，開場首幀獨立標註，徹底杜絕模型序號錯位。
           </p>
         </div>
 
@@ -393,7 +393,7 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
                   {item.physicalTag && item.tag.startsWith('<Subject') && !item.isPureSubject && (
                     <span
                       className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-950/90 text-indigo-300 border border-indigo-500/50 text-[11px] font-mono font-semibold"
-                      title={`對應海螺多圖實體上傳槽位：${item.physicalTag} / @image${item.pictureIndex}`}
+                      title={`對應海螺多圖實體上傳槽位：${item.physicalTag} / @image${item.pictureIndex}（通用視覺參考圖，非開場首幀）`}
                     >
                       <span className="text-indigo-400 font-bold">aka {item.physicalTag}</span>
                       <span className="text-indigo-400/80 font-normal">(@image{item.pictureIndex})</span>

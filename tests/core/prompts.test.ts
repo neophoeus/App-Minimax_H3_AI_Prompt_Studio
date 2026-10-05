@@ -131,6 +131,74 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
       assert.ok(res.userPrompt.includes("<Picture 1>"));
       assert.ok(!res.userPrompt.includes("opening_frame.png")); // filename must be sanitized out
     });
+
+    test("Ref2VA with general subject reference image does NOT declare Picture as first keyframe", () => {
+      const res = buildH3UserPrompt({
+        idea: "Hero standing in futuristic city",
+        mode: "Ref2VA",
+        references: [
+          {
+            id: "ref-subj-1",
+            tag: "<Subject 1>",
+            role: "character",
+            name: "Cyberpunk Hero",
+            description: "Woman in black leather outfit",
+            fileType: "image",
+            fileUrl: "data:image/jpeg;base64,herobase64data",
+            physicalTag: "<Picture 1>",
+            pictureIndex: 1,
+          },
+        ],
+      });
+
+      assert.ok(res.userPrompt.includes("<Subject 1>"));
+      assert.ok(res.userPrompt.includes("<Picture 1>"));
+      // Must NOT treat <Picture 1> as an opening keyframe
+      assert.ok(!res.userPrompt.includes("Define the keyframe image as <Picture 1>"));
+      assert.ok(!res.userPrompt.includes("The opening frame matches <Picture 1>"));
+      assert.ok(res.userPrompt.includes("[reference generation]"));
+      assert.ok(res.userPrompt.includes("is purely a general visual reference for the subject and is NOT an opening keyframe"));
+      assert.ok(res.userPrompt.includes("Do NOT generate any standalone \"<Picture N> is ...\" definition lines"));
+      // Multimodal prompt directive check
+      const multiPartString = res.multimodalParts.join("\n");
+      assert.ok(multiPartString.includes("general visual reference"));
+      assert.ok(multiPartString.includes("NOT an opening keyframe"));
+    });
+
+    test("Ref2VA with explicit first_keyframe instructs keyframe completion", () => {
+      const res = buildH3UserPrompt({
+        idea: "Hero standing in futuristic city",
+        mode: "Ref2VA",
+        references: [
+          {
+            id: "ref-subj-1",
+            tag: "<Subject 1>",
+            role: "character",
+            name: "Cyberpunk Hero",
+            description: "Woman in black leather outfit",
+            fileType: "image",
+            fileUrl: "data:image/jpeg;base64,herobase64data",
+            physicalTag: "<Picture 1>",
+            pictureIndex: 1,
+          },
+          {
+            id: "ref-kf-1",
+            tag: "<Picture 2>",
+            role: "first_keyframe",
+            name: "Opening Scene Frame",
+            description: "Wide shot of neon skyscraper courtyard",
+            fileType: "image",
+            fileUrl: "data:image/jpeg;base64,scenebase64data",
+            physicalTag: "<Picture 2>",
+            pictureIndex: 2,
+          },
+        ],
+      });
+
+      assert.ok(res.userPrompt.includes("Define the keyframe image as <Picture 2>"));
+      assert.ok(res.userPrompt.includes("[keyframe completion + reference generation]"));
+      assert.ok(res.userPrompt.includes("The opening frame matches <Picture 2>"));
+    });
   });
 
   describe("buildDialoguePrompt & buildOptimizePrompt & buildRefineSeriesPrompt", () => {
