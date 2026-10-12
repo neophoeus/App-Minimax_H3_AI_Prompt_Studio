@@ -171,6 +171,7 @@ Video diffusion models synthesize physical movement from text tokens. Flowery se
   1. Starting state: Initial position of the subject/object, body posture, what hands are holding, and initial eye gaze.
   2. Action: Objective physical motion, directions, trajectories, speeds, and contacts in chronological step-by-step order.
   3. End state: Resting position, resulting posture, and physical status when motion concludes.
+- HIGH PHYSICAL DENSITY & SUBSTANTIAL LENGTH: Being literal and objective does NOT mean being terse or minimalist! Video diffusion models produce superior visual consistency when supplied with abundant, specific physical anchors (clothing materials, lighting angles, background ambient activity, tactile grips, exact spatial coordinates). Provide rich, thorough physical descriptions (aiming for 120-250 English words per shot).
 
 ### 4. Speakers, Dialogue, Voiceover & Visible Text Rules:
 - Speakers who vocalize receive stable IDs: (S1), (S2), or compound (S1,S2). Non-vocalizing characters receive no speaker ID.
@@ -194,7 +195,7 @@ Video diffusion models synthesize physical movement from text tokens. Flowery se
 You MUST output a valid JSON object matching this schema:
 {
   "fullPrompt": "The COMPLETE combined prompt string formatted with exact headers, blank lines, and exact field names, ready to copy into MiniMax H3. Ensure NO filenames appear.",
-  "explanationZh": "繁體中文解析：說明選用模式的結構編排優勢、三維度運鏡與畫面規劃",
+  "explanationZh": "繁體中文解析：詳細說明畫面編排、三維度運鏡規劃，以及【前因後果推演】、【周遭背景動態】與【補足之實體材質與生理細節】",
   "suggestions": [
     "畫幅與鏡頭節奏建議",
     "MiniMax-H3 官方實用技巧 1",
@@ -224,19 +225,41 @@ Return ONLY valid JSON.
 
 /**
  * Builds specific instruction directives for the Assistant Director (輔助導演開關)
- * Enabled: Autonomously extrapolates and enriches secondary physical interactions and environment.
+ * Enabled: Autonomously extrapolates and enriches context, causality, ambient world dynamics, materials, and substantial density.
  * Disabled: Strictly faithful mode, zero extrapolation beyond user explicit input.
  */
 export function getAssistantDirectorDirective(assistantDirector: boolean = true): string {
   if (assistantDirector) {
     return `
-### ASSISTANT DIRECTOR DIRECTIVE (ENABLED / 輔助導演開啟):
-- ROLE: Professional Cinematographer & Scene Coordinator.
-- ENRICH PHYSICAL LOGIC: Faithfully maintain the user's core intent, characters, and primary storyline, while automatically extrapolating and enriching realistic physical context and secondary motions:
-  1. Secondary Micro-Motions: Incorporate realistic secondary physical reactions (e.g. hair strands or clothing fluttering in the breeze, steam billows rising from liquid, droplets beading and streaking down surfaces, subtle eyelid twitches, natural breathing rhythm, fingers micro-adjusting grip).
-  2. Multi-Plane Spatial Depth: Structure the composition with clear foreground layers (e.g. out-of-focus wet glass, door frame, passing dust particles), midground action, and deep atmospheric background.
-  3. Plausible Environmental Interaction: Objects realistically react to the environment (e.g. feet kicking up subtle dust puffs, neon light shimmering in puddle ripples).
-- OBJECTIVE PHRASING: Ensure all enriched details are described strictly as literal physical actions (Starting state -> Action -> End state) without flowery adjectives.`;
+### ASSISTANT DIRECTOR DIRECTIVE (ENABLED / 輔助導演開啟 - 深度影視導演與世界觀推演):
+- ROLE: Master Cinematographer, Narrative Dramaturge & Visual World-Building Architect.
+- MISSION: Move beyond mere formatting or summarizing. Transform concise user ideas into rich, layered, cinema-grade prompts with substantial text density and high-dimensional physical realism, adhering strictly to MiniMax-H3's literal physical framework (Starting state -> Action -> End state).
+
+- 4-DIMENSIONAL DEEP CINEMATIC ENRICHMENT (深度四維度擴充):
+  1. Preceding Context & Causality (前因後果與生理動態推演):
+     - Deduce the immediate preceding physical events (what happened 5–15 seconds prior): Why is the character here? What is their immediate objective?
+     - Translate psychological state into concrete physical manifestations: physiological signs (e.g. rapid shallow chest breathing, beaded sweat reflecting ambient light on temple, white-knuckled grip, trembling fingertips, mud or water stains on trouser hems, worn leather abrasions).
+     - Specify the immediate physical outcome and consequence of the action (e.g. displaced dust settling, ripples dissipating, condensed breath fogging cold glass).
+
+  2. Surrounding World Dynamics & Ambient Life (周遭事件與環境生命力):
+     - Eliminate "empty sterile stage syndrome". The world is alive around the subject:
+     - Multi-Plane Spatial Depth: Layer the frame with clear foreground framing (e.g. out-of-focus wet railing, edge of door frame, floating dust motes / rain streaks), active midground subject action, and deep atmospheric background.
+     - Surrounding Background Events: Integrate subtle, logical background activity appropriate to the setting (e.g. distant passing vehicle headlights cutting through mist, a flickering neon tube with an erratic buzz, curtains swaying from an open sash, wind-blown dry leaves skittering along asphalt, a background clock pendulum swinging).
+     - Plausible Environmental Interaction: Objects realistically react to the environment (e.g. boots crunching loose gravel, rain droplets bouncing off a taut umbrella canopy, neon reflections shimmering across water puddles).
+
+  3. Tactile, Material & Sensory Grounding (補足未提及的材質與肢體細節):
+     - Flesh out unstated visual and material specifics: precise textures (e.g. distressed lambskin jacket, brushed matte anodized aluminum, pitted concrete, oil-stained wooden bench), exact light color temperatures (e.g. 2800K amber tungsten vs 6500K harsh fluorescent), and specular reflections.
+     - Secondary Micro-Motions: Incorporate realistic secondary physical reactions (e.g. hair strands or clothing fluttering in the breeze, steam billows rising from liquid, droplets beading and streaking down surfaces, subtle eyelid twitches, natural breathing rhythm, fingers micro-adjusting grip).
+     - Articulate multi-phase physical mechanics: exact hand-finger positioning, weight shifts from heel to ball of foot, and eye gaze direction vectors.
+
+  4. Substantial Narrative Density & Text Volume (豐沛文字量與鏡頭密度):
+     - DO NOT provide brief, superficial 1–2 sentence summaries.
+     - Generate substantial, dense, highly descriptive physical paragraphs (aiming for 120–250 English words per shot in "integrated_multimodal_description" or "detailed_description").
+     - Every second of the duration should be accounted for through deliberate, step-by-step physical progression.
+
+- CRITICAL ZERO-FLUFF COMPLIANCE:
+  - All enriched details MUST be expressed strictly as literal physical actions, spatial relationships, and concrete material appearances.
+  - NEVER use abstract poetic metaphors or emotional adjectives (e.g. NO "ethereal glow", "mysterious aura", "heart-wrenching grief"). Ground all emotion into tangible physical behavior and lighting!`;
   } else {
     return `
 ### ASSISTANT DIRECTOR DIRECTIVE (DISABLED / 保守忠實模式):
@@ -420,7 +443,7 @@ CRITICAL DIALOGUE RULES:
 - Any character spoken dialogue MUST be placed inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>). Keep the exact user dialogue verbatim.
 - Double quotes "" are strictly reserved for text visibly seen on-screen (e.g. signs, logos).
 CRITICAL PROHIBITION: DO NOT write any file names, file extensions (e.g. .png, .jpg), or local upload names into the output! Define subjects using clear visual descriptions only.
-Ensure English language is used for the actual prompt text (fullPrompt) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh, suggestions, and continuityNotes!
+Ensure English language is used for the actual prompt text (fullPrompt) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh, suggestions, and continuityNotes! In explanationZh, clearly detail: (1) 【前因後果與動機推演】, (2) 【周遭環境與背景事件動態】, and (3) 【補足之實體材質與生理細節】, so the user understands the exact cinematic reasoning applied!
 `;
 
   return {
@@ -470,7 +493,7 @@ CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE:
 - DO NOT use flowery language, poetic metaphors, emotional adjectives, or abstract concepts (avoid "ethereal", "breathtaking", "mysterious aura", "soul-stirring").
 - Instead of "a ball bouncing around" → "A red ball moves to the right, bounces off the wall, and returns to the center"
 - Instead of "fluid pouring" → "Water flows from the left container through the connecting tube into the right container until both levels are equal"
-- Describe the starting state, the action, and the end state for each shot.
+- Describe the starting state, the action, and the end state for each shot with high physical density and rich narrative depth (aiming for substantial, detailed physical progression rather than sparse summaries).
 - Divide into shots starting with [Shot 1] (setting style/composition, no timestamp), and subsequent shots with cut timecodes: "[Shot 2] At MM:SS.mmm, the camera cuts to...".
 - Express camera motion as natural English actions within the shot (e.g. "The camera pushes in with small amplitude at slow speed toward..."). DO NOT use bracketed camera tags like "[Push In]".
 - Format spoken dialogue inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>), and reserve double quotes "" strictly for visible on-screen text.

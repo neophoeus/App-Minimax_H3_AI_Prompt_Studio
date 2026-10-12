@@ -154,7 +154,7 @@ export interface H3PromptConfig {
   dialogueText: string;
   sfxText: string;
   suppressMusic: boolean; // non_diegetic_music: N/A
-  assistantDirector?: boolean; // 輔助導演開關 (預設 true: 自動推理補全次生細節)
+  assistantDirector?: boolean; // 輔助導演開關 (預設 true: 深度推理前因後果、周遭環境動態、補全實體材質與擴充高密度文字量)
   outputContract?: OutputContract; // 'official' (預設 官方全量架構) | 'compact' (簡約精煉模式)
   temperatureMode?: TemperatureMode; // 'auto' (Gemini官方預設, 本機0.7) | 'manual'
   manualTemperature?: number; // 手動溫度 (0.0 ~ 1.5, 預設 0.7)

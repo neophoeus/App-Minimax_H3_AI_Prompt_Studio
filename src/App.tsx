@@ -927,11 +927,16 @@ ${ep.fullPrompt}`;
                     <label className="text-xs font-semibold text-slate-200">
                       輔助導演開關 (Assistant Director)
                     </label>
+                    {config.assistantDirector !== false && (
+                      <span className="px-1.5 py-0.5 text-[10px] font-medium bg-purple-500/20 text-purple-300 border border-purple-500/30 rounded-md">
+                        深度推演增強
+                      </span>
+                    )}
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
                     {config.assistantDirector !== false
-                      ? '已啟用：AI 自動推理補充周邊環境動態、光影、次生物理細節（髮絲、水氣、景深分層）與運鏡流暢度。'
-                      : '已關閉：規格直譯模式，100% 嚴格忠於原始輸入，零額外腦補與情節增添。'}
+                      ? '已啟用：AI 影視導演深度推演 — 自動推算前因後果、周遭環境動態事件、補足實體材質與生理微細節，大幅擴充文字量與畫面豐富度。'
+                      : '已關閉：規格直譯模式 — 100% 嚴格忠於原始輸入，零額外情節與周遭事件增添。'}
                   </p>
                 </div>
                 <button
@@ -2230,7 +2235,7 @@ ${ep.fullPrompt}`;
         </section>
       </main>
 
-      {/* Studio Global Footer (v5.1.0) */}
+      {/* Studio Global Footer (v5.2.0) */}
       <footer className="mt-auto border-t border-slate-900 bg-slate-950/90 backdrop-blur-md px-4 lg:px-8 py-3.5 text-xs text-slate-500">
         <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Left: Brand, Version & Verification */}
@@ -2240,7 +2245,7 @@ ${ep.fullPrompt}`;
               MiniMax-H3 AI Prompt Studio
             </span>
             <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-mono font-bold text-purple-300">
-              v5.1.0 Flagship
+              v5.2.0 Flagship
             </span>
             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-md">
               <ShieldCheck className="w-3 h-3 text-emerald-400" />

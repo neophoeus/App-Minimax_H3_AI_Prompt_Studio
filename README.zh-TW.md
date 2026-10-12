@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v5.1.0-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v5.2.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -31,7 +31,16 @@
 
 ## ✨ 核心特色
 
-### 0. 通用視覺參考解耦與 MiniMax-H3 官方規範對齊 (v5.1.0)
+### 0. 深度影視導演推理與多維度細節擴充 (v5.2.0)
+- **四維度深度推演架構 (4-Dimensional Cinematic Deduction)**：
+  - **前因後果與生理動態推演**：自動推導進入鏡頭前 5～15 秒的歷史，將動機轉譯為實體生理特徵（急促喘息、額角冷汗反光、發白指節、沾濕褲管磨損）與動作後的物理反饋。
+  - **周遭事件與環境生命力**：杜絕真空舞台，注入前景遮擋層（失焦生鏽欄杆、雨刷水痕）與背景環境微動態（穿行車燈、斷續嗡鳴霓虹、窗簾微風擺動、地面落葉）。
+  - **材質與肢體微細節補足**：自動補足具體材質（做舊牛皮、生鏽鐵網）、精確色溫與多段連續肢體接觸。
+  - **豐沛文字量與敘事密度**：要求每個鏡頭產出 **120～250 英文單字之高密度客觀動作段落**；澄清「客觀嚴謹不代表簡短！豐富的實體物理錨定能為視頻擴散模型帶來更佳的生成穩定度」。
+- **結構化中文解析 (`explanationZh`)**：透明化條列標註【前因後果推演】、【周遭環境動態】與【補足材質】，方便檢視 AI 的思考脈絡。
+- **介面深度推演標籤**：輔助導演開關新增「深度推演增強」動態徽章。
+
+### 1. 通用視覺參考解耦與 MiniMax-H3 官方規範對齊 (v5.1.0)
 - **通用視覺參考圖（Subject）與首幀解耦**：徹底解除過去未指定首幀時將 `<Picture 1>` 誤判為開場關鍵幀的限制。除非使用者明確指明 `first_keyframe`、`keyframe` 或 `composition`，否則上傳圖片絕不被強制視為首幀關鍵幀。
 - **嚴格遵循 MiniMax-H3 官方全參考規範 (`ref-en.txt`)**：在 `Ref2VA` 模式中將素材物理槽位 `<Picture P>` 直接內嵌於 `<Subject K>` 條目，自動抑制獨立 Picture 條目，強制指定任務類型為 `[reference generation]`，並確保開場 `[Shot 1]` 依據劇情自由發揮、不受參考圖構圖限制。
 - **通用格式中立（Format-Neutral）**：取消對「三視圖」或「角色設定圖」的格式偏誤，全面以通用視覺特徵參考定位，無縫相容人物、物件、載具、建築、場景及風格等多模態圖像。

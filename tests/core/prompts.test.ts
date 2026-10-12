@@ -63,9 +63,13 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
   describe("getAssistantDirectorDirective", () => {
     test("Enabled mode includes secondary micro-motions and spatial depth", () => {
       const enabled = getAssistantDirectorDirective(true);
-      assert.ok(enabled.includes("ASSISTANT DIRECTOR DIRECTIVE (ENABLED / 輔助導演開啟)"));
+      assert.ok(enabled.includes("ASSISTANT DIRECTOR DIRECTIVE (ENABLED / 輔助導演開啟"));
       assert.ok(enabled.includes("Secondary Micro-Motions"));
       assert.ok(enabled.includes("Multi-Plane Spatial Depth"));
+      assert.ok(enabled.includes("Preceding Context & Causality"));
+      assert.ok(enabled.includes("Surrounding World Dynamics & Ambient Life"));
+      assert.ok(enabled.includes("Tactile, Material & Sensory Grounding"));
+      assert.ok(enabled.includes("Substantial Narrative Density & Text Volume"));
     });
 
     test("Disabled mode restricts extrapolation", () => {

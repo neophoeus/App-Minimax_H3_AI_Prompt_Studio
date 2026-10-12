@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v5.2.0] - 2026-10-12
+
+### 🎬 Deep Director Reasoning & Multi-Dimensional Rich Context Enrichment (深度影視導演推理與多維度細節擴充)
+
+#### 🧠 1. 4-Dimensional Cinematic Deduction Framework (`server/core/prompts.ts`)
+- **Preceding Context & Causality (前因後果與生理動態推演)**:
+  - 提示詞生成引擎告別單純的「規格整理員（Spec Formatter）」，全面升級為「影視導演與世界觀推演架構師（Cinematic Co-Director & Visual World Dramaturge）」。
+  - 自動推導進入鏡頭前 5～15 秒之事件背景與角色動機，將心理狀態客觀轉譯為具體生理特徵（急促淺胸喘息、額角冷汗反光、發白緊握之指節、沾濕褲管磨損）與動作後的物理反饋（揚起塵土緩緩沉降、呼出白霧凝結於冰冷玻璃）。
+- **Surrounding World Dynamics & Ambient Life (周遭事件與環境生命力)**:
+  - 杜絕真空無人舞台，注入真實世界動態：
+  - 前景遮擋構圖層（失焦生鏽欄杆、雨刷水痕、飄動微粒）。
+  - 背景環境事件（遠處穿行車輛燈束切破薄霧、霓虹燈管伴隨斷續嗡鳴閃爍、窗簾受風擺動、街角打轉的乾燥落葉）。
+  - 真實環境互動（鞋底碾碎砂礫、雨滴在傘面彈跳、霓虹倒影在水窪漣漪中晃動）。
+- **Tactile, Material & Sensory Grounding (未提及材質與肢體細節補足)**:
+  - 自動補足未說明的具體材質特性（做舊牛皮夾克、啞光陽極氧化鋁、生鏽鐵網、斑駁木桌）。
+  - 精確光源色溫（2800K 琥珀暖光 vs 6500K 刺眼水銀日光）與高光反光。
+  - 次生物理動態（髮絲受微風吹拂、液體升騰熱氣、微表情與重心轉移）與精準視線方向。
+- **Substantial Narrative Density & Text Volume (豐沛文字量與鏡頭密度)**:
+  - 每個 Shot 敘事明確要求產出 **120～250 英文單字之高密度客觀動作段落**，禁止一兩句簡短摘要。
+  - 特別澄清核心原則：「**客觀嚴謹不代表簡短！豐富的實體物理錨定能為視頻擴散模型帶來更佳的生成穩定度與細節飽滿度。**」
+
+#### 📑 2. Structured Chinese Reasoning Output (`explanationZh`)
+- **Transparent Deduction Breakdown**:
+  - 指示 AI 在產出中文架構解析（`explanationZh`）時條列呈現：
+    1. `【前因後果與動機推演】`
+    2. `【周遭環境與背景事件動態】`
+    3. `【補足之實體材質與生理細節】`
+  - 讓使用者能透明且清晰檢驗 AI 導演為場景構想所補充的具體推演脈絡。
+
+#### 💻 3. Frontend UI Badge & Copy Upgrades (`src/App.tsx`, `src/components/Navbar.tsx`)
+- **Dynamic Badge & Clarified Copy**:
+  - 輔助導演開關新增「`深度推演增強`」動態高亮徽章。
+  - 文案更新為：`已啟用：AI 影視導演深度推演 — 自動推算前因後果、周遭環境動態事件、補足實體材質與生理微細節，大幅擴充文字量與畫面豐富度。`
+- **Global Studio Version Synchronization**:
+  - 頂部導覽列升級為 `v5.2.0 • 深度導演推理、周遭環境動態、通用視覺參考解耦與四大獨立引擎旗艦`。
+  - 頁尾全域狀態更新為 `v5.2.0 Flagship`。
+
+#### 🧪 4. Automated Test Suite Updates (`tests/core/prompts.test.ts`)
+- **Deep Director Directive Verification**:
+  - 擴充單元測試斷言，驗證 `getAssistantDirectorDirective(true)` 完整包含四維度推演指令（Preceding Context & Causality、Surrounding World Dynamics & Ambient Life、Tactile Material Grounding、Substantial Narrative Density & Text Volume）。
+  - 42 項測試全部 100% 通過。
+
 ## [v5.1.0] - 2026-10-05
 
 ### 🎯 Universal Visual Reference Decoupling & Official MiniMax-H3 Spec Alignment (通用視覺參考解耦與 MiniMax-H3 官方全參考規範修復)

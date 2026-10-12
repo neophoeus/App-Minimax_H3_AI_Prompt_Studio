@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v5.1.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v5.2.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -29,7 +29,16 @@ Featuring a **Quad-Engine Independent Architecture with Dedicated UI Panels**:
 
 ## ✨ Key Features
 
-### 0. Universal Visual Reference Decoupling & MiniMax-H3 Spec Alignment (v5.1.0)
+### 0. Deep Director Reasoning & Multi-Dimensional Rich Context Enrichment (v5.2.0)
+- **4-Dimensional Cinematic Deduction Framework**:
+  - **Preceding Context & Causality**: Autonomously extrapolates immediate historical events (5–15 seconds prior) and grounds psychological tension into concrete physiological symptoms (rapid shallow breathing, beaded sweat reflections on temples, white-knuckled grips, frayed seams, and subsequent physical consequences).
+  - **Surrounding World Dynamics & Ambient Life**: Eliminates empty stage syndrome by injecting living world events: foreground obstruction layers (out-of-focus railings, rain streaks), background micro-events (passing headlights, flickering buzzing neon, windblown debris), and realistic environmental reactions.
+  - **Tactile, Material & Sensory Grounding**: Fills in unstated textures (distressed leather, brushed aluminum, pitted concrete, oil-stained timber), precise light color temperatures, and multi-phase physical mechanics.
+  - **Substantial Narrative Density & Text Volume**: Explicitly aims for 120–250 English words per shot of dense, cinema-grade literal physical prose. Clarifies that strict objectivity does not mean sparse minimalism.
+- **Structured Chinese Explanations (`explanationZh`)**: Transparently lists deduced antecedents, surrounding background dynamics, and added physical materials.
+- **Enhanced UI Controls**: "深度推演增強" dynamic badge on the Assistant Director toggle.
+
+### 1. Universal Visual Reference Decoupling & MiniMax-H3 Spec Alignment (v5.1.0)
 - **Subject General Reference Decoupling**: Completely decoupled `<Subject N>` general reference images from opening keyframes (`<Picture N>`). Unless explicitly assigned a keyframe role (`first_keyframe`, `keyframe`, `composition`), uploaded images are never erroneously declared as first keyframes.
 - **Strict MiniMax-H3 Official Spec Compliance (`ref-en.txt`)**: In `Ref2VA`, visual reference images are cleanly cited inside `<Subject K>` definitions; suppresses redundant standalone picture declarations, mandates `[reference generation]` task types, and ensures `[Shot 1]` unfolds freely based on story action.
 - **Universal Format-Neutral Support**: General visual referencing across characters, objects, vehicles, scenes, and styles without restrictive layout or turnaround assumptions.
