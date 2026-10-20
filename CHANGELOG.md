@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v5.3.1] - 2026-10-20
+
+### 🩹 Footer Status Synchronization & Release Alignment (頁尾全域狀態同步與發行對齊)
+- **Global Footer Version Badge Update**:
+  - 同步頁尾版本標記至 `v5.3.1 Flagship`，確保導覽列、頁尾與套件配置完全一致。
+- **Full Release Alignment**:
+  - 全面更新 `package.json`、`package-lock.json`、`README.md`、`README.zh-TW.md` 與 AI Studio 純淨打包器版本至 `v5.3.1`。
+
 ## [v5.3.0] - 2026-10-20
 
 ### 🚀 Observable Physical State Principles, 3-in-1 AI Assistants & MiniMax-H3 Full Spec Alignment (客觀可觀察物理狀態原則放寬、三合一 AI 輔助與 MiniMax-H3 官方全規格對齊)
