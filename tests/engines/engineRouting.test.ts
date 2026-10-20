@@ -33,12 +33,12 @@ describe("Engine Routing & Strategy Specifications", () => {
       assert.ok(plan.thinkingConfig);
     });
 
-    test("pro tier specializes models by task (lite for dialogue, 3.6 for media, 3.8 for prompt)", () => {
+    test("pro tier specializes models by task (lite for dialogue, 3.8 for media, 3.8 for prompt)", () => {
       const dialoguePlan = getExecutionPlan("dialogue", "pro");
       assert.equal(dialoguePlan.primaryModel, "gemini-3.5-flash-lite");
 
       const mediaPlan = getExecutionPlan("media_analysis", "pro");
-      assert.equal(mediaPlan.primaryModel, "gemini-3.6-flash");
+      assert.equal(mediaPlan.primaryModel, "gemini-3.8-flash");
 
       const promptPlan = getExecutionPlan("prompt_generation", "pro");
       assert.equal(promptPlan.primaryModel, "gemini-3.8-flash");

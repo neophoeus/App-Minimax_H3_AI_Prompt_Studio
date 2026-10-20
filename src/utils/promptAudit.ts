@@ -11,6 +11,11 @@ const CAMERA_MOVEMENT_REGEX =
 
 const FILENAME_LEAK_REGEX = /\b[\w-]+\.(?:png|jpe?g|webp|gif|mp4|mov|webm|mp3|wav|ogg)\b/gi;
 
+const SHOT1_TIMESTAMP_REGEX = /\[Shot 1\]\s*(?:At\s+)?(?:\d{1,2}:)?\d{1,2}:\d{2,3}(?:\.\d{1,3})?/i;
+
+const BRACKETED_CAMERA_REGEX =
+  /\[\s*(?:Camera\s*:\s*)?(?:Zoom[- ](?:In|Out)|Push[- ](?:In|Out)|Pull[- ](?:In|Out)|Pan[- ](?:Left|Right|Across|Up|Down)|Truck[- ](?:Left|Right)|Tilt[- ](?:Up|Down)|Pedestal[- ](?:Up|Down)|Arc[- ]Shot|Tracking[- ]Shot|Static[- ]Shot|Dolly[- ](?:In|Out)|Shake[- ](?:Slightly|Strongly)|POV|Roll(?:\s+(?:Clockwise|Counterclockwise))?)\s*\]/gi;
+
 /**
  * Parses duration string like '10s' to seconds number (10)
  */
@@ -157,7 +162,31 @@ export function auditPrompt(
     });
   }
 
-  // 4. Constraint Check: Static Shot vs Moving Camera
+  // 4. Shot 1 Timestamp Constraint Check (Shot 1 must be baseline and have NO timestamp)
+  if (SHOT1_TIMESTAMP_REGEX.test(prompt)) {
+    hasTimestampError = true;
+    issues.push({
+      level: 'error',
+      code: 'SHOT1_HAS_TIMESTAMP',
+      messageZh: 'Shot 1 包含時間戳，違反 MiniMax-H3 規範（Shot 1 必須為基準鏡頭且無時間標籤）',
+      suggestionZh: '移除 Shot 1 的時間戳，例如將 "[Shot 1] At 00:00.000, " 改為 "[Shot 1] "。',
+    });
+  }
+
+  // 5. Bracketed Camera Movement Tags Check (e.g. [Push In], [Pan Left])
+  const bracketedCameraMatches = prompt.match(BRACKETED_CAMERA_REGEX);
+  if (bracketedCameraMatches && bracketedCameraMatches.length > 0) {
+    hasConstraintViolation = true;
+    const uniqueTags = Array.from(new Set(bracketedCameraMatches));
+    issues.push({
+      level: 'warning',
+      code: 'BRACKETED_CAMERA_TAG',
+      messageZh: `偵測到中括號形式的運鏡標籤：${uniqueTags.join(', ')}`,
+      suggestionZh: 'MiniMax-H3 不支援中括號運鏡標籤，應寫成自然英文動作（如 "The camera pushes in slowly toward..."）。',
+    });
+  }
+
+  // 6. Constraint Check: Static Shot vs Moving Camera
   const hasStaticRequest =
     (options.cameraMoves && options.cameraMoves.includes('Static Shot')) ||
     /\b(?:static|locked(?:-off)?|fixed)\s+camera\b|\bno\s+camera\s+movement\b/i.test(prompt);
@@ -178,7 +207,7 @@ export function auditPrompt(
     }
   }
 
-  // 5. Dialogue Tag Balance
+  // 7. Dialogue Tag Balance
   const openDTags = (prompt.match(/<d>/gi) || []).length;
   const closeDTags = (prompt.match(/<\/d>/gi) || []).length;
   if (openDTags !== closeDTags) {
@@ -187,6 +216,18 @@ export function auditPrompt(
       code: 'UNBALANCED_DIALOGUE_TAGS',
       messageZh: `對白標籤未對稱閉合（<d> 共 ${openDTags} 個，</d> 共 ${closeDTags} 個）`,
       suggestionZh: 'MiniMax-H3 的人物對白必須完整置於 <d>[Language] ...</d> 標籤中。',
+    });
+  }
+
+  // 8. Lyrics Tag Balance (<l> vs </l>)
+  const openLTags = (prompt.match(/<l>/gi) || []).length;
+  const closeLTags = (prompt.match(/<\/l>/gi) || []).length;
+  if (openLTags !== closeLTags) {
+    issues.push({
+      level: 'error',
+      code: 'UNBALANCED_LYRICS_TAGS',
+      messageZh: `歌詞標籤未對稱閉合（<l> 共 ${openLTags} 個，</l> 共 ${closeLTags} 個）`,
+      suggestionZh: 'MiniMax-H3 的歌詞必須完整置於 <l>[Language] ...</l> 標籤中。',
     });
   }
 
@@ -245,7 +286,13 @@ export function repairPrompt(prompt: string, durationSeconds: number = 10): stri
     }
   });
 
-  // 4. Clean formatting punctuation leftovers
+  // 4. Strip timestamp from [Shot 1] if accidentally added
+  text = text.replace(/\[Shot 1\]\s*(?:At\s+)?(?:\d{1,2}:)?\d{1,2}:\d{2,3}(?:\.\d{1,3})?,?\s*/gi, '[Shot 1] ');
+
+  // 5. Strip bracketed camera tags like [Push In]
+  text = text.replace(BRACKETED_CAMERA_REGEX, '');
+
+  // 6. Clean formatting punctuation leftovers
   text = text
     .replace(/\bis\s*,\s*/gi, 'is ')
     .replace(/,\s*,/g, ',')
@@ -253,6 +300,18 @@ export function repairPrompt(prompt: string, durationSeconds: number = 10): stri
     .replace(/[ \t]{2,}/g, ' ')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+
+  // 7. Balance unclosed speech/lyrics tags
+  const openD = (text.match(/<d>/gi) || []).length;
+  const closeD = (text.match(/<\/d>/gi) || []).length;
+  if (openD > closeD) {
+    text += '</d>'.repeat(openD - closeD);
+  }
+  const openL = (text.match(/<l>/gi) || []).length;
+  const closeL = (text.match(/<\/l>/gi) || []).length;
+  if (openL > closeL) {
+    text += '</l>'.repeat(openL - closeL);
+  }
 
   return text;
 }

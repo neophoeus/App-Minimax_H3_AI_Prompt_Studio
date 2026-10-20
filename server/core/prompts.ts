@@ -10,7 +10,7 @@ export function buildModularSystemInstruction(mode: string = "T2VA", outputContr
 ### 1. Structure & Core Fields for Compact Mode (Concise Narrative Output):
 The prompt MUST follow this exact, clean two-part natural-language layout (do NOT output subject_definitions, summary, or retention_analysis headers):
 
-[A complete, dense, vivid, and objective literal description of the entire scene, character appearance/visual style, step-by-step physical actions following Starting State -> Action Sequence -> End State, and natural camera movements in continuous English prose. Preserve character spoken dialogue inside <d>[Language] ...</d> tags.]
+[A complete, vivid, and objective description of the scene, character appearance/visual style, observable physical states and actions, and natural camera movements in continuous English prose. Preserve character spoken dialogue inside <d>[Language] ...</d> tags and sung lyrics inside <l>[Language] ...</l> tags.]
 
 overall_soundscape:
 [Brief, scene-grounded audible sounds and physical sound effects in 1-2 English sentences]
@@ -160,26 +160,25 @@ CRITICAL CAMERA GRAMMAR RULE:
 Camera motion MUST be written as a natural English action within the shot narrative, NEVER stacked as separate bracketed labels (e.g. NEVER write "[Push In]" or "[Camera: Arc shot]").
 Example: "The camera pushes in with small amplitude at slow speed toward the folded letter in her hands."
 
-### 3. Objective, Literal & Step-by-Step Visual Action Principle (CRITICAL):
-Video diffusion models synthesize physical movement from text tokens. Flowery sentences, poetic metaphors, emotional adjectives, and abstract concepts cause motion confusion and distortion.
-- ALL visual actions MUST be specific, literal, and step-by-step:
-  - Be specific and literal. Describe what happens, in what order, step by step.
-  - DO NOT use flowery language, poetic metaphors, emotional adjectives, or abstract concepts (e.g. NEVER write "ethereal glow", "mysterious aura", "heart-wrenching sorrow", "breathtaking majesty", "symphony of lights", "vibes").
+### 3. Objective & Observable Physical State Principle (CRITICAL):
+Video diffusion models synthesize visual frames from concrete physical descriptions. Abstract adjectives, poetic metaphors, and vague emotional labels cause visual ambiguity.
+- DO NOT use abstract adjectives, flowery language, poetic metaphors, or non-visual emotional concepts (e.g. NEVER write "ethereal glow", "mysterious aura", "heart-wrenching sorrow", "breathtaking majesty", "symphony of lights", "vibes").
+- Focus primarily on objective, concrete, and visually observable physical states, appearances, spatial relationships, and actions:
+  - Describe what can be physically seen on camera: subject posture, facial expression or gaze, clothing/object materials, lighting direction, and clear physical movements.
   - Instead of "a ball bouncing around" → "A red ball moves to the right, bounces off the wall, and returns to the center"
   - Instead of "fluid pouring" → "Water flows from the left container through the connecting tube into the right container until both levels are equal"
-- ALWAYS construct action narratives using the three-state physical framework:
-  1. Starting state: Initial position of the subject/object, body posture, what hands are holding, and initial eye gaze.
-  2. Action: Objective physical motion, directions, trajectories, speeds, and contacts in chronological step-by-step order.
-  3. End state: Resting position, resulting posture, and physical status when motion concludes.
-- HIGH PHYSICAL DENSITY & SUBSTANTIAL LENGTH: Being literal and objective does NOT mean being terse or minimalist! Video diffusion models produce superior visual consistency when supplied with abundant, specific physical anchors (clothing materials, lighting angles, background ambient activity, tactile grips, exact spatial coordinates). Provide rich, thorough physical descriptions (aiming for 120-250 English words per shot).
+- Keep the narrative natural and flexible: adjust description length and detail density naturally according to the scene's complexity without rigid word-count padding or formulaic templates.
 
-### 4. Speakers, Dialogue, Voiceover & Visible Text Rules:
+### 4. Speakers, Dialogue, Voiceover, Singing & Visible Text Rules:
 - Speakers who vocalize receive stable IDs: (S1), (S2), or compound (S1,S2). Non-vocalizing characters receive no speaker ID.
-- Dialogue MUST be formatted using <d>[Language] ...</d> tags:
+- Spoken dialogue MUST be formatted using <d>[Language] ...</d> tags:
   - Example: "The young woman with a quiet, breathy voice (S1) says: <d>[English] I get off at the next station.</d>"
   - Preserve user dialogue verbatim; NEVER translate dialogue!
+- Singing / lyrics MUST be formatted using <l>[Language] ...</l> tags (preserving original lyrics verbatim).
 - Voiceover MUST use the exact phrase:
   "says in an off-screen voiceover: <d>[Language] ...</d> while his lips remain completely closed."
+- Cross-shot speech continuity (<scenetrans>): When spoken dialogue or singing continues uninterrupted across a camera cut from one shot to the next, place <scenetrans> at the connecting point in both shots and explicitly state that the speech continues across the cut (e.g. "continues seamlessly across the cut" or "carries over from the previous shot").
+- End-of-video speech truncation (<cutoff>): If spoken dialogue or singing is abruptly cut off by the end of the video clip, insert <cutoff> right where the vocalization is truncated.
 - Visible text on-screen: English double quotes "" (e.g. 'A red neon sign reading "Open" glows above the door.'). Do NOT use double quotes for spoken dialogue!
 
 ### 5. Official Duration & Series Continuation Standard:
@@ -195,7 +194,7 @@ Video diffusion models synthesize physical movement from text tokens. Flowery se
 You MUST output a valid JSON object matching this schema:
 {
   "fullPrompt": "The COMPLETE combined prompt string formatted with exact headers, blank lines, and exact field names, ready to copy into MiniMax H3. Ensure NO filenames appear.",
-  "explanationZh": "繁體中文解析：詳細說明畫面編排、三維度運鏡規劃，以及【前因後果推演】、【周遭背景動態】與【補足之實體材質與生理細節】",
+  "explanationZh": "繁體中文解析：說明畫面編排、三維度運鏡規劃，以及如何以客觀且可觀察的物理狀態呈現場景與動作細節",
   "suggestions": [
     "畫幅與鏡頭節奏建議",
     "MiniMax-H3 官方實用技巧 1",
@@ -231,41 +230,21 @@ Return ONLY valid JSON.
 export function getAssistantDirectorDirective(assistantDirector: boolean = true): string {
   if (assistantDirector) {
     return `
-### ASSISTANT DIRECTOR DIRECTIVE (ENABLED / 輔助導演開啟 - 深度影視導演與世界觀推演):
-- ROLE: Master Cinematographer, Narrative Dramaturge & Visual World-Building Architect.
-- MISSION: Move beyond mere formatting or summarizing. Transform concise user ideas into rich, layered, cinema-grade prompts with substantial text density and high-dimensional physical realism, adhering strictly to MiniMax-H3's literal physical framework (Starting state -> Action -> End state).
-
-- 4-DIMENSIONAL DEEP CINEMATIC ENRICHMENT (深度四維度擴充):
-  1. Preceding Context & Causality (前因後果與生理動態推演):
-     - Deduce the immediate preceding physical events (what happened 5–15 seconds prior): Why is the character here? What is their immediate objective?
-     - Translate psychological state into concrete physical manifestations: physiological signs (e.g. rapid shallow chest breathing, beaded sweat reflecting ambient light on temple, white-knuckled grip, trembling fingertips, mud or water stains on trouser hems, worn leather abrasions).
-     - Specify the immediate physical outcome and consequence of the action (e.g. displaced dust settling, ripples dissipating, condensed breath fogging cold glass).
-
-  2. Surrounding World Dynamics & Ambient Life (周遭事件與環境生命力):
-     - Eliminate "empty sterile stage syndrome". The world is alive around the subject:
-     - Multi-Plane Spatial Depth: Layer the frame with clear foreground framing (e.g. out-of-focus wet railing, edge of door frame, floating dust motes / rain streaks), active midground subject action, and deep atmospheric background.
-     - Surrounding Background Events: Integrate subtle, logical background activity appropriate to the setting (e.g. distant passing vehicle headlights cutting through mist, a flickering neon tube with an erratic buzz, curtains swaying from an open sash, wind-blown dry leaves skittering along asphalt, a background clock pendulum swinging).
-     - Plausible Environmental Interaction: Objects realistically react to the environment (e.g. boots crunching loose gravel, rain droplets bouncing off a taut umbrella canopy, neon reflections shimmering across water puddles).
-
-  3. Tactile, Material & Sensory Grounding (補足未提及的材質與肢體細節):
-     - Flesh out unstated visual and material specifics: precise textures (e.g. distressed lambskin jacket, brushed matte anodized aluminum, pitted concrete, oil-stained wooden bench), exact light color temperatures (e.g. 2800K amber tungsten vs 6500K harsh fluorescent), and specular reflections.
-     - Secondary Micro-Motions: Incorporate realistic secondary physical reactions (e.g. hair strands or clothing fluttering in the breeze, steam billows rising from liquid, droplets beading and streaking down surfaces, subtle eyelid twitches, natural breathing rhythm, fingers micro-adjusting grip).
-     - Articulate multi-phase physical mechanics: exact hand-finger positioning, weight shifts from heel to ball of foot, and eye gaze direction vectors.
-
-  4. Substantial Narrative Density & Text Volume (豐沛文字量與鏡頭密度):
-     - DO NOT provide brief, superficial 1–2 sentence summaries.
-     - Generate substantial, dense, highly descriptive physical paragraphs (aiming for 120–250 English words per shot in "integrated_multimodal_description" or "detailed_description").
-     - Every second of the duration should be accounted for through deliberate, step-by-step physical progression.
-
-- CRITICAL ZERO-FLUFF COMPLIANCE:
-  - All enriched details MUST be expressed strictly as literal physical actions, spatial relationships, and concrete material appearances.
-  - NEVER use abstract poetic metaphors or emotional adjectives (e.g. NO "ethereal glow", "mysterious aura", "heart-wrenching grief"). Ground all emotion into tangible physical behavior and lighting!`;
+### ASSISTANT DIRECTOR DIRECTIVE (ENABLED / 輔助導演開啟 - 自然物理細節與環境互動豐富化):
+- ROLE: Cinematographer & Visual Scene Director.
+- MISSION: Naturally enrich the user's core concept with concrete, visually observable physical states and scene details while keeping the narrative organic and well-paced.
+- OBSERVABLE PHYSICAL ENRICHMENT GUIDELINES:
+  1. Observable Subject & Action Details: Express character states and intentions through visible posture, gaze, hand movements, and physical interactions with objects.
+  2. Environment & Spatial Layering: Ground the subject in a believable physical setting with natural lighting, surface textures, and plausible ambient movements (e.g., wind moving fabric or leaves, light reflections on wet pavement, steam rising).
+  3. Natural Pacing & Flexible Density: Let the description length adapt naturally to the shot duration and scene complexity—do NOT force rigid word counts or artificial padding.
+- CRITICAL ZERO-ABSTRACTION COMPLIANCE:
+  - Do NOT use abstract adjectives, poetic metaphors, or unobservable emotional labels (e.g. NO "ethereal glow", "mysterious aura", "heart-wrenching grief"). Describe only objective, visually observable physical states and actions.`;
   } else {
     return `
 ### ASSISTANT DIRECTOR DIRECTIVE (DISABLED / 保守忠實模式):
 - ROLE: Precision Technical Transcriber & Spec Compliance Officer.
-- STRICT & FAITHFUL: Follow ONLY what the user explicitly requested without introducing unasked creative extrapolation or secondary elements.
-- STRUCTURE: Follow the exact three-state physical framework (Starting state -> Action -> End state) concisely, cleanly, and faithfully.`;
+- STRICT & FAITHFUL: Follow ONLY what the user explicitly requested without introducing unasked creative extrapolation or extra background elements.
+- OBJECTIVE PHYSICAL DESCRIPTION: Convert any abstract terms in the user's request into concise, objective, and visually observable physical states and actions.`;
   }
 }
 
@@ -383,9 +362,17 @@ CRITICAL MULTI-EPISODE SERIES GENERATION PROTOCOL (${seriesCount} CONSECUTIVE EP
 `;
 
   const isT2VA = (config.mode || "T2VA") === "T2VA";
-  const styleInstruction = isT2VA
+  const hasReferenceImage = rawRefs.some(
+    (r: any) =>
+      ['first_keyframe', 'last_keyframe', 'keyframe', 'composition'].includes(r.role) ||
+      (r.fileType === 'image' && !r.isPureSubject)
+  );
+  const useCustomStyle = isT2VA || (config.mode === "Ref2VA" && !hasReferenceImage);
+  const styleInstruction = useCustomStyle
     ? `- Visual Style: ${config.style || "Cinematic Photorealistic"}\n- Lighting & Atmosphere: ${config.lightingMood || "Cinematic volumetric lighting"}`
     : `- Visual Style & Lighting: [LOCKED FROM REFERENCE IMAGE] In accordance with MiniMax-H3 official specification, visual style, color palette, rendering quality, and lighting are anchored directly from the reference image(s). Do NOT generate conflicting style descriptors in the prompt.`;
+
+  const l2vaTargetTag = lastKeyframeRef?.physicalTag || openingKeyframeTag || firstUploadedImageRef?.physicalTag || '<Picture 1>';
 
   const userPrompt = `
 Generate an optimal MiniMax-H3 prompt based on the following user input:
@@ -411,6 +398,9 @@ KEYFRAME & PHYSICAL SLOT ALIGNMENT CONTRACT:
 - If Generation Mode is FL2VA:
   The prompt MUST begin with the exact header line:
   How the reference pictures align with the target video — ${firstKeyframePic} (from Shot 1) aligns with the 0.00-second mark of the target video; ${lastKeyframePic} (from Shot N) aligns with the ${durationSec.toFixed(2)}-second mark of the target video.
+- If Generation Mode is L2VA:
+  The prompt MUST begin with the exact header line:
+  How the reference pictures align with the target video — ${l2vaTargetTag} (from [Shot N]) aligns with the ${durationSec.toFixed(2)}-second mark of the target video.
 - If Generation Mode is Ref2VA:
   Follow the MiniMax Multi-Image Physical Upload Mapping Contract:
 ${hasOpeningKeyframe ? `  * In "subject_definitions": Define each <Subject K> as depicted in its corresponding <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity."). Define the keyframe image as ${openingKeyframeTag} (e.g. "${openingKeyframeTag} is the first keyframe image showing...").
@@ -422,15 +412,11 @@ ${hasOpeningKeyframe ? `  * In "subject_definitions": Define each <Subject K> as
   * In "retention_analysis": Analyze retention for <Subject K> (e.g. "<Subject 1> (appears in [Shot 1]): fully_preserved - visual characteristics maintained from <Picture 1>"). Do NOT create a separate retention entry for <Picture 1>.
   * In "detailed_description" [Shot 1]: Objectively describe the opening shot according to the narrative. [Shot 1] does NOT match any picture as an opening frame.`}
 
-CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE (MUST FOLLOW STRICTLY):
-- Be specific and literal. Describe what happens, in what order, step by step.
-- DO NOT use flowery language, poetic metaphors, emotional adjectives, or abstract concepts (e.g. NEVER write "ethereal", "breathtaking", "mysterious aura", "soul-stirring", "stunning masterpiece", "symphony of light").
+CRITICAL OBJECTIVE & OBSERVABLE PHYSICAL STATE PRINCIPLE (MUST FOLLOW):
+- Avoid abstract adjectives, flowery language, poetic metaphors, or vague emotional terms (e.g. NEVER write "ethereal", "breathtaking", "mysterious aura", "soul-stirring", "stunning masterpiece", "symphony of light").
+- Focus primarily on objective, concrete, and visually observable physical states and actions (what is physically visible in the frame, how subjects/objects move and interact).
 - Instead of "a ball bouncing around" → "A red ball moves to the right, bounces off the wall, and returns to the center"
 - Instead of "fluid pouring" → "Water flows from the left container through the connecting tube into the right container until both levels are equal"
-- For every shot and action, describe:
-  1. Starting state (body posture, position in frame, what hands are holding, initial gaze)
-  2. Action (chronological step-by-step physical movement, directions, contact)
-  3. End state (resulting posture, resting place of objects when movement concludes)
 
 ${assistantDirectorDirective}
 
@@ -443,7 +429,7 @@ CRITICAL DIALOGUE RULES:
 - Any character spoken dialogue MUST be placed inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>). Keep the exact user dialogue verbatim.
 - Double quotes "" are strictly reserved for text visibly seen on-screen (e.g. signs, logos).
 CRITICAL PROHIBITION: DO NOT write any file names, file extensions (e.g. .png, .jpg), or local upload names into the output! Define subjects using clear visual descriptions only.
-Ensure English language is used for the actual prompt text (fullPrompt) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh, suggestions, and continuityNotes! In explanationZh, clearly detail: (1) 【前因後果與動機推演】, (2) 【周遭環境與背景事件動態】, and (3) 【補足之實體材質與生理細節】, so the user understands the exact cinematic reasoning applied!
+Ensure English language is used for the actual prompt text (fullPrompt) as MiniMax-H3 processes English best, and provide Traditional Chinese for explanationZh, suggestions, and continuityNotes! In explanationZh, clearly explain the shot arrangement, camera motion design, and the objective observable physical states used in the prompt.
 `;
 
   return {
@@ -480,24 +466,32 @@ export function buildOptimizePrompt(params: {
   duration?: string;
   suppressMusic?: boolean;
   assistantDirectorDirective: string;
+  mode?: string;
+  outputContract?: string;
 }) {
+  const modeText = params.mode ? `Generation Mode: ${params.mode}` : "";
+  const contractText = params.outputContract === "compact"
+    ? `Output Format Requirement: Generate in Compact Single-Block format (omitting section headers, outputting only continuous shot-by-shot text with natural camera and physical soundscape).`
+    : `Output Format Requirement: Generate in Standard Multi-Section format with standard headers ([Shot 1], overall_soundscape, etc.).`;
+
   return `
 Take the user's rough prompt or idea below and optimize/rewrite it into the official MiniMax-H3 prompt standard:
 Rough Prompt: "${params.rawPrompt}"
+${modeText}
 Duration: ${params.duration || "10s"}
 Suppress Music: ${params.suppressMusic ? "Yes" : "No"}
+${contractText}
 
 Refine it strictly following official MiniMax-H3 specifications:
-CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE:
-- Be specific and literal. Describe what happens, in what order, step by step.
+CRITICAL OBJECTIVE PHYSICAL STATE PRINCIPLE:
+- Focus on concrete, observable physical states and actions (e.g. object positions, visible movements, materials, lighting changes) rather than abstract feelings or poetic metaphors.
 - DO NOT use flowery language, poetic metaphors, emotional adjectives, or abstract concepts (avoid "ethereal", "breathtaking", "mysterious aura", "soul-stirring").
 - Instead of "a ball bouncing around" → "A red ball moves to the right, bounces off the wall, and returns to the center"
 - Instead of "fluid pouring" → "Water flows from the left container through the connecting tube into the right container until both levels are equal"
-- Describe the starting state, the action, and the end state for each shot with high physical density and rich narrative depth (aiming for substantial, detailed physical progression rather than sparse summaries).
-- Divide into shots starting with [Shot 1] (setting style/composition, no timestamp), and subsequent shots with cut timecodes: "[Shot 2] At MM:SS.mmm, the camera cuts to...".
+- Divide into shots starting with [Shot 1] (setting style/composition, NO timestamp on Shot 1), and subsequent shots with cut timecodes: "[Shot 2] At MM:SS.mmm, the camera cuts to...".
 - Express camera motion as natural English actions within the shot (e.g. "The camera pushes in with small amplitude at slow speed toward..."). DO NOT use bracketed camera tags like "[Push In]".
-- Format spoken dialogue inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>), and reserve double quotes "" strictly for visible on-screen text.
-- Formulate complete overall_soundscape and non_diegetic_music sections according to the guide.
+- Format spoken dialogue inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>), lyrics inside <l>[Language] ...</l> tags, and reserve double quotes "" strictly for visible on-screen text.
+- Formulate complete overall_soundscape and non_diegetic_music sections according to the guide (or "non_diegetic_music: none" if music is suppressed).
 DO NOT include any file names or file extensions in the generated prompt!
 
 ${params.assistantDirectorDirective}

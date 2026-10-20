@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ReferenceItem, ReferenceRole, EngineTier } from '../types';
-import { Plus, Trash2, Tag, Upload, Film, Image as ImageIcon, Music, Check } from 'lucide-react';
+import { Plus, Trash2, Tag, Upload, Film, Image as ImageIcon, Music, Check, Sparkles, Loader2 } from 'lucide-react';
 
 interface ReferenceManagerProps {
   references: ReferenceItem[];
   onChange: (refs: ReferenceItem[]) => void;
   onToast?: (message: string, type?: 'success' | 'error' | 'info', duration?: number) => void;
   engineTier?: EngineTier;
+  appMode?: string;
+  ollamaModel?: string;
+  llamacppModel?: string;
 }
 
 const ROLE_OPTIONS: { role: ReferenceRole; labelZh: string; desc: string; icon: string }[] = [
@@ -197,7 +200,52 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
   onChange,
   onToast,
   engineTier = 'pro',
+  appMode,
+  ollamaModel,
+  llamacppModel,
 }) => {
+  const [analyzingId, setAnalyzingId] = useState<string | null>(null);
+
+  const handleAnalyzeMedia = async (item: ReferenceItem) => {
+    if (analyzingId || !item.fileUrl || !item.fileUrl.startsWith('data:image/')) return;
+    setAnalyzingId(item.id);
+    try {
+      const res = await fetch('/api/analyze-reference-media', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          imageBase64: item.fileUrl,
+          role: item.role,
+          fileName: item.fileName || item.name,
+          engineTier,
+          subscriptionTier: engineTier,
+          appMode,
+          ollamaModel,
+          llamacppModel,
+        }),
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const textErr = await res.text();
+        throw new Error(`伺服器錯誤 (${res.status}): ${textErr.slice(0, 120)}`);
+      }
+      const data = await res.json();
+      if (!res.ok || data.success === false) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      const analysisText = (data.description || data.analysis || data.text || '').trim();
+      if (analysisText) {
+        updateReference(item.id, { description: analysisText });
+        onToast?.('已完成 AI 視覺特徵解析！已填入鎖定細節', 'success');
+      }
+    } catch (err: any) {
+      console.error('Failed to analyze reference media:', err);
+      onToast?.(`特徵解析失敗：${err.message || '未知錯誤'}`, 'error');
+    } finally {
+      setAnalyzingId(null);
+    }
+  };
+
   const addReference = () => {
     const role: ReferenceRole = 'character';
     const newItem: ReferenceItem = {
@@ -548,13 +596,39 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
                       </div>
                     )}
                   </div>
-                  <textarea
-                    rows={2}
-                    value={item.description}
-                    onChange={(e) => updateReference(item.id, { description: e.target.value })}
-                    placeholder="Retention Analysis 鎖定細節 (例如: 鎖定黑貓臉型、發光右眼與皮衣質感)"
-                    className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500 resize-none"
-                  />
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-slate-400 font-medium">特徵鎖定描述 (Retention Analysis)</span>
+                      {!item.isPureSubject && item.fileUrl && item.fileUrl.startsWith('data:image/') && (!item.fileType || item.fileType === 'image') && (
+                        <button
+                          type="button"
+                          onClick={() => handleAnalyzeMedia(item)}
+                          disabled={analyzingId === item.id}
+                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium bg-purple-950/70 text-purple-300 border border-purple-500/40 hover:bg-purple-900/60 hover:text-purple-200 transition-colors disabled:opacity-50"
+                          title="使用 AI 自動解析圖片中的關鍵視覺與外觀特徵"
+                        >
+                          {analyzingId === item.id ? (
+                            <>
+                              <Loader2 className="w-3 h-3 text-purple-400 animate-spin" />
+                              <span>特徵解析中...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Sparkles className="w-3 h-3 text-purple-400" />
+                              <span>🔍 AI 解析外觀特徵</span>
+                            </>
+                          )}
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      rows={2}
+                      value={item.description}
+                      onChange={(e) => updateReference(item.id, { description: e.target.value })}
+                      placeholder="Retention Analysis 鎖定細節 (例如: 鎖定黑貓臉型、發光右眼與皮衣質感)"
+                      className="w-full px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500 resize-none"
+                    />
+                  </div>
                 </div>
               </div>
             </div>

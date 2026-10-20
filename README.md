@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v5.2.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v5.3.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -29,7 +29,20 @@ Featuring a **Quad-Engine Independent Architecture with Dedicated UI Panels**:
 
 ## ✨ Key Features
 
-### 0. Deep Director Reasoning & Multi-Dimensional Rich Context Enrichment (v5.2.0)
+### 0. Observable Physical State Principles, 3-in-1 AI Assistants & MiniMax-H3 Full Spec Alignment (v5.3.0)
+- **Relaxation of Physical State Descriptions**: Shifted from rigid 3-state formulas and mandatory 120-250 word count quotas to a flexible, objective physical principle: "Focus on concrete, visually observable physical states and actions without abstract adjectives or poetic metaphors."
+- **MiniMax-H3 Official Spec Gaps Filled**:
+  - **L2VA Dynamic Alignment Header**: Integrates dynamic ending timecode headers (`How the reference pictures align with the target video — <Picture 1> (from [Shot N]) aligns with the S.SS-second mark...`).
+  - **Full Official Tag Support**: Added lyrics `<l>[Language] ...</l>`, cross-shot dialogue continuation `<scenetrans>`, and truncation `<cutoff>` syntax highlighting and audit rules.
+  - **Image-Free Ref2VA Style Customization**: Freely customize styles and lighting when Ref2VA has no uploaded image references.
+- **3-in-1 AI Assistant Buttons in UI**:
+  - **🔍 AI Media Analysis (`/api/analyze-reference-media`)**: One-click visual feature and material extraction into `Retention Analysis`.
+  - **✨ AI Dialogue Generator (`/api/generate-dialogue`)**: Context-aware spoken line (`<d>[Language] ...</d>`) and soundscape suggestions.
+  - **🪄 AI Spec Optimizer (`/api/optimize-existing-prompt`)**: Reformat rough drafts or manual edits into compliant MiniMax-H3 prompts.
+- **Modernized Gemini 3.8 Router**: Flagship `gemini-3.8-flash` for generation and media analysis, high-speed `gemini-3.5-flash-lite` for dialogue, using `@google/genai` `ThinkingLevel.MINIMAL`.
+- **Expanded Test Suite**: 49 automated tests covering syntax audit, auto-repair, and engine routing (100% pass).
+
+### 1. Deep Director Reasoning & Multi-Dimensional Rich Context Enrichment (v5.2.0)
 - **4-Dimensional Cinematic Deduction Framework**:
   - **Preceding Context & Causality**: Autonomously extrapolates immediate historical events (5–15 seconds prior) and grounds psychological tension into concrete physiological symptoms (rapid shallow breathing, beaded sweat reflections on temples, white-knuckled grips, frayed seams, and subsequent physical consequences).
   - **Surrounding World Dynamics & Ambient Life**: Eliminates empty stage syndrome by injecting living world events: foreground obstruction layers (out-of-focus railings, rain streaks), background micro-events (passing headlights, flickering buzzing neon, windblown debris), and realistic environmental reactions.

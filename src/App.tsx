@@ -217,6 +217,8 @@ export default function App() {
   const [selectedEpisodeIdx, setSelectedEpisodeIdx] = useState<number>(0);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [editedPrompt, setEditedPrompt] = useState<string>('');
+  const [loadingDialogue, setLoadingDialogue] = useState<boolean>(false);
+  const [loadingOptimize, setLoadingOptimize] = useState<boolean>(false);
 
   // Toast & Drawers state
   const [toast, setToast] = useState<ToastProps | null>(null);
@@ -621,6 +623,113 @@ export default function App() {
       showToast(errStr, 'error', toastDuration);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Generate dialogue & SFX using AI assistant
+  const handleGenerateDialogue = async () => {
+    if (!config.idea.trim()) {
+      showToast('請先輸入核心創意思路，以便 AI 構思符合情境的台詞與音效', 'info');
+      return;
+    }
+    if (loadingDialogue) return;
+    setLoadingDialogue(true);
+    try {
+      const res = await fetch('/api/generate-dialogue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          idea: config.idea,
+          style: config.style,
+          mode: config.mode,
+          duration: config.duration,
+          engineTier,
+          subscriptionTier: engineTier,
+          appMode,
+          ollamaModel,
+          llamacppModel,
+        }),
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const textErr = await res.text();
+        throw new Error(`伺服器錯誤 (${res.status}): ${textErr.slice(0, 120)}`);
+      }
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.data) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      const { dialogueEn, sfxSuggestion } = data.data;
+      setConfig((prev) => ({
+        ...prev,
+        dialogueText: dialogueEn || prev.dialogueText,
+        sfxText: sfxSuggestion || prev.sfxText,
+      }));
+      showToast('已由 AI 生成角色台詞與環境音效建議！', 'success');
+    } catch (err: any) {
+      console.error('Failed to generate dialogue:', err);
+      const errStr = formatErrorMessage(err.message || '對白生成失敗');
+      showToast(errStr, 'error');
+    } finally {
+      setLoadingDialogue(false);
+    }
+  };
+
+  // Optimize existing prompt using MiniMax-H3 specification standard
+  const handleOptimizePrompt = async () => {
+    const promptToOptimize = (isEditing ? editedPrompt : output?.fullPrompt || config.idea || '').trim();
+    if (!promptToOptimize) {
+      showToast('請先輸入創意思路或生成提示詞後再執行優化', 'info');
+      return;
+    }
+    if (loadingOptimize) return;
+    setLoadingOptimize(true);
+    try {
+      const res = await fetch('/api/optimize-existing-prompt', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          rawPrompt: promptToOptimize,
+          duration: config.duration,
+          suppressMusic: config.suppressMusic,
+          assistantDirector: typeof config.assistantDirector === 'boolean' ? config.assistantDirector : config.creativityLevel !== 0,
+          mode: config.mode,
+          outputContract: config.outputContract,
+          temperatureMode: config.temperatureMode,
+          manualTemperature: config.manualTemperature,
+          engineTier,
+          subscriptionTier: engineTier,
+          appMode,
+          ollamaModel,
+          llamacppModel,
+        }),
+      });
+      const contentType = res.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        const textErr = await res.text();
+        throw new Error(`伺服器錯誤 (${res.status}): ${textErr.slice(0, 120)}`);
+      }
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.data) {
+        throw new Error(data.error || `HTTP ${res.status}`);
+      }
+      const result: H3PromptOutput = data.data;
+      setOutput((prev) => ({
+        ...prev,
+        ...result,
+        fullPrompt: result.fullPrompt,
+        explanationZh: result.explanationZh || prev?.explanationZh || '',
+        suggestions: result.suggestions || prev?.suggestions || [],
+      }));
+      setEditedPrompt(result.fullPrompt);
+      setActiveTab('full');
+      showToast('已完成 MiniMax-H3 提示詞規格優化！', 'success');
+    } catch (err: any) {
+      console.error('Failed to optimize prompt:', err);
+      const errStr = formatErrorMessage(err.message || '提示詞規格優化失敗');
+      showToast(errStr, 'error');
+    } finally {
+      setLoadingOptimize(false);
     }
   };
 
@@ -1199,6 +1308,9 @@ ${ep.fullPrompt}`;
             onChange={(refs) => setConfig({ ...config, references: refs })}
             onToast={showToast}
             engineTier={engineTier}
+            appMode={appMode}
+            ollamaModel={ollamaModel}
+            llamacppModel={llamacppModel}
           />
         </section>
 
@@ -1274,39 +1386,64 @@ ${ep.fullPrompt}`;
               </div>
             </div>
 
-            {/* Style Selector: T2VA Only */}
-            {config.mode === 'T2VA' ? (
-              <div>
-                <label className="text-xs font-medium text-slate-300 block mb-1">
-                  視覺畫風與渲染 (Style & Rendering - T2VA 專用)
-                </label>
-                <select
-                  value={config.style}
-                  onChange={(e) => setConfig({ ...config, style: e.target.value })}
-                  className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-purple-500 mb-1.5"
-                >
-                  {STYLE_PRESETS.map((st, i) => (
-                    <option key={i} value={st}>
-                      {st}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="text"
-                  value={config.style}
-                  onChange={(e) => setConfig({ ...config, style: e.target.value })}
-                  placeholder="自訂畫風描述..."
-                  className="w-full px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-purple-500"
-                />
-              </div>
-            ) : (
-              <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] flex items-center gap-2 text-slate-400">
-                <span className="text-base shrink-0">🖼️</span>
-                <span>
-                  <strong className="text-slate-300">視覺畫風由參考圖片自動錨定</strong>：依官方 H3 規範，圖片模式（{config.mode}）風格直接繼承參考素材，無須手動指定。
-                </span>
-              </div>
-            )}
+            {/* Style Selector: T2VA or Ref2VA without image */}
+            {(() => {
+              const hasImageRef = config.references.some(
+                (r) =>
+                  ['first_keyframe', 'last_keyframe', 'keyframe', 'composition'].includes(r.role) ||
+                  ((r.fileType === 'image' || !r.fileType) && !r.isPureSubject)
+              );
+              const allowCustomStyle = config.mode === 'T2VA' || (config.mode === 'Ref2VA' && !hasImageRef);
+
+              if (allowCustomStyle) {
+                return (
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-slate-300 block">
+                        視覺畫風與渲染 (Style & Rendering)
+                      </label>
+                      {config.mode === 'Ref2VA' && (
+                        <span className="text-[10px] text-cyan-400 font-medium">
+                          無圖片自訂模式
+                        </span>
+                      )}
+                    </div>
+                    <select
+                      value={config.style}
+                      onChange={(e) => setConfig({ ...config, style: e.target.value })}
+                      className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-purple-500 mb-1.5"
+                    >
+                      {STYLE_PRESETS.map((st, i) => (
+                        <option key={i} value={st}>
+                          {st}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={config.style}
+                      onChange={(e) => setConfig({ ...config, style: e.target.value })}
+                      placeholder="自訂畫風描述..."
+                      className="w-full px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-purple-500"
+                    />
+                    {config.mode === 'Ref2VA' && (
+                      <p className="text-[10px] text-cyan-400 mt-1">
+                        💡 提示：目前 Ref2VA 尚未上傳實體參考圖片（純文字主體宣告或音訊參考），已自動啟用畫風與光影自訂選項。
+                      </p>
+                    )}
+                  </div>
+                );
+              }
+
+              return (
+                <div className="p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] flex items-center gap-2 text-slate-400">
+                  <span className="text-base shrink-0">🖼️</span>
+                  <span>
+                    <strong className="text-slate-300">視覺畫風由參考圖片自動錨定</strong>：依官方 H3 規範，圖片模式（{config.mode}）已上傳參考圖片時風格直接繼承參考素材，無須手動指定。
+                  </span>
+                </div>
+              );
+            })()}
 
             {/* Output Contract Selector: Official vs Compact */}
             <div className="pt-2 border-t border-slate-800/60">
@@ -1622,6 +1759,25 @@ ${ep.fullPrompt}`;
                   <Volume2 className="w-3.5 h-3.5 text-emerald-400" />
                   對白台詞與音效設定 (Dialogue & SFX)
                 </span>
+                <button
+                  type="button"
+                  onClick={handleGenerateDialogue}
+                  disabled={loadingDialogue}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-emerald-950/70 text-emerald-300 border border-emerald-500/40 hover:bg-emerald-900/60 hover:text-emerald-200 transition-colors disabled:opacity-50"
+                  title="根據當前場景情境，透過 AI 自動生成人物對白 (dialogueEn) 與音效建議 (sfxSuggestion)"
+                >
+                  {loadingDialogue ? (
+                    <>
+                      <div className="w-3 h-3 border-2 border-emerald-300/30 border-t-emerald-300 rounded-full animate-spin" />
+                      <span>生成對白中...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="w-3 h-3 text-emerald-400" />
+                      <span>✨ AI 靈感生成</span>
+                    </>
+                  )}
+                </button>
               </div>
 
               <div className="space-y-1">
@@ -1737,7 +1893,7 @@ ${ep.fullPrompt}`;
                 </div>
                 <p className="text-xs text-slate-400">
                   {config.outputContract === 'compact'
-                    ? '簡約精煉模式：稠密自然語言動作描繪（含三態物理動作）與獨立聲音欄位，支援一鍵複製貼入 MiniMax 或 ComfyUI 工作流。'
+                    ? '簡約精煉模式：以客觀且可觀察的物理狀態描述為主，不使用抽象形容，支援一鍵複製貼入 MiniMax 或 ComfyUI 工作流。'
                     : '100% 符合 MiniMax-H3 官方標準規格之全量提示詞（含實體主體鎖定、運鏡三維度與完整音訊音效），支援一鍵複製貼上至 MiniMax 海螺 / Hailuo 3 AI 視訊生成器。'}
                 </p>
               </div>
@@ -2136,6 +2292,26 @@ ${ep.fullPrompt}`;
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={handleOptimizePrompt}
+                        disabled={loadingOptimize || (!activePrompt.trim() && !config.idea.trim())}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-semibold bg-purple-950/70 hover:bg-purple-900/80 text-purple-200 border border-purple-500/40 transition-all shadow-sm disabled:opacity-50"
+                        title="將當前提示詞透過 MiniMax-H3 規格優化器重新排版精修，修正鏡頭、時間戳與區塊標頭"
+                      >
+                        {loadingOptimize ? (
+                          <>
+                            <div className="w-3.5 h-3.5 border-2 border-purple-300/30 border-t-purple-300 rounded-full animate-spin" />
+                            <span>優化中...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Wand2 className="w-3.5 h-3.5 text-purple-400" />
+                            <span>🪄 AI 規格優化</span>
+                          </>
+                        )}
+                      </button>
+
                       {isEditing && (
                         <button
                           type="button"

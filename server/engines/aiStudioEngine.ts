@@ -168,10 +168,10 @@ export class AiStudioEngine implements StudioEngine {
             data: base64Data,
           },
         },
-        `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Reference Definitions & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture). Keep it concise and within 60 words.`
+        `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, objective visual description focusing on observable physical traits (e.g. facial features, clothing materials, colors, lighting, or object structure) without abstract adjectives and without any file names. Keep it within 60 words.`
       ];
     } else {
-      contents = [`Provide a concise reference description for file "${fileName || 'Asset'}" with role "${role || 'character'}". Keep it within 50 words.`];
+      contents = [`Provide a concise, objective reference description for role "${role || 'character'}" focusing on observable physical traits without abstract adjectives or file names. Keep it within 50 words.`];
     }
 
     const response = await callGeminiDynamic(
@@ -181,7 +181,7 @@ export class AiStudioEngine implements StudioEngine {
       { contents }
     );
 
-    return (response.text || "Analyzed visual characteristics for retention lock.").trim();
+    return sanitizeGeneratedPromptText((response.text || "Analyzed visual characteristics for retention lock.").trim());
   }
 
   async optimizePrompt(params: any): Promise<any> {
@@ -198,10 +198,12 @@ export class AiStudioEngine implements StudioEngine {
       duration: params.duration,
       suppressMusic: params.suppressMusic,
       assistantDirectorDirective,
+      mode: params.mode || 'T2VA',
+      outputContract: params.outputContract,
     });
 
     const geminiConfig: any = {
-      systemInstruction: buildModularSystemInstruction("T2VA"),
+      systemInstruction: buildModularSystemInstruction(params.mode || "T2VA", params.outputContract || "official"),
       responseMimeType: "application/json",
       responseSchema: {
         type: Type.OBJECT,
@@ -232,10 +234,7 @@ export class AiStudioEngine implements StudioEngine {
     );
 
     const resultJson = JSON.parse(response.text || "{}");
-    if (resultJson.fullPrompt) {
-      resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
-    }
-    return resultJson;
+    return formatGeneratedPromptResult(resultJson, params);
   }
 
   async refineSeriesEpisode(params: any): Promise<any> {

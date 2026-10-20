@@ -53,8 +53,8 @@ export const PromptSyntaxHighlighter: React.FC<PromptSyntaxHighlighterProps> = (
         );
       }
 
-      // Process line tokens: <d>...</d>, speaker IDs (S1), <scenetrans>, <cutoff>, <Subject/Picture/Video/Audio>, [Shot N], timecodes, task types, retention markers, quotes
-      const tokenRegex = /(<d>\[.*?\][\s\S]*?<\/d>|<d>|<\/d>|<scenetrans>|<cutoff>|\(S\d+(?:,S\d+)*\)|\b(?:fully_preserved|partially_preserved|attribute_transfer|fully_copy|partially_copy|weak_reference)\b|<(?:Subject|Picture|Video|Audio)\s+\d+>|<[^>]+>|\[(?:keyframe completion|reference generation|video editing|video continuation|audio reuse|audio reference)(?:\s*\+\s*(?:keyframe completion|reference generation|video editing|video continuation|audio reuse|audio reference))*\]|\[Shot\s+\d+\]|At\s+\d{2}:\d{2}\.\d{3},?|\[[^\]]+\]|"([^"\\]|\\.)*")/g;
+      // Process line tokens: <d>...</d>, <l>...</l>, speaker IDs (S1), <scenetrans>, <cutoff>, <Subject/Picture/Video/Audio>, [Shot N], timecodes, task types, retention markers, quotes
+      const tokenRegex = /(<d>\[.*?\][\s\S]*?<\/d>|<d>|<\/d>|<l>\[.*?\][\s\S]*?<\/l>|<l>|<\/l>|<scenetrans>|<cutoff>|\(S\d+(?:,S\d+)*\)|\b(?:fully_preserved|partially_preserved|attribute_transfer|fully_copy|partially_copy|weak_reference)\b|<(?:Subject|Picture|Video|Audio)\s+\d+>|<[^>]+>|\[(?:keyframe completion|reference generation|video editing|video continuation|audio reuse|audio reference)(?:\s*\+\s*(?:keyframe completion|reference generation|video editing|video continuation|audio reuse|audio reference))*\]|\[Shot\s+\d+\]|At\s+\d{2}:\d{2}\.\d{3},?|\[[^\]]+\]|"([^"\\]|\\.)*")/g;
 
       const tokens = line.split(tokenRegex);
 
@@ -77,12 +77,38 @@ export const PromptSyntaxHighlighter: React.FC<PromptSyntaxHighlighterProps> = (
               );
             }
 
+            // Singing lyrics block: <l>[Language] ...</l>
+            if (token.startsWith('<l>') && token.endsWith('</l>')) {
+              return (
+                <span
+                  key={tokenIndex}
+                  className="inline-flex items-center px-2 py-0.5 mx-1 rounded text-xs font-mono bg-cyan-950/80 text-cyan-300 border border-cyan-500/50 shadow-sm"
+                  title="MiniMax-H3 官方人聲歌詞標籤 (Singing Lyrics)"
+                >
+                  <span className="text-cyan-400 font-bold mr-1">🎵</span>
+                  {token}
+                </span>
+              );
+            }
+
             // Dialogue boundary tags
             if (token === '<d>' || token === '</d>') {
               return (
                 <span
                   key={tokenIndex}
                   className="font-bold text-emerald-400 px-1 bg-emerald-950/60 rounded border border-emerald-500/40"
+                >
+                  {token}
+                </span>
+              );
+            }
+
+            // Lyrics boundary tags
+            if (token === '<l>' || token === '</l>') {
+              return (
+                <span
+                  key={tokenIndex}
+                  className="font-bold text-cyan-400 px-1 bg-cyan-950/60 rounded border border-cyan-500/40"
                 >
                   {token}
                 </span>

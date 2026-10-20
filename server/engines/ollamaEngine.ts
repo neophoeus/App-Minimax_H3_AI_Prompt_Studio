@@ -200,8 +200,8 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
     const modelToUse = params.ollamaModel || this.defaultModel;
 
     const userPrompt = imageBase64 && imageBase64.includes(",")
-      ? `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, highly detailed visual description suitable for Reference Definitions & Retention Analysis (e.g. key facial traits, clothing, lighting, color palette, or object texture). Keep it concise and within 60 words.`
-      : `Provide a concise reference description for file "${fileName || 'Asset'}" with role "${role || 'character'}". Keep it within 50 words.`;
+      ? `Analyze this reference image for MiniMax-H3 model with declared Role = "${role || 'character'}". Provide a concise, objective visual description focusing on observable physical traits (e.g. facial features, clothing materials, colors, lighting, or object structure) without abstract adjectives and without any file names. Keep it within 60 words.`
+      : `Provide a concise, objective reference description for role "${role || 'character'}" focusing on observable physical traits without abstract adjectives or file names. Keep it within 50 words.`;
 
     const images = (imageBase64 && imageBase64.includes(","))
       ? [imageBase64.split(",")[1]]
@@ -213,7 +213,7 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
       images,
     });
 
-    return text.trim();
+    return sanitizeGeneratedPromptText(text.trim());
   }
 
   async optimizePrompt(params: any): Promise<any> {
@@ -229,9 +229,11 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
       duration: params.duration,
       suppressMusic: params.suppressMusic,
       assistantDirectorDirective,
+      mode: params.mode || 'T2VA',
+      outputContract: params.outputContract,
     });
 
-    const systemPrompt = `${buildModularSystemInstruction("T2VA")}
+    const systemPrompt = `${buildModularSystemInstruction(params.mode || "T2VA", params.outputContract || "official")}
 
 CRITICAL FORMAT REQUIREMENT:
 You MUST output a valid JSON object matching this schema:
@@ -251,10 +253,7 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
     });
 
     const resultJson = parseJsonSafely(raw);
-    if (resultJson.fullPrompt) {
-      resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt);
-    }
-    return resultJson;
+    return formatGeneratedPromptResult(resultJson, params);
   }
 
   async refineSeriesEpisode(params: any): Promise<any> {

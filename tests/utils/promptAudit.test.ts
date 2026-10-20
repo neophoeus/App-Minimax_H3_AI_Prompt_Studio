@@ -50,6 +50,26 @@ describe("Prompt Audit & Repair System", () => {
       assert.equal(res.hasConstraintViolation, false);
       assert.equal(res.isValid, true);
     });
+
+    test("detects timestamp in Shot 1", () => {
+      const text = "[Shot 1] At 00:00.000, the camera pushes in toward the subject.";
+      const res = auditPrompt(text);
+      assert.equal(res.hasTimestampError, true);
+      assert.ok(res.issues.some((i) => i.code === "SHOT1_HAS_TIMESTAMP"));
+    });
+
+    test("detects bracketed camera movement tags", () => {
+      const text = "[Shot 1] [Push In] The camera moves forward.";
+      const res = auditPrompt(text);
+      assert.ok(res.issues.some((i) => i.code === "BRACKETED_CAMERA_TAG"));
+    });
+
+    test("detects unbalanced lyrics tags", () => {
+      const text = "[Shot 1] The singer sings <l>[English] We are the champions while looking up.";
+      const res = auditPrompt(text);
+      assert.equal(res.isValid, false);
+      assert.ok(res.issues.some((i) => i.code === "UNBALANCED_LYRICS_TAGS"));
+    });
   });
 
   describe("repairPrompt", () => {
@@ -65,6 +85,21 @@ describe("Prompt Audit & Repair System", () => {
       const repaired = repairPrompt(dirty, 10);
       assert.ok(!repaired.includes("00:15.000"));
       assert.ok(repaired.includes("00:09.500"));
+    });
+
+    test("automatically removes timestamps from Shot 1 and strips bracketed camera tags", () => {
+      const dirty = "[Shot 1] At 00:00.000, [Push In] The camera pushes in.";
+      const repaired = repairPrompt(dirty, 10);
+      assert.ok(!repaired.includes("At 00:00.000"));
+      assert.ok(!repaired.includes("[Push In]"));
+      assert.ok(repaired.startsWith("[Shot 1] "));
+    });
+
+    test("automatically closes unclosed speech and lyrics tags", () => {
+      const dirty = "[Shot 1] (S1) says: <d>[English] Hello and sings <l>[English] Lalala";
+      const repaired = repairPrompt(dirty, 10);
+      assert.ok(repaired.includes("</d>"));
+      assert.ok(repaired.includes("</l>"));
     });
   });
 });

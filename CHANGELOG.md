@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v5.3.0] - 2026-10-20
+
+### 🚀 Observable Physical State Principles, 3-in-1 AI Assistants & MiniMax-H3 Full Spec Alignment (客觀可觀察物理狀態原則放寬、三合一 AI 輔助與 MiniMax-H3 官方全規格對齊)
+
+#### 🌊 1. Relaxation of Physical State Description Directives (提示詞客觀物理原則放寬)
+- **Removal of Rigid Templates & Word Count Constraints**:
+  - 全面移除過往強制的「三態拆解公式（起點狀態 -> 動作過程 -> 終點狀態）」與每鏡 120–250 字數強制灌水要求，避免文風冗餘或模型語意過載。
+- **Core Principle: Zero-Abstraction & Observable Physical Grounding**:
+  - 確立核心指導原則：「**不使用抽象、空泛或詩意比喻的形容詞，以客觀、具體且視覺上可觀察的物理狀態與動作描述為主**」。
+  - 聚焦於攝影機可客觀捕捉之角色姿態、視線、手部與物體交互、空間層次與自然光影，徹底摒棄情緒抽象詞（如 "ethereal", "breathtaking", "mysterious aura"）。
+
+#### 📐 2. Official MiniMax-H3 Spec Gaps Closed (補齊官方規範細節)
+- **L2VA Dynamic Alignment Header**:
+  - 於 `L2VA` 模式提示詞注入動態結尾時間戳標頭契約（`How the reference pictures align with the target video — <Picture 1> (from [Shot N]) aligns with the S.SS-second mark of the target video.`）。
+- **Full Tag Grammar Support**:
+  - 補齊歌唱歌詞標籤 `<l>[Language] ...</l>`、跨鏡對白延續標籤 `<scenetrans>` 與影片結尾對白截斷標籤 `<cutoff>`。
+  - 前端語法亮顯器與審計器同步支援 `<l>` 標籤高亮與對稱閉合檢查。
+- **Image-Free Ref2VA Style Selection**:
+  - 在 `Ref2VA` 模式未上傳參考圖片（如純文字主體或音訊參考）時，前端自動解放視覺畫風與光影選項，後端提示詞同步保留使用者設定之畫風指示。
+
+#### ✨ 3. Frontend AI Assistant Triad Integration (前端三合一 AI 輔助功能實裝)
+- **🔍 AI 解析外觀特徵 (`/api/analyze-reference-media`)**:
+  - 素材卡片新增專屬按鈕，上傳圖片後一鍵提取客觀外觀與材質細節並自動填入 `Retention Analysis`。
+- **✨ AI 靈感生成 (`/api/generate-dialogue`)**:
+  - 對白設定區新增按鈕，依據當前場景情境一鍵生成符合 H3 規範的英文對白（`<d>[English] ...</d>`）與環境音效建議。
+- **🪄 AI 規格優化 (`/api/optimize-existing-prompt`)**:
+  - 提示詞輸出編輯工具列新增按鈕，將任意粗稿或手動編輯後的提示詞一鍵重組為官方標準結構與區塊標頭。
+
+#### ⚡ 4. Modernized Gemini 3.8 Flagship Architecture (Gemini 3.8 模型路由升級)
+- **Flagship & Lite Specialization**:
+  - 淘汰舊版 `gemini-3.6-flash`，主力模型升級為 **`gemini-3.8-flash`**（具備深入推理能力）。
+  - 對白與高頻輕量任務專業分流至 **`gemini-3.5-flash-lite`**。
+  - 採用 `@google/genai` 現代枚舉 `{ thinkingLevel: ThinkingLevel.MINIMAL }`。
+
+#### 🧪 5. Comprehensive Test Suite Expansion (測試套件全量擴充)
+- 自動化測試套件由 42 項擴充至 **49 項**，涵蓋 Shot 1 時間戳違規審計、方括號運鏡清理、歌詞未閉合自癒、L2VA 動態標頭與無圖 Ref2VA 畫風驗證，100% 通過。
+
 ## [v5.2.0] - 2026-10-12
 
 ### 🎬 Deep Director Reasoning & Multi-Dimensional Rich Context Enrichment (深度影視導演推理與多維度細節擴充)

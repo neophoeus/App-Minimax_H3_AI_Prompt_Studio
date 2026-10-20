@@ -61,15 +61,13 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
   });
 
   describe("getAssistantDirectorDirective", () => {
-    test("Enabled mode includes secondary micro-motions and spatial depth", () => {
+    test("Enabled mode includes observable physical enrichment guidelines", () => {
       const enabled = getAssistantDirectorDirective(true);
       assert.ok(enabled.includes("ASSISTANT DIRECTOR DIRECTIVE (ENABLED / 輔助導演開啟"));
-      assert.ok(enabled.includes("Secondary Micro-Motions"));
-      assert.ok(enabled.includes("Multi-Plane Spatial Depth"));
-      assert.ok(enabled.includes("Preceding Context & Causality"));
-      assert.ok(enabled.includes("Surrounding World Dynamics & Ambient Life"));
-      assert.ok(enabled.includes("Tactile, Material & Sensory Grounding"));
-      assert.ok(enabled.includes("Substantial Narrative Density & Text Volume"));
+      assert.ok(enabled.includes("Observable Subject & Action Details"));
+      assert.ok(enabled.includes("Environment & Spatial Layering"));
+      assert.ok(enabled.includes("Natural Pacing & Flexible Density"));
+      assert.ok(enabled.includes("CRITICAL ZERO-ABSTRACTION COMPLIANCE"));
     });
 
     test("Disabled mode restricts extrapolation", () => {
@@ -203,6 +201,27 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
       assert.ok(res.userPrompt.includes("[keyframe completion + reference generation]"));
       assert.ok(res.userPrompt.includes("The opening frame matches <Picture 2>"));
     });
+
+    test("buildH3UserPrompt with L2VA includes dynamic alignment header", () => {
+      const res = buildH3UserPrompt({
+        idea: "Car drifting around corner",
+        mode: "L2VA",
+        duration: "6s",
+      });
+      assert.ok(res.userPrompt.includes("How the reference pictures align with the target video — <Picture 1> (from [Shot N]) aligns with the 6.00-second mark of the target video."));
+    });
+
+    test("Ref2VA without reference image preserves custom style and lighting", () => {
+      const res = buildH3UserPrompt({
+        idea: "A detective walking in fog",
+        mode: "Ref2VA",
+        style: "Film Noir Black and White",
+        lightingMood: "Dramatic chiaroscuro shadow",
+        references: [],
+      });
+      assert.ok(res.userPrompt.includes("Film Noir Black and White"));
+      assert.ok(res.userPrompt.includes("Dramatic chiaroscuro shadow"));
+    });
   });
 
   describe("buildDialoguePrompt & buildOptimizePrompt & buildRefineSeriesPrompt", () => {
@@ -220,7 +239,7 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
         assistantDirectorDirective: "DIRECTOR DIRECTIVE",
       });
       assert.ok(p.includes("A cool guy walking"));
-      assert.ok(p.includes("CRITICAL OBJECTIVE PHYSICAL ACTION PRINCIPLE"));
+      assert.ok(p.includes("CRITICAL OBJECTIVE PHYSICAL STATE PRINCIPLE"));
     });
 
     test("buildRefineSeriesPrompt anchors previous and next episode states", () => {

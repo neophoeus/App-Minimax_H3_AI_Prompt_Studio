@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v5.2.0-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v5.3.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -31,7 +31,20 @@
 
 ## ✨ 核心特色
 
-### 0. 深度影視導演推理與多維度細節擴充 (v5.2.0)
+### 0. 客觀可觀察物理描述、三合一 AI 輔助與 MiniMax-H3 官方全規格對齊 (v5.3.0)
+- **客觀可觀察物理原則全面放寬**：移除死板的強制三態公式與 120–250 字數灌水限制，確立「以客觀、具體且視覺上可觀察的物理狀態與動作描述為主，絕不使用抽象空泛的形容詞或詩意比喻」之核心原則。
+- **MiniMax-H3 官方細節規格補齊**：
+  - **L2VA 動態時間對齊標頭**：依據影片實際秒數自動產生尾幀對齊標頭（`How the reference pictures align with the target video — <Picture 1> (from [Shot N]) aligns with the S.SS-second mark...`）。
+  - **官方標籤全量支援**：補齊歌唱歌詞標籤 `<l>[Language] ...</l>`、跨鏡對白延續標籤 `<scenetrans>` 與截斷標籤 `<cutoff>` 之語法亮顯與審計自癒。
+  - **無圖片 Ref2VA 畫風解鎖**：當 Ref2VA 僅有純文字主體或音訊參考時，前端開放畫風選擇器並在提示詞中保留畫風指示。
+- **介面三合一 AI 輔助功能實裝**：
+  - **🔍 AI 解析外觀特徵 (`/api/analyze-reference-media`)**：一鍵解析圖片視覺與材質特徵並自動填入 `Retention Analysis`。
+  - **✨ AI 靈感生成 (`/api/generate-dialogue`)**：依據場景情境生成標準英語對白（`<d>[Language] ...</d>`）與環境音效建議。
+  - **🪄 AI 規格優化 (`/api/optimize-existing-prompt`)**：將粗稿或微調後的提示詞一鍵重組為官方標準架構。
+- **現代化 Gemini 3.8 路由**：旗艦 `gemini-3.8-flash` 負責提示詞生成與視覺解析，輕量 `gemini-3.5-flash-lite` 負責對白生成，全面採用現代枚舉 `ThinkingLevel.MINIMAL`。
+- **全套測試套件擴充**：自動化測試擴充至 49 項（100% 通過）。
+
+### 1. 深度影視導演推理與多維度細節擴充 (v5.2.0)
 - **四維度深度推演架構 (4-Dimensional Cinematic Deduction)**：
   - **前因後果與生理動態推演**：自動推導進入鏡頭前 5～15 秒的歷史，將動機轉譯為實體生理特徵（急促喘息、額角冷汗反光、發白指節、沾濕褲管磨損）與動作後的物理反饋。
   - **周遭事件與環境生命力**：杜絕真空舞台，注入前景遮擋層（失焦生鏽欄杆、雨刷水痕）與背景環境微動態（穿行車燈、斷續嗡鳴霓虹、窗簾微風擺動、地面落葉）。

@@ -28,9 +28,9 @@ export interface ExecutionPlan {
  *    - Direct Flagship Gemini 3.8 Flash for all tasks with High reasoning, no subscription quota throttling
  * 
  * - 'pro' (Default / Web UI & Free API Optimized):
- *    - Dialogue: gemini-3.5-flash-lite
- *    - Vision / Media Analysis: gemini-3.6-flash
- *    - Prompt Generation: gemini-3.8-flash (Medium thinking) with fallback to gemini-3.6-flash
+ *    - Dialogue: gemini-3.5-flash-lite (Minimal thinking)
+ *    - Vision / Media Analysis: gemini-3.8-flash (Low thinking)
+ *    - Prompt Generation: gemini-3.8-flash (Medium thinking) with fallback to gemini-3.5-flash-lite
  * 
  * - 'ultra_5x' (High Performance):
  *    - Full gemini-3.8-flash with deeper reasoning
@@ -46,7 +46,7 @@ export function getExecutionPlan(
     case 'paid_direct':
       return {
         primaryModel: 'gemini-3.8-flash',
-        fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+        fallbackModels: ['gemini-3.5-flash-lite'],
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
       };
 
@@ -54,20 +54,20 @@ export function getExecutionPlan(
       if (task === 'dialogue') {
         return {
           primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.6-flash'],
+          fallbackModels: ['gemini-3.5-flash-lite'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
         };
       }
       if (task === 'media_analysis') {
         return {
           primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+          fallbackModels: ['gemini-3.5-flash-lite'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
         };
       }
       return {
         primaryModel: 'gemini-3.8-flash',
-        fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+        fallbackModels: ['gemini-3.5-flash-lite'],
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
       };
 
@@ -75,20 +75,20 @@ export function getExecutionPlan(
       if (task === 'dialogue') {
         return {
           primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.6-flash'],
+          fallbackModels: ['gemini-3.5-flash-lite'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         };
       }
       if (task === 'media_analysis') {
         return {
           primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+          fallbackModels: ['gemini-3.5-flash-lite'],
           thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
         };
       }
       return {
         primaryModel: 'gemini-3.8-flash',
-        fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+        fallbackModels: ['gemini-3.5-flash-lite'],
         thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
       };
 
@@ -97,20 +97,20 @@ export function getExecutionPlan(
       if (task === 'dialogue') {
         return {
           primaryModel: 'gemini-3.5-flash-lite',
-          fallbackModels: ['gemini-3.6-flash', 'gemini-3.8-flash'],
-          thinkingConfig: { thinkingBudget: 0 },
+          fallbackModels: ['gemini-3.8-flash'],
+          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
         };
       }
       if (task === 'media_analysis') {
         return {
-          primaryModel: 'gemini-3.6-flash',
-          fallbackModels: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'],
-          thinkingConfig: { thinkingBudget: 0 },
+          primaryModel: 'gemini-3.8-flash',
+          fallbackModels: ['gemini-3.5-flash-lite'],
+          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
         };
       }
       return {
         primaryModel: 'gemini-3.8-flash',
-        fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
+        fallbackModels: ['gemini-3.5-flash-lite'],
         thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
       };
   }
