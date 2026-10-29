@@ -3,7 +3,11 @@
  * (https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing)
  * Dynamically tailored per Generation Mode to conserve input tokens and sharpen model focus.
  */
-export function buildModularSystemInstruction(mode: string = "T2VA", outputContract: string = "official"): string {
+export function buildModularSystemInstruction(
+  mode: string = "T2VA",
+  outputContract: string = "official",
+  isSeriesMode: boolean = false
+): string {
   let headerAndSectionRules = "";
   if (outputContract === "compact") {
     headerAndSectionRules = `
@@ -129,6 +133,48 @@ When multiple images are uploaded, MiniMax indexes them physically in sequential
 - NEVER mix up Picture indices!`;
   }
 
+  const jsonSchemaInstructions = isSeriesMode
+    ? `### 7. Output JSON Format Constraints (Series Mode):
+You MUST output a valid JSON object matching this schema:
+{
+  "isSeries": true,
+  "seriesTitle": "Optional series title in Traditional Chinese",
+  "storyArcSummary": "Optional story arc summary in Traditional Chinese",
+  "explanationZh": "繁體中文解析：說明畫面編排、三維度運鏡規劃，以及如何以客觀且可觀察的物理狀態呈現場景與動作細節",
+  "suggestions": [
+    "畫幅與鏡頭節奏建議",
+    "MiniMax-H3 官方實用技巧 1",
+    "MiniMax-H3 官方實用技巧 2"
+  ],
+  "episodes": [
+    {
+      "episodeIndex": 1,
+      "title": "第 1 段標題",
+      "duration": "10s",
+      "startingState": "具體畫面初始姿態與位置",
+      "actionSequence": "連續步驟化客觀動作",
+      "endState": "動作結束時畫面落點姿態",
+      "fullPrompt": "100% 獨立合法可貼之完整 MiniMax-H3 提示詞",
+      "cameraMovement": "運鏡英文句子",
+      "audioSoundscape": "環境音與音效",
+      "continuityNotes": "承接說明"
+    }
+  ]
+}
+Return ONLY valid JSON.`
+    : `### 7. Output JSON Format Constraints (Single Shot Mode):
+You MUST output a valid JSON object matching this schema:
+{
+  "fullPrompt": "The COMPLETE combined prompt string formatted with exact headers, blank lines, and exact field names, ready to copy into MiniMax H3. Ensure NO filenames appear.",
+  "explanationZh": "繁體中文解析：說明畫面編排、三維度運鏡規劃，以及如何以客觀且可觀察的物理狀態呈現場景與動作細節",
+  "suggestions": [
+    "畫幅與鏡頭節奏建議",
+    "MiniMax-H3 官方實用技巧 1",
+    "MiniMax-H3 官方實用技巧 2"
+  ]
+}
+Return ONLY valid JSON.`;
+
   return `
 You are the official MiniMax-H3 Video & Audio Prompt Engineering Assistant, strictly adhering to the MiniMax-H3 (Hailuo 3 / H3) "h3-prompt-writing" skill specification from https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing.
 
@@ -190,35 +236,7 @@ Video diffusion models synthesize visual frames from concrete physical descripti
 ### 6. Absolute Prohibition Regarding File Names:
 - STRICT RULE: DO NOT include any file names, file extensions (.jpg, .png, .mp4, .wav), or upload paths anywhere in the prompt! Define subjects purely by visual traits.
 
-### 7. Output JSON Format Constraints:
-You MUST output a valid JSON object matching this schema:
-{
-  "fullPrompt": "The COMPLETE combined prompt string formatted with exact headers, blank lines, and exact field names, ready to copy into MiniMax H3. Ensure NO filenames appear.",
-  "explanationZh": "繁體中文解析：說明畫面編排、三維度運鏡規劃，以及如何以客觀且可觀察的物理狀態呈現場景與動作細節",
-  "suggestions": [
-    "畫幅與鏡頭節奏建議",
-    "MiniMax-H3 官方實用技巧 1",
-    "MiniMax-H3 官方實用技巧 2"
-  ],
-  "isSeries": false,
-  "seriesTitle": "Optional series title when generating multiple episodes",
-  "storyArcSummary": "Optional story arc summary when generating multiple episodes",
-  "episodes": [
-    {
-      "episodeIndex": 1,
-      "title": "第 1 段標題",
-      "duration": "10s",
-      "startingState": "具體畫面初始姿態與位置",
-      "actionSequence": "連續步驟化客觀動作",
-      "endState": "動作結束時畫面落點姿態",
-      "fullPrompt": "100% 獨立合法可貼之完整 MiniMax-H3 提示詞",
-      "cameraMovement": "運鏡英文句子",
-      "audioSoundscape": "環境音與音效",
-      "continuityNotes": "承接說明"
-    }
-  ]
-}
-Return ONLY valid JSON.
+${jsonSchemaInstructions}
 `;
 }
 
@@ -374,6 +392,37 @@ CRITICAL MULTI-EPISODE SERIES GENERATION PROTOCOL (${seriesCount} CONSECUTIVE EP
 
   const l2vaTargetTag = lastKeyframeRef?.physicalTag || openingKeyframeTag || firstUploadedImageRef?.physicalTag || '<Picture 1>';
 
+  const activeMode = config.mode || "T2VA";
+  let modeAlignmentBlock = "";
+  if (activeMode === "I2VA") {
+    modeAlignmentBlock = `KEYFRAME & PHYSICAL SLOT ALIGNMENT CONTRACT:
+- If Generation Mode is I2VA:
+  The prompt MUST begin with the exact header line:
+  For the target video, at 0.00 seconds into the target video, ${i2vaOpeningTag} (from [Shot 1]) is fully referenced.`;
+  } else if (activeMode === "FL2VA") {
+    modeAlignmentBlock = `KEYFRAME & PHYSICAL SLOT ALIGNMENT CONTRACT:
+- If Generation Mode is FL2VA:
+  The prompt MUST begin with the exact header line:
+  How the reference pictures align with the target video — ${firstKeyframePic} (from Shot 1) aligns with the 0.00-second mark of the target video; ${lastKeyframePic} (from Shot N) aligns with the ${durationSec.toFixed(2)}-second mark of the target video.`;
+  } else if (activeMode === "L2VA") {
+    modeAlignmentBlock = `KEYFRAME & PHYSICAL SLOT ALIGNMENT CONTRACT:
+- If Generation Mode is L2VA:
+  The prompt MUST begin with the exact header line:
+  How the reference pictures align with the target video — ${l2vaTargetTag} (from [Shot N]) aligns with the ${durationSec.toFixed(2)}-second mark of the target video.`;
+  } else if (activeMode === "Ref2VA") {
+    modeAlignmentBlock = `KEYFRAME & PHYSICAL SLOT ALIGNMENT CONTRACT:
+- If Generation Mode is Ref2VA:
+  Follow the MiniMax Multi-Image Physical Upload Mapping Contract:
+${hasOpeningKeyframe ? `  * In "subject_definitions": Define each <Subject K> as depicted in its corresponding <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity."). Define the keyframe image as ${openingKeyframeTag} (e.g. "${openingKeyframeTag} is the first keyframe image showing...").
+  * In "summary": [keyframe completion + reference generation] Generated from ${openingKeyframeTag}, preserving <Subject 1> (from <Picture 1>), <Subject 2> (from <Picture 2>)...
+  * In "retention_analysis": Analyze retention for both <Subject K> (from <Picture P>) and ${openingKeyframeTag}.
+  * In "detailed_description" [Shot 1]: The opening frame matches ${openingKeyframeTag}.` : `  * In "subject_definitions": Define each <Subject K> with its objective visual characteristics as depicted in its physical upload slot <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity.").
+    CRITICAL: ${rawRefs.filter((r: any) => r.physicalTag).map((r: any) => r.physicalTag).join(', ') || '<Picture 1>'} is purely a general visual reference for the subject and is NOT an opening keyframe! Do NOT generate any standalone "<Picture N> is ..." definition lines, and do NOT declare any Picture as the first keyframe image!
+  * In "summary": MUST begin with [reference generation] (or [reference generation + other types]). Summarize the scene featuring <Subject 1> with visual traits from its reference image. Do NOT write "Generated from <Picture 1>" and do NOT treat any picture as an initial keyframe!
+  * In "retention_analysis": Analyze retention for <Subject K> (e.g. "<Subject 1> (appears in [Shot 1]): fully_preserved - visual characteristics maintained from <Picture 1>"). Do NOT create a separate retention entry for <Picture 1>.
+  * In "detailed_description" [Shot 1]: Objectively describe the opening shot according to the narrative. [Shot 1] does NOT match any picture as an opening frame.`}`;
+  }
+
   const userPrompt = `
 Generate an optimal MiniMax-H3 prompt based on the following user input:
 - Core Idea/Concept: ${config.idea || "A sleek futuristic scene"}
@@ -390,28 +439,7 @@ ${styleInstruction}
 - Assistant Director Mode: ${assistantDirector ? "Enabled (Enrich secondary physical details)" : "Disabled (Strictly faithful)"}
 - Reference Assets:
 ${sanitizedReferences}
-
-KEYFRAME & PHYSICAL SLOT ALIGNMENT CONTRACT:
-- If Generation Mode is I2VA:
-  The prompt MUST begin with the exact header line:
-  For the target video, at 0.00 seconds into the target video, ${i2vaOpeningTag} (from [Shot 1]) is fully referenced.
-- If Generation Mode is FL2VA:
-  The prompt MUST begin with the exact header line:
-  How the reference pictures align with the target video — ${firstKeyframePic} (from Shot 1) aligns with the 0.00-second mark of the target video; ${lastKeyframePic} (from Shot N) aligns with the ${durationSec.toFixed(2)}-second mark of the target video.
-- If Generation Mode is L2VA:
-  The prompt MUST begin with the exact header line:
-  How the reference pictures align with the target video — ${l2vaTargetTag} (from [Shot N]) aligns with the ${durationSec.toFixed(2)}-second mark of the target video.
-- If Generation Mode is Ref2VA:
-  Follow the MiniMax Multi-Image Physical Upload Mapping Contract:
-${hasOpeningKeyframe ? `  * In "subject_definitions": Define each <Subject K> as depicted in its corresponding <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity."). Define the keyframe image as ${openingKeyframeTag} (e.g. "${openingKeyframeTag} is the first keyframe image showing...").
-  * In "summary": [keyframe completion + reference generation] Generated from ${openingKeyframeTag}, preserving <Subject 1> (from <Picture 1>), <Subject 2> (from <Picture 2>)...
-  * In "retention_analysis": Analyze retention for both <Subject K> (from <Picture P>) and ${openingKeyframeTag}.
-  * In "detailed_description" [Shot 1]: The opening frame matches ${openingKeyframeTag}.` : `  * In "subject_definitions": Define each <Subject K> with its objective visual characteristics as depicted in its physical upload slot <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity.").
-    CRITICAL: ${rawRefs.filter((r: any) => r.physicalTag).map((r: any) => r.physicalTag).join(', ') || '<Picture 1>'} is purely a general visual reference for the subject and is NOT an opening keyframe! Do NOT generate any standalone "<Picture N> is ..." definition lines, and do NOT declare any Picture as the first keyframe image!
-  * In "summary": MUST begin with [reference generation] (or [reference generation + other types]). Summarize the scene featuring <Subject 1> with visual traits from its reference image. Do NOT write "Generated from <Picture 1>" and do NOT treat any picture as an initial keyframe!
-  * In "retention_analysis": Analyze retention for <Subject K> (e.g. "<Subject 1> (appears in [Shot 1]): fully_preserved - visual characteristics maintained from <Picture 1>"). Do NOT create a separate retention entry for <Picture 1>.
-  * In "detailed_description" [Shot 1]: Objectively describe the opening shot according to the narrative. [Shot 1] does NOT match any picture as an opening frame.`}
-
+${modeAlignmentBlock ? `\n${modeAlignmentBlock}\n` : ''}
 CRITICAL OBJECTIVE & OBSERVABLE PHYSICAL STATE PRINCIPLE (MUST FOLLOW):
 - Avoid abstract adjectives, flowery language, poetic metaphors, or vague emotional terms (e.g. NEVER write "ethereal", "breathtaking", "mysterious aura", "soul-stirring", "stunning masterpiece", "symphony of light").
 - Focus primarily on objective, concrete, and visually observable physical states and actions (what is physically visible in the frame, how subjects/objects move and interact).

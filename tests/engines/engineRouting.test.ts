@@ -1,6 +1,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
+import { MediaResolution, ThinkingLevel } from "@google/genai";
 import { resolveTemperature } from "../../server/core/types";
+import * as geminiCore from "../../server/engines/geminiCore";
 import { getExecutionPlan, getGeminiClient } from "../../server/engines/geminiCore";
 import { GeminiApiEngine } from "../../server/engines/geminiApiEngine";
 import { OllamaEngine } from "../../server/engines/ollamaEngine";
@@ -25,27 +27,50 @@ describe("Engine Routing & Strategy Specifications", () => {
     });
   });
 
-  describe("getExecutionPlan for Gemini API Flagship Direct Engine", () => {
-    test("prompt_generation routes to flagship gemini-3.8-flash with HIGH thinking", () => {
+  describe("getExecutionPlan for Gemini API Flagship Direct Engine (Pay-as-you-go & Token Optimized)", () => {
+    test("prompt_generation routes to flagship gemini-3.8-flash with HIGH thinking and MEDIA_RESOLUTION_LOW", () => {
       const plan = getExecutionPlan("prompt_generation");
       assert.equal(plan.primaryModel, "gemini-3.8-flash");
-      assert.deepEqual(plan.fallbackModels, ["gemini-3.5-flash-lite"]);
-      assert.ok(plan.thinkingConfig);
+      assert.equal("fallbackModels" in plan, false);
+      assert.deepEqual(plan.thinkingConfig, {
+        thinkingLevel: ThinkingLevel.HIGH,
+        includeThoughts: false,
+      });
+      assert.equal(plan.mediaResolution, MediaResolution.MEDIA_RESOLUTION_LOW);
     });
 
-    test("dialogue routes to gemini-3.8-flash with HIGH thinking", () => {
+    test("dialogue routes to high-throughput gemini-3.5-flash-lite with MINIMAL thinking to save tokens", () => {
       const plan = getExecutionPlan("dialogue");
-      assert.equal(plan.primaryModel, "gemini-3.8-flash");
-      assert.deepEqual(plan.fallbackModels, ["gemini-3.5-flash-lite"]);
-      assert.ok(plan.thinkingConfig);
+      assert.equal(plan.primaryModel, "gemini-3.5-flash-lite");
+      assert.equal("fallbackModels" in plan, false);
+      assert.deepEqual(plan.thinkingConfig, {
+        thinkingLevel: ThinkingLevel.MINIMAL,
+        includeThoughts: false,
+      });
     });
 
-    test("media_analysis and optimize route to flagship gemini-3.8-flash", () => {
+    test("media_analysis and optimize route to gemini-3.8-flash with LOW thinking", () => {
       const mediaPlan = getExecutionPlan("media_analysis");
       assert.equal(mediaPlan.primaryModel, "gemini-3.8-flash");
+      assert.equal("fallbackModels" in mediaPlan, false);
+      assert.deepEqual(mediaPlan.thinkingConfig, {
+        thinkingLevel: ThinkingLevel.LOW,
+        includeThoughts: false,
+      });
+      assert.equal(mediaPlan.mediaResolution, MediaResolution.MEDIA_RESOLUTION_LOW);
 
       const optPlan = getExecutionPlan("optimize");
       assert.equal(optPlan.primaryModel, "gemini-3.8-flash");
+      assert.equal("fallbackModels" in optPlan, false);
+      assert.deepEqual(optPlan.thinkingConfig, {
+        thinkingLevel: ThinkingLevel.LOW,
+        includeThoughts: false,
+      });
+    });
+
+    test("safety settings and quota retry artifacts are removed from geminiCore exports", () => {
+      assert.equal("RELAXED_SAFETY_SETTINGS" in geminiCore, false);
+      assert.equal("sleep" in geminiCore, false);
     });
 
     test("getGeminiClient rejects blank or default placeholder MY_GEMINI_API_KEY", () => {

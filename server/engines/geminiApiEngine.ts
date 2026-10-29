@@ -48,54 +48,70 @@ export class GeminiApiEngine implements StudioEngine {
       ? [...multimodalParts, userPrompt]
       : userPrompt;
 
-    const geminiConfig: any = {
-      systemInstruction: buildModularSystemInstruction(config.mode || "T2VA", config.outputContract || "official"),
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          fullPrompt: { type: Type.STRING },
-          explanationZh: { type: Type.STRING },
-          suggestions: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-          },
-          isSeries: { type: Type.BOOLEAN },
-          seriesTitle: { type: Type.STRING },
-          storyArcSummary: { type: Type.STRING },
-          episodes: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                episodeIndex: { type: Type.INTEGER },
-                title: { type: Type.STRING },
-                duration: { type: Type.STRING },
-                startingState: { type: Type.STRING },
-                actionSequence: { type: Type.STRING },
-                endState: { type: Type.STRING },
-                fullPrompt: { type: Type.STRING },
-                cameraMovement: { type: Type.STRING },
-                audioSoundscape: { type: Type.STRING },
-                continuityNotes: { type: Type.STRING },
+    const isSeries = Boolean(config.isSeriesMode);
+
+    const responseSchema = isSeries
+      ? {
+          type: Type.OBJECT,
+          properties: {
+            isSeries: { type: Type.BOOLEAN },
+            seriesTitle: { type: Type.STRING },
+            storyArcSummary: { type: Type.STRING },
+            explanationZh: { type: Type.STRING },
+            suggestions: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+            episodes: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  episodeIndex: { type: Type.INTEGER },
+                  title: { type: Type.STRING },
+                  duration: { type: Type.STRING },
+                  startingState: { type: Type.STRING },
+                  actionSequence: { type: Type.STRING },
+                  endState: { type: Type.STRING },
+                  fullPrompt: { type: Type.STRING },
+                  cameraMovement: { type: Type.STRING },
+                  audioSoundscape: { type: Type.STRING },
+                  continuityNotes: { type: Type.STRING },
+                },
+                required: [
+                  "episodeIndex",
+                  "title",
+                  "duration",
+                  "startingState",
+                  "actionSequence",
+                  "endState",
+                  "fullPrompt",
+                  "cameraMovement",
+                  "audioSoundscape",
+                  "continuityNotes",
+                ],
               },
-              required: [
-                "episodeIndex",
-                "title",
-                "duration",
-                "startingState",
-                "actionSequence",
-                "endState",
-                "fullPrompt",
-                "cameraMovement",
-                "audioSoundscape",
-                "continuityNotes",
-              ],
             },
           },
-        },
-        required: ["fullPrompt", "explanationZh", "suggestions"],
-      },
+          required: ["isSeries", "seriesTitle", "storyArcSummary", "explanationZh", "suggestions", "episodes"],
+        }
+      : {
+          type: Type.OBJECT,
+          properties: {
+            fullPrompt: { type: Type.STRING },
+            explanationZh: { type: Type.STRING },
+            suggestions: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+            },
+          },
+          required: ["fullPrompt", "explanationZh", "suggestions"],
+        };
+
+    const geminiConfig: any = {
+      systemInstruction: buildModularSystemInstruction(config.mode || "T2VA", config.outputContract || "official", isSeries),
+      responseMimeType: "application/json",
+      responseSchema,
     };
 
     if (typeof geminiTemperature === 'number') {
@@ -111,8 +127,10 @@ export class GeminiApiEngine implements StudioEngine {
       }
     );
 
-    const outputText = response.text || "{}";
-    const resultJson = JSON.parse(outputText);
+    const resultJson = parseJsonSafely(response.text || "{}");
+    if (isSeries && !resultJson.fullPrompt && Array.isArray(resultJson.episodes) && resultJson.episodes[0]?.fullPrompt) {
+      resultJson.fullPrompt = resultJson.episodes[0].fullPrompt;
+    }
     return formatGeneratedPromptResult(resultJson, config);
   }
 
@@ -139,7 +157,7 @@ export class GeminiApiEngine implements StudioEngine {
       }
     );
 
-    return JSON.parse(response.text || "{}");
+    return parseJsonSafely(response.text || "{}");
   }
 
   async analyzeReferenceMedia(params: any): Promise<string> {
@@ -219,7 +237,7 @@ export class GeminiApiEngine implements StudioEngine {
       }
     );
 
-    const resultJson = JSON.parse(response.text || "{}");
+    const resultJson = parseJsonSafely(response.text || "{}");
     return formatGeneratedPromptResult(resultJson, params);
   }
 
@@ -291,7 +309,7 @@ export class GeminiApiEngine implements StudioEngine {
       }
     );
 
-    const resultJson = JSON.parse(response.text || "{}");
+    const resultJson = parseJsonSafely(response.text || "{}");
     resultJson.episodeIndex = params.targetEpisodeIndex;
     resultJson.fullPrompt = sanitizeGeneratedPromptText(resultJson.fullPrompt || '', durationSec);
     resultJson.startingState = sanitizeGeneratedPromptText(resultJson.startingState || '', durationSec);

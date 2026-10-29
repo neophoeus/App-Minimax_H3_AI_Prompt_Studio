@@ -1,4 +1,4 @@
-import { GoogleGenAI, ThinkingLevel, HarmCategory, HarmBlockThreshold, FinishReason, BlockedReason } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel, MediaResolution, FinishReason, BlockedReason } from "@google/genai";
 
 // Initialize Gemini Client
 export const getGeminiClient = () => {
@@ -13,103 +13,76 @@ export const getGeminiClient = () => {
 
 export type GeminiTaskType = 'dialogue' | 'media_analysis' | 'prompt_generation' | 'optimize';
 
+/**
+ * Pure Pay-as-you-go Execution Plan with Task-Adaptive Token Optimization.
+ * No quota fallback models; each task uses its optimal model, thinking depth, and media resolution.
+ */
 export interface ExecutionPlan {
   primaryModel: string;
-  fallbackModels: string[];
-  thinkingConfig?: {
-    thinkingLevel?: ThinkingLevel;
-    thinkingBudget?: number;
+  thinkingConfig: {
+    thinkingLevel: ThinkingLevel;
+    includeThoughts: boolean;
   };
+  mediaResolution?: MediaResolution;
 }
 
 /**
  * Strategy Planner for Gemini API Direct Engine:
- * Direct Flagship Gemini 3.8 Flash for all tasks with High reasoning and 3.5 Flash Lite fallback.
- * Fully compatible with Google AI Studio Free Tier and Google Cloud Pay-as-you-go keys.
+ * Pure Pay-as-you-go direct flagship routing with task-adaptive token optimization:
+ * - prompt_generation: Flagship gemini-3.8-flash with HIGH thinking depth & MEDIA_RESOLUTION_LOW
+ * - optimize: gemini-3.8-flash with LOW thinking depth (fast spec restructuring)
+ * - media_analysis: gemini-3.8-flash with LOW thinking depth & MEDIA_RESOLUTION_LOW (280 tokens/image)
+ * - dialogue: Ultra-fast gemini-3.5-flash-lite with MINIMAL thinking depth
  */
 export function getExecutionPlan(task: GeminiTaskType): ExecutionPlan {
-  return {
-    primaryModel: 'gemini-3.8-flash',
-    fallbackModels: ['gemini-3.5-flash-lite'],
-    thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
-  };
+  switch (task) {
+    case 'prompt_generation':
+      return {
+        primaryModel: 'gemini-3.8-flash',
+        thinkingConfig: {
+          thinkingLevel: ThinkingLevel.HIGH,
+          includeThoughts: false,
+        },
+        mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW,
+      };
+    case 'optimize':
+      return {
+        primaryModel: 'gemini-3.8-flash',
+        thinkingConfig: {
+          thinkingLevel: ThinkingLevel.LOW,
+          includeThoughts: false,
+        },
+      };
+    case 'media_analysis':
+      return {
+        primaryModel: 'gemini-3.8-flash',
+        thinkingConfig: {
+          thinkingLevel: ThinkingLevel.LOW,
+          includeThoughts: false,
+        },
+        mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW,
+      };
+    case 'dialogue':
+      return {
+        primaryModel: 'gemini-3.5-flash-lite',
+        thinkingConfig: {
+          thinkingLevel: ThinkingLevel.MINIMAL,
+          includeThoughts: false,
+        },
+      };
+    default:
+      return {
+        primaryModel: 'gemini-3.8-flash',
+        thinkingConfig: {
+          thinkingLevel: ThinkingLevel.HIGH,
+          includeThoughts: false,
+        },
+      };
+  }
 }
 
 /**
- * Ultra-permissive safety settings for creative video production and cinematic storytelling.
- * Sets BLOCK_NONE across all core harm categories to maximize creative freedom.
- */
-export const RELAXED_SAFETY_SETTINGS = [
-  {
-    category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-  {
-    category: HarmCategory.HARM_CATEGORY_CIVIC_INTEGRITY,
-    threshold: HarmBlockThreshold.BLOCK_NONE,
-  },
-];
-
-export const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-export function isTransientRateLimitOrServerError(err: any): boolean {
-  const status = err?.status || err?.statusCode || err?.response?.status || err?.code;
-  const errMsg = typeof err?.message === 'string' ? err.message : JSON.stringify(err || '');
-  const lowerMsg = errMsg.toLowerCase();
-  return (
-    status === 429 ||
-    status === '429' ||
-    status === 503 ||
-    status === '503' ||
-    status === 500 ||
-    status === 502 ||
-    status === 504 ||
-    lowerMsg.includes('429') ||
-    lowerMsg.includes('503') ||
-    lowerMsg.includes('500') ||
-    lowerMsg.includes('resource_exhausted') ||
-    lowerMsg.includes('exhausted') ||
-    lowerMsg.includes('quota') ||
-    lowerMsg.includes('unavailable') ||
-    lowerMsg.includes('high demand') ||
-    lowerMsg.includes('overloaded') ||
-    lowerMsg.includes('fetch failed') ||
-    lowerMsg.includes('econnreset') ||
-    lowerMsg.includes('etimedout') ||
-    lowerMsg.includes('rate limit') ||
-    lowerMsg.includes('spikes in demand')
-  );
-}
-
-export function isPermanentModelError(err: any): boolean {
-  const status = err?.status || err?.statusCode || err?.response?.status || err?.code;
-  const errMsg = typeof err?.message === 'string' ? err.message : JSON.stringify(err || '');
-  const lowerMsg = errMsg.toLowerCase();
-  return (
-    status === 404 ||
-    status === '404' ||
-    lowerMsg.includes('404') ||
-    lowerMsg.includes('not_found') ||
-    lowerMsg.includes('not found') ||
-    lowerMsg.includes('no longer available') ||
-    lowerMsg.includes('is not supported')
-  );
-}
-
-/**
- * Check if the Gemini response or candidate was blocked due to safety violations.
+ * Check if the Gemini response or candidate was blocked due to core built-in safety violations.
  */
 export function checkSafetyViolations(response: any) {
   if (!response) return;
@@ -140,8 +113,8 @@ export function checkSafetyViolations(response: any) {
 }
 
 /**
- * Execute Gemini API with automatic model specialization, relaxed safety settings,
- * exponential backoff retry with jitter, and seamless 429/503 fallback routing.
+ * Execute Gemini API with pure Pay-as-you-go direct routing and task-adaptive token optimization.
+ * Additional safety filters are Off by default per official Gemini API specifications.
  */
 export async function callGeminiDynamic(
   ai: GoogleGenAI,
@@ -149,99 +122,20 @@ export async function callGeminiDynamic(
   requestOptions: Omit<Parameters<typeof ai.models.generateContent>[0], 'model'>
 ) {
   const plan = getExecutionPlan(task);
-  const modelsToTry = [plan.primaryModel, ...plan.fallbackModels];
-  let lastError: any = null;
-  const MAX_RETRIES_PER_MODEL = 2; // Total 3 attempts per model: initial + 2 retries
-  const BASE_DELAY_MS = 1000;
 
-  for (let mIdx = 0; mIdx < modelsToTry.length; mIdx++) {
-    const currentModel = modelsToTry[mIdx];
-    const isFallback = mIdx > 0;
+  const mergedConfig = {
+    ...(plan.mediaResolution ? { mediaResolution: plan.mediaResolution } : {}),
+    ...(plan.thinkingConfig ? { thinkingConfig: plan.thinkingConfig } : {}),
+    ...(requestOptions.config || {}),
+  };
 
-    const mergedConfig = {
-      safetySettings: RELAXED_SAFETY_SETTINGS,
-      ...(requestOptions.config || {}),
-      ...(plan.thinkingConfig ? { thinkingConfig: plan.thinkingConfig } : {}),
-    };
+  const response = await ai.models.generateContent({
+    ...requestOptions,
+    config: mergedConfig,
+    model: plan.primaryModel,
+  });
 
-    if (isFallback) {
-      console.log(`[Gemini Dynamic Router] Activating fallback model "${currentModel}" for task "${task}"...`);
-    }
+  checkSafetyViolations(response);
 
-    let modelAttemptSucceeded = false;
-
-    for (let attempt = 0; attempt <= MAX_RETRIES_PER_MODEL; attempt++) {
-      try {
-        if (attempt > 0) {
-          const jitter = Math.floor(Math.random() * 500);
-          const delayMs = BASE_DELAY_MS * Math.pow(2, attempt - 1) + jitter;
-          console.log(
-            `[Gemini Dynamic Router] Retry attempt ${attempt}/${MAX_RETRIES_PER_MODEL} for model "${currentModel}" after ${delayMs}ms exponential backoff (Task: "${task}")...`
-          );
-          await sleep(delayMs);
-        }
-
-        const response = await ai.models.generateContent({
-          ...requestOptions,
-          config: mergedConfig,
-          model: currentModel,
-        });
-
-        checkSafetyViolations(response);
-
-        modelAttemptSucceeded = true;
-        return response;
-      } catch (err: any) {
-        lastError = err;
-        const status = err?.status || err?.statusCode || err?.response?.status || err?.code;
-        const errMsg = typeof err?.message === 'string' ? err.message : JSON.stringify(err || '');
-
-        if (errMsg.includes('【內容安全性阻擋通知】')) {
-          throw err;
-        }
-
-        console.warn(
-          `[Gemini Dynamic Router] Model "${currentModel}" attempt ${attempt + 1}/${MAX_RETRIES_PER_MODEL + 1} failed for task "${task}" (Status: ${status || 'N/A'}):`,
-          errMsg
-        );
-
-        if (isPermanentModelError(err)) {
-          console.warn(`[Gemini Dynamic Router] Model "${currentModel}" has permanent error. Skipping retries.`);
-          break;
-        }
-
-        if (!isTransientRateLimitOrServerError(err)) {
-          break;
-        }
-
-        if (attempt === MAX_RETRIES_PER_MODEL) {
-          console.warn(`[Gemini Dynamic Router] Exhausted ${MAX_RETRIES_PER_MODEL} retries for model "${currentModel}".`);
-        }
-      }
-    }
-
-    if (modelAttemptSucceeded) break;
-
-    if (mIdx < modelsToTry.length - 1) {
-      const nextModel = modelsToTry[mIdx + 1];
-      console.log(
-        `[Gemini Dynamic Router] Failover: Switching from "${currentModel}" to next fallback model "${nextModel}"...`
-      );
-      continue;
-    }
-
-    break;
-  }
-
-  const status = lastError?.status || lastError?.statusCode || lastError?.response?.status || lastError?.code;
-  const errMsg = typeof lastError?.message === 'string' ? lastError.message : JSON.stringify(lastError || '');
-
-  if (errMsg.includes('429') || errMsg.includes('RESOURCE_EXHAUSTED') || status === 429) {
-    throw new Error('⚠️ Gemini API 請求頻率/額度受限 (429 Rate Limit)，系統已自動執行同模型指數退避重試並嘗試多模型備援，目前配額仍處於冷卻中，請稍等 1~2 分鐘後重試！');
-  }
-  if (errMsg.includes('503') || errMsg.includes('UNAVAILABLE') || status === 503) {
-    throw new Error('⚠️ Gemini AI 模型目前高負載 (503)，系統已完成多次退避重試與備援，請稍候數秒後再試！');
-  }
-
-  throw lastError || new Error('Gemini API 請求失敗');
+  return response;
 }

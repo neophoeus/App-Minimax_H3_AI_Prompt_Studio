@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v6.0.0-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v6.1.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -22,7 +22,7 @@
 本工具 100% 嚴格遵循 MiniMax-H3 官方 [`h3-prompt-writing`](https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing) 技能規範，能將使用者的創意概念一鍵轉化為符合模型最佳理解結構的生產級提示詞，並提供一鍵複製功能。
 
 具備全新 **三大獨立引擎架構與專屬入口 (Tri-Engine Independent Architecture)**：
-1. **🔑 本地 Gemini API 直通引擎 (`start_gemini_api.bat` / `server-gemini-api.ts`)**：本機運行支援使用者自備的 Google Gemini API Key（全面相容 Google AI Studio Free Tier 免費金鑰與 Google Cloud Pay-as-you-go 按量計費金鑰），全核心直接調用旗艦級 `gemini-3.8-flash` 深度推理。
+1. **🔑 本地 Gemini API 直通引擎 (`start_gemini_api.bat` / `server-gemini-api.ts`)**：本機運行純 Pay-as-you-go 按量計費直通，對齊 Gemini 官方安全過濾器預設關閉（Default Off）規範，具備任務自適應思考預算深度、影像 Token 壓縮 -75%（`MediaResolution.MEDIA_RESOLUTION_LOW`）與動態 Schema 裁剪。
 2. **💻 本地 Ollama 離線引擎 (`start_ollama.bat` / `server-ollama.ts`)**：連線至本機端點 `http://127.0.0.1:11434`，具備 **本地已安裝模型動態探索機制**，自動掃描並列出所有本機安裝模型（包含 `Qwen3.8-27B-Uncensored` 等）。
 3. **⚡ 本地 llama.cpp 離線引擎 (`start_llamacpp.bat` / `server-llamacpp.ts`)**：專為 NVIDIA RTX 5090 (32GB VRAM) 打造。自動掃描 `C:\llama.cpp\models` 內的 GGUF、配對 `mmproj` 視覺投影器，並啟用 MTP (Multi-Token Prediction) 2.23x 加速。
 
@@ -30,7 +30,16 @@
 
 ## ✨ 核心特色
 
-### 0. 三大獨立引擎架構收斂與 AI Studio 雲端預覽廢除 (v6.0.0)
+### 0. 官方預設安全對齊、純 Pay-as-you-go 直通與深度 Token 節約最佳化 (v6.1.0)
+- **官方安全設定預設關閉（Default Off）對齊**：依據 Google Gemini API 官方安全性文件規範，Gemini 2.5 / 3.x / 4 模型的可調式過濾器預設均為關閉狀態。全面移除 `safetySettings` 手動設定與 `HarmCategory` / `HarmBlockThreshold` 代碼，回歸原生預設行為，並保有被動式系統違規阻擋檢測。
+- **純 Pay-as-you-go 按量計費直通**：徹底清除跨模型降級備援迴圈（`fallbackModels`）、429 指數退避重試邏輯與過時的免費額度文案，請求單次直通無額外延遲與重複計費。
+- **深度 Token 節省架構**：
+  - **多模態影像 Token 壓縮 75%**：引入官方 `MediaResolution.MEDIA_RESOLUTION_LOW`，將參考圖輸入消耗自 1,120 tokens 降至 280 tokens/圖。
+  - **任務自適應思考預算**：按任務複雜度配置專屬 `ThinkingLevel`（提示詞生成用 `HIGH`、優化與視覺解析用 `LOW`、對話生成路由至 `gemini-3.5-flash-lite` 搭配 `MINIMAL`），全數設定 `includeThoughts: false` 杜絕計費思考輸出浪費。
+  - **單段/系列動態 Schema 裁剪**：單段請求從 `responseSchema` 徹底剝離系列與集數欄位，多集模式由後端安全回填頂層 `fullPrompt`。
+  - **模式隔離提示詞注入**：`buildH3UserPrompt` 僅注入當前模式（如 L2VA/FL2VA）所需的對齊指令，節省 250~400 tokens 冗餘。
+
+### 1. 三大獨立引擎架構收斂與 AI Studio 雲端預覽廢除 (v6.0.0)
 - **AI Studio 雲端預覽全面廢除**：由於 Google AI Studio 自建 App 預覽模式已取消前端瀏覽器注入訂閱配額（Subscription Quota）之機制，目前僅支援透過直接配置 API Key 呼叫模型，因此舊版 AI Studio 雲端預覽伺服器 (`server-aistudio.ts`)、打包器 (`pack-aistudio.ts`、`pack_aistudio.bat`) 與多餘的方案選擇器已全數徹底移除，不殘留任何無用代碼。
 - **Gemini API 直通引擎 (`gemini_api`)**：原 Paid API 正式更名並整合為 Gemini API 直通引擎，全核心調用旗艦級 `gemini-3.8-flash` 深入推理，全面相容 Google AI Studio Free Tier（免費方案，15 RPM）與 Google Cloud Pay-as-you-go 按量計費金鑰。
 - **佔位符安全防護與舊版相容**：自動攔截預設佔位符 `MY_GEMINI_API_KEY` 並提示設定，並針對瀏覽器舊版 `localStorage`（如 `'paid_api'`）提供自動平滑遷移至 `'gemini_api'`。

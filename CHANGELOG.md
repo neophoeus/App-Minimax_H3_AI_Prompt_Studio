@@ -2,6 +2,43 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v6.1.0] - 2026-10-29
+
+### 🚀 Default Safety Alignment, Pure Pay-as-you-go & Deep Token Optimization (官方預設安全對齊、純 Pay-as-you-go 直通與深度 Token 節約最佳化)
+
+#### 🛡️ 1. Official Safety Settings Default Off Alignment (官方安全設定預設關閉對齊)
+- **規範對齊 (Official Spec Alignment)**:
+  - 依據 [Gemini API 官方安全性文件](https://ai.google.dev/gemini-api/docs/safety-settings)，Gemini 2.5 / 3.x / 4 系列模型之可調式過濾器預設均為關閉（Default Off）。
+  - 徹底移除 `server/engines/geminiCore.ts` 中手動設定的 `RELAXED_SAFETY_SETTINGS`、`HarmCategory`、`HarmBlockThreshold` 及 `safetySettings` 請求欄位，直接採用官方原生預設關閉行為。
+- **核心系統攔截保護 (Passive System Check)**:
+  - 保留被動式 `checkSafetyViolations(response)`，當請求觸發 Google 系統級底層不可關閉之違規阻擋（如 `SAFETY`、`PROHIBITED_CONTENT`、`BLOCKLIST`）時，及時提供友善的中文解析通知。
+
+#### 💳 2. Pure Pay-as-you-go Direct Architecture (純按量計費直通架構)
+- **全面移除配額備援與退避重試 (Zero Fallback Overhead)**:
+  - 移除 `ExecutionPlan` 內的 `fallbackModels` 備援陣列。
+  - 清除 `callGeminiDynamic` 中的 `sleep`、429 指數退避重試迴圈（`maxRetries`）、同模型退避與跨模型降級機制，消除多餘延遲並避免重複計費。
+- **介面文案全面對齊**:
+  - 更新導覽列彈窗與 `src/App.tsx` 中的錯誤提示，移除舊有「Free Tier 15 RPM」與「同模型退避重試與跨模型降級備援」等陳舊文案。
+
+#### ⚡ 3. Deep Multi-Dimensional Token Optimization (多維度深度 Token 節約)
+- **多模態影像 Token 壓縮 -75%**:
+  - 引入官方原生枚舉 `MediaResolution.MEDIA_RESOLUTION_LOW`。在提示詞生成與視覺解析任務中，將參考圖輸入消耗自預設 1,120 tokens 壓縮至 280 tokens/圖，與前端 512px 圖片壓縮完美契合。
+- **任務自適應思考深度 (Task-Adaptive Thinking Budgets)**:
+  - 核心提示詞生成（`prompt_generation`）：維持旗艦 `gemini-3.8-flash` 搭配 `ThinkingLevel.HIGH` 保證 MiniMax-H3 編排品質。
+  - 提示詞優化（`optimize`）與多模態分析（`media_analysis`）：配置 `ThinkingLevel.LOW` 節約大量思考 Token。
+  - 對話生成（`dialogue`）：專屬路由至高輸送量 `gemini-3.5-flash-lite` 搭配 `ThinkingLevel.MINIMAL`。
+  - 全數任務強制設定 `includeThoughts: false`，消除思維鏈計費輸出浪費。
+- **動態 JSON Schema 裁剪**:
+  - 單段模式（Single-shot）：從 `responseSchema` 徹底剝離 `isSeries`、`seriesTitle`、`storyArcSummary` 與 10 欄位的 `episodes` 陣列定義，節約 180~250 輸出結構 tokens。
+  - 系列模式（Series）：移除頂層重複之 `fullPrompt` 定義，由後端以 `episodes[0].fullPrompt` 保底回填。
+- **模式隔離提示詞注入**:
+  - `buildH3UserPrompt` 依據當前 `mode`（如 T2VA, I2VA, Ref2VA, L2VA, FL2VA）僅注入所需之對齊指令，節省 250~400 tokens 冗餘。
+
+#### 🧪 4. Test Suite Alignment & 100% Pass (測試套件全量通過)
+- 更新 `tests/engines/engineRouting.test.ts` 驗證全新純 Pay-as-you-go 路由、`ThinkingLevel`、`MediaResolution` 與安全性代碼移除。
+- 擴充 `tests/core/prompts.test.ts` 涵蓋單段 vs 系列模式 Schema 裁剪驗證與各模式提示詞隔離斷言。
+- 全套測試 52 / 52 全數通過（18 suites, 0 fails），建置無錯誤。
+
 ## [v6.0.0] - 2026-10-29
 
 ### 🚀 Tri-Engine Architecture & Google AI Studio Decommissioning (三大獨立引擎收斂與 AI Studio 預覽模式廢除)

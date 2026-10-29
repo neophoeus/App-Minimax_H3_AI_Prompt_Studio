@@ -58,6 +58,20 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
       assert.ok(instruction.includes("Structure & Core Fields for Compact Mode"));
       assert.ok(instruction.includes("do NOT output subject_definitions, summary, or retention_analysis"));
     });
+
+    test("Single-shot mode outputs concise JSON schema without series schema overhead", () => {
+      const instruction = buildModularSystemInstruction("T2VA", "official", false);
+      assert.ok(instruction.includes('"fullPrompt"'));
+      assert.ok(!instruction.includes('"seriesTitle"'));
+      assert.ok(!instruction.includes('"episodes"'));
+    });
+
+    test("Series mode outputs full multi-episode JSON schema", () => {
+      const instruction = buildModularSystemInstruction("T2VA", "official", true);
+      assert.ok(instruction.includes('"seriesTitle"'));
+      assert.ok(instruction.includes('"storyArcSummary"'));
+      assert.ok(instruction.includes('"episodes"'));
+    });
   });
 
   describe("getAssistantDirectorDirective", () => {
@@ -91,6 +105,7 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
       assert.ok(res.userPrompt.includes("A lone samurai in rain"));
       assert.ok(res.userPrompt.includes("Push In, Tilt Up"));
       assert.ok(res.userPrompt.includes("non_diegetic_music: N/A"));
+      assert.ok(!res.userPrompt.includes("How the reference pictures align with the target video"));
       assert.equal(res.isSeriesMode, false);
       assert.equal(res.durationSec, 10);
     });
@@ -209,6 +224,16 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
         duration: "6s",
       });
       assert.ok(res.userPrompt.includes("How the reference pictures align with the target video — <Picture 1> (from [Shot N]) aligns with the 6.00-second mark of the target video."));
+      assert.ok(!res.userPrompt.includes("Picture 2 (from Shot N)"));
+    });
+
+    test("buildH3UserPrompt with FL2VA includes first and last frame alignment header", () => {
+      const res = buildH3UserPrompt({
+        idea: "Sun rises then sets",
+        mode: "FL2VA",
+        duration: "10s",
+      });
+      assert.ok(res.userPrompt.includes("How the reference pictures align with the target video — Picture 1 (from Shot 1) aligns with the 0.00-second mark of the target video; Picture 2 (from Shot N) aligns with the 10.00-second mark"));
     });
 
     test("Ref2VA without reference image preserves custom style and lighting", () => {

@@ -291,9 +291,7 @@ export default function App() {
       rawMsg.includes('Quota') ||
       rawMsg.includes('Rate limit')
     ) {
-      return rawMsg.includes('冷卻')
-        ? rawMsg
-        : '⚠️ Gemini API 額度限制 (429 Rate Limit)，系統已自動執行同模型退避重試與跨模型降級備援，請稍等片刻後重試！';
+      return '⚠️ Gemini API 呼叫頻率或額度限制 (429 Rate Limit)，請稍候片刻後重試！';
     }
     if (
       rawMsg.includes('503') ||
@@ -303,9 +301,7 @@ export default function App() {
       rawMsg.includes('負載') ||
       rawMsg.includes('overloaded')
     ) {
-      return rawMsg.includes('多次退避')
-        ? rawMsg
-        : '⚠️ Gemini 模型目前負載較高 (503)，系統已嘗試退避重試，請稍候 3~5 秒後再試！';
+      return '⚠️ Gemini 模型伺服端目前負載較高 (503 Service Unavailable)，請稍候 3~5 秒後再試！';
     }
     if (rawMsg.includes('GEMINI_API_KEY')) {
       return '⚠️ 未設定 GEMINI_API_KEY 環境變數，請確認後端 .env 設定！';
@@ -2394,7 +2390,7 @@ ${ep.fullPrompt}`;
         </section>
       </main>
 
-      {/* Studio Global Footer (v6.0.0) */}
+      {/* Studio Global Footer (v6.1.0) */}
       <footer className="mt-auto border-t border-slate-900 bg-slate-950/90 backdrop-blur-md px-4 lg:px-8 py-3.5 text-xs text-slate-500">
         <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Left: Brand, Version & Verification */}
@@ -2404,7 +2400,7 @@ ${ep.fullPrompt}`;
               MiniMax-H3 AI Prompt Studio
             </span>
             <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-mono font-bold text-purple-300">
-              v6.0.0 Flagship
+              v6.1.0 Flagship
             </span>
             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-md">
               <ShieldCheck className="w-3 h-3 text-emerald-400" />

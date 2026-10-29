@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v6.0.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v6.1.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -22,13 +22,22 @@
 Adhering 100% to the official MiniMax-H3 [`h3-prompt-writing`](https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing) skill specification, the studio transforms high-level creative concepts into production-ready, perfectly formatted prompts with one-click copy functionality.
 
 Featuring a **Tri-Engine Independent Architecture with Dedicated UI Panels**:
-1. **🔑 Local Gemini API Direct Engine (`start_gemini_api.bat` / `server-gemini-api.ts`)**: Direct execution utilizing the user's Google Gemini API key (supporting both Google AI Studio Free Tier and Google Cloud Pay-as-you-go), unlocking full-core flagship `gemini-3.8-flash` deep reasoning across all tasks.
+1. **🔑 Local Gemini API Direct Engine (`start_gemini_api.bat` / `server-gemini-api.ts`)**: Direct Pay-as-you-go execution utilizing Google Gemini API, aligned with official default Off safety policies, featuring task-adaptive thinking budgets, 75% image token reduction (`MediaResolution.MEDIA_RESOLUTION_LOW`), and dynamic schema pruning.
 2. **💻 Local Ollama Offline Engine (`start_ollama.bat` / `server-ollama.ts`)**: 100% private and offline on `http://127.0.0.1:11434`, with **dynamic local model discovery** (automatically scans all installed models like `Qwen3.8-27B-Uncensored`).
 3. **⚡ Local llama.cpp Offline Engine (`start_llamacpp.bat` / `server-llamacpp.ts`)**: Pure C/C++ ultra-low latency offline inference for the NVIDIA RTX 5090 (32GB VRAM), with Flash Attention, 32K context windows, and `mmproj` multimodal vision support.
 
 ## ✨ Key Features
 
-### 0. Tri-Engine Unification & AI Studio Preview Decommissioning (v6.0.0)
+### 0. Default Safety Alignment, Pure Pay-as-you-go & Deep Token Optimization (v6.1.0)
+- **Official Safety Settings Default Off Alignment**: Per official Gemini API documentation, safety filters are Off by default in Gemini 2.5 / 3.x / 4 models. All manual `safetySettings` configurations have been removed, relying strictly on native default Off behavior while retaining passive system block detection.
+- **Pure Pay-as-you-go Architecture**: Completely eliminated quota fallback loops, multi-model downgrade chains (`fallbackModels`), exponential backoff retries, and legacy Free Tier UI copy for ultra-low latency direct calls.
+- **Deep Token Optimization Matrix**:
+  - **75% Image Token Reduction**: Native `MediaResolution.MEDIA_RESOLUTION_LOW` compresses multimodal input to 280 tokens/image (down from 1,120 tokens/image).
+  - **Task-Adaptive Thinking Budgets**: Explicit `ThinkingLevel` per task (`HIGH` for prompt generation, `LOW` for optimization and media analysis, `MINIMAL` with `gemini-3.5-flash-lite` for dialogue) with `includeThoughts: false`.
+  - **Dynamic Schema Pruning**: Automatically strips series and episode definitions in single-shot mode to eliminate output token overhead.
+  - **Mode-Specific Prompt Injection**: Prunes irrelevant keyframe alignment rules outside active modes (T2VA, I2VA, Ref2VA).
+
+### 1. Tri-Engine Unification & AI Studio Preview Decommissioning (v6.0.0)
 - **AI Studio Preview Decommissioned**: Google AI Studio deprecated browser front-end subscription quota injection, standardizing exclusively on direct API key access. Dedicated preview servers (`server-aistudio.ts`), pure packaging scripts (`pack-aistudio.ts`, `pack_aistudio.bat`), and subscription tier selectors have been completely removed with zero residual dead code.
 - **Gemini API Direct Engine (`gemini_api`)**: Renamed and unified Paid API to Gemini API Direct, delivering full-core `gemini-3.8-flash` reasoning with native support for both Google AI Studio Free Tier (15 RPM) and Google Cloud Pay-as-you-go keys.
 - **Enhanced Placeholder & Rate Limit Protection**: Built-in interception for unconfigured `MY_GEMINI_API_KEY` placeholders and automatic downward compatibility for legacy browser `localStorage`.
