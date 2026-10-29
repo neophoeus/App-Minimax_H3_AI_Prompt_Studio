@@ -11,20 +11,18 @@ import {
 import { formatGeneratedPromptResult, parseJsonSafely, sanitizeGeneratedPromptText } from "../core/sanitizer";
 import { getGeminiClient, callGeminiDynamic } from "./geminiCore";
 
-export class PaidApiEngine implements StudioEngine {
-  readonly mode = 'paid_api' as const;
+export class GeminiApiEngine implements StudioEngine {
+  readonly mode = 'gemini_api' as const;
 
   async getStatus(): Promise<SystemModeStatus> {
     const { hasGeminiApiKey } = detectEnvironment();
     return {
       detectedModes: {
-        ai_studio: false,
-        paid_api: hasGeminiApiKey,
+        gemini_api: hasGeminiApiKey,
         ollama: false,
         llamacpp: false,
       },
       details: {
-        isAiStudioEnv: false,
         hasGeminiApiKey,
         ollamaOnline: false,
         ollamaBaseUrl: "",
@@ -33,8 +31,8 @@ export class PaidApiEngine implements StudioEngine {
         llamacppBaseUrl: "",
         llamacppModelCount: 0,
       },
-      recommendedMode: 'paid_api',
-      fixedMode: 'paid_api',
+      recommendedMode: 'gemini_api',
+      fixedMode: 'gemini_api',
       ollamaModels: [],
       llamacppModels: [],
     };
@@ -42,7 +40,6 @@ export class PaidApiEngine implements StudioEngine {
 
   async generateH3Prompt(config: any): Promise<any> {
     const ai = getGeminiClient();
-    const effectiveTier = 'paid_direct' as const;
     const geminiTemperature = resolveTemperature('gemini', config.temperatureMode, config.manualTemperature);
 
     const { userPrompt, multimodalParts } = buildH3UserPrompt(config);
@@ -108,7 +105,6 @@ export class PaidApiEngine implements StudioEngine {
     const response = await callGeminiDynamic(
       ai,
       'prompt_generation',
-      effectiveTier,
       {
         contents: requestContents,
         config: geminiConfig,
@@ -122,13 +118,11 @@ export class PaidApiEngine implements StudioEngine {
 
   async generateDialogue(params: any): Promise<any> {
     const ai = getGeminiClient();
-    const effectiveTier = 'paid_direct' as const;
     const prompt = buildDialoguePrompt(params);
 
     const response = await callGeminiDynamic(
       ai,
       'dialogue',
-      effectiveTier,
       {
         contents: prompt,
         config: {
@@ -150,7 +144,6 @@ export class PaidApiEngine implements StudioEngine {
 
   async analyzeReferenceMedia(params: any): Promise<string> {
     const ai = getGeminiClient();
-    const effectiveTier = 'paid_direct' as const;
     const { imageBase64, role, fileName } = params;
 
     let contents: any[] = [];
@@ -173,7 +166,6 @@ export class PaidApiEngine implements StudioEngine {
     const response = await callGeminiDynamic(
       ai,
       'media_analysis',
-      effectiveTier,
       { contents }
     );
 
@@ -182,7 +174,6 @@ export class PaidApiEngine implements StudioEngine {
 
   async optimizePrompt(params: any): Promise<any> {
     const ai = getGeminiClient();
-    const effectiveTier = 'paid_direct' as const;
     const assistantDirector = typeof params.assistantDirector === 'boolean'
       ? params.assistantDirector
       : (params.creativityLevel !== 0);
@@ -222,7 +213,6 @@ export class PaidApiEngine implements StudioEngine {
     const response = await callGeminiDynamic(
       ai,
       'optimize',
-      effectiveTier,
       {
         contents: promptText,
         config: geminiConfig,
@@ -235,7 +225,6 @@ export class PaidApiEngine implements StudioEngine {
 
   async refineSeriesEpisode(params: any): Promise<any> {
     const ai = getGeminiClient();
-    const effectiveTier = 'paid_direct' as const;
     const config = params.config || {};
     const durationToUse = params.currentEpisode?.duration || config.duration || "10s";
     const durationSec = parseFloat(durationToUse) || 10;
@@ -296,7 +285,6 @@ export class PaidApiEngine implements StudioEngine {
     const response = await callGeminiDynamic(
       ai,
       'prompt_generation',
-      effectiveTier,
       {
         contents: userPrompt,
         config: geminiConfig,

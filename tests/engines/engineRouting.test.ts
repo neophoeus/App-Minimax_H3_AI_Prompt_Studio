@@ -1,9 +1,8 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { resolveTemperature } from "../../server/core/types";
-import { getExecutionPlan } from "../../server/engines/geminiCore";
-import { AiStudioEngine } from "../../server/engines/aiStudioEngine";
-import { PaidApiEngine } from "../../server/engines/paidApiEngine";
+import { getExecutionPlan, getGeminiClient } from "../../server/engines/geminiCore";
+import { GeminiApiEngine } from "../../server/engines/geminiApiEngine";
 import { OllamaEngine } from "../../server/engines/ollamaEngine";
 import { LlamaCppEngine } from "../../server/engines/llamaCppEngine";
 
@@ -26,61 +25,78 @@ describe("Engine Routing & Strategy Specifications", () => {
     });
   });
 
-  describe("getExecutionPlan for Subscription Tiers", () => {
-    test("paid_direct tier always routes to gemini-3.8-flash with HIGH thinking", () => {
-      const plan = getExecutionPlan("prompt_generation", "paid_direct");
+  describe("getExecutionPlan for Gemini API Flagship Direct Engine", () => {
+    test("prompt_generation routes to flagship gemini-3.8-flash with HIGH thinking", () => {
+      const plan = getExecutionPlan("prompt_generation");
       assert.equal(plan.primaryModel, "gemini-3.8-flash");
+      assert.deepEqual(plan.fallbackModels, ["gemini-3.5-flash-lite"]);
       assert.ok(plan.thinkingConfig);
     });
 
-    test("pro tier specializes models by task (lite for dialogue, 3.8 for media, 3.8 for prompt)", () => {
-      const dialoguePlan = getExecutionPlan("dialogue", "pro");
-      assert.equal(dialoguePlan.primaryModel, "gemini-3.5-flash-lite");
-
-      const mediaPlan = getExecutionPlan("media_analysis", "pro");
-      assert.equal(mediaPlan.primaryModel, "gemini-3.8-flash");
-
-      const promptPlan = getExecutionPlan("prompt_generation", "pro");
-      assert.equal(promptPlan.primaryModel, "gemini-3.8-flash");
+    test("dialogue routes to gemini-3.8-flash with HIGH thinking", () => {
+      const plan = getExecutionPlan("dialogue");
+      assert.equal(plan.primaryModel, "gemini-3.8-flash");
+      assert.deepEqual(plan.fallbackModels, ["gemini-3.5-flash-lite"]);
+      assert.ok(plan.thinkingConfig);
     });
 
-    test("ultra_20x tier runs flagship models across tasks", () => {
-      const promptPlan = getExecutionPlan("prompt_generation", "ultra_20x");
-      assert.equal(promptPlan.primaryModel, "gemini-3.8-flash");
+    test("media_analysis and optimize route to flagship gemini-3.8-flash", () => {
+      const mediaPlan = getExecutionPlan("media_analysis");
+      assert.equal(mediaPlan.primaryModel, "gemini-3.8-flash");
+
+      const optPlan = getExecutionPlan("optimize");
+      assert.equal(optPlan.primaryModel, "gemini-3.8-flash");
+    });
+
+    test("getGeminiClient rejects blank or default placeholder MY_GEMINI_API_KEY", () => {
+      const prev = process.env.GEMINI_API_KEY;
+      try {
+        process.env.GEMINI_API_KEY = "MY_GEMINI_API_KEY";
+        assert.throws(() => getGeminiClient(), /GEMINI_API_KEY/);
+        process.env.GEMINI_API_KEY = "   ";
+        assert.throws(() => getGeminiClient(), /GEMINI_API_KEY/);
+      } finally {
+        if (prev === undefined) delete process.env.GEMINI_API_KEY;
+        else process.env.GEMINI_API_KEY = prev;
+      }
     });
   });
 
   describe("Engine Isolation & Status Verification", () => {
-    test("AiStudioEngine returns fixedMode 'ai_studio' and pure cloud status with no local port checking", async () => {
-      const engine = new AiStudioEngine();
-      assert.equal(engine.mode, "ai_studio");
+    test("GeminiApiEngine returns fixedMode 'gemini_api' and clean 3-engine mode status", async () => {
+      const engine = new GeminiApiEngine();
+      assert.equal(engine.mode, "gemini_api");
 
       const status = await engine.getStatus();
-      assert.equal(status.fixedMode, "ai_studio");
-      assert.equal(status.recommendedMode, "ai_studio");
-      assert.equal(status.detectedModes.ai_studio, true);
+      assert.equal(status.fixedMode, "gemini_api");
+      assert.equal(status.recommendedMode, "gemini_api");
       assert.equal(status.detectedModes.ollama, false);
       assert.equal(status.detectedModes.llamacpp, false);
-      assert.equal(status.details.ollamaOnline, false);
-      assert.equal(status.details.llamacppOnline, false);
-      assert.deepEqual(status.ollamaModels, []);
-      assert.deepEqual(status.llamacppModels, []);
+      assert.equal(typeof status.detectedModes.gemini_api, "boolean");
+      assert.equal("paid_api" in status.detectedModes, false);
+      assert.equal("ai_studio" in status.detectedModes, false);
+      assert.equal("isAiStudioEnv" in status.details, false);
     });
 
-    test("PaidApiEngine returns fixedMode 'paid_api'", async () => {
-      const engine = new PaidApiEngine();
-      assert.equal(engine.mode, "paid_api");
-
-      const status = await engine.getStatus();
-      assert.equal(status.fixedMode, "paid_api");
-      assert.equal(status.recommendedMode, "paid_api");
-    });
-
-    test("OllamaEngine and LlamaCppEngine have dedicated mode identifiers", () => {
+    test("OllamaEngine and LlamaCppEngine have dedicated mode identifiers and clean status", async () => {
       const ollama = new OllamaEngine();
       const llamacpp = new LlamaCppEngine();
       assert.equal(ollama.mode, "ollama");
       assert.equal(llamacpp.mode, "llamacpp");
+
+      const ollamaStatus = await ollama.getStatus();
+      assert.equal(ollamaStatus.fixedMode, "ollama");
+      assert.equal(ollamaStatus.detectedModes.gemini_api, false);
+      assert.equal("paid_api" in ollamaStatus.detectedModes, false);
+      assert.equal("ai_studio" in ollamaStatus.detectedModes, false);
+      assert.equal("isAiStudioEnv" in ollamaStatus.details, false);
+
+      const llamaStatus = await llamacpp.getStatus();
+      assert.equal(llamaStatus.fixedMode, "llamacpp");
+      assert.equal(llamaStatus.detectedModes.gemini_api, false);
+      assert.equal("paid_api" in llamaStatus.detectedModes, false);
+      assert.equal("ai_studio" in llamaStatus.detectedModes, false);
+      assert.equal("isAiStudioEnv" in llamaStatus.details, false);
     });
   });
 });

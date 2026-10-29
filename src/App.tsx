@@ -15,7 +15,6 @@ import {
   GenerationMode,
   CreativityLevel,
   TemperatureMode,
-  EngineTier,
   AiProvider,
   AppMode,
   SystemModeStatus,
@@ -169,26 +168,25 @@ const DEFAULT_CONFIG: H3PromptConfig = {
   outputContract: 'official',
   temperatureMode: 'auto',
   manualTemperature: 0.7,
-  engineTier: 'pro',
   references: [],
   isSeriesMode: false,
   seriesCount: 5,
 };
 
 export default function App() {
-  const [engineTier, setEngineTier] = useState<EngineTier>('pro');
   const [appMode, setAppMode] = useState<AppMode>(() => {
     try {
-      const saved = localStorage.getItem('minimax_h3_app_mode') as AppMode;
-      if (saved && ['ai_studio', 'ollama', 'llamacpp', 'paid_api'].includes(saved)) {
-        return saved;
+      const saved = localStorage.getItem('minimax_h3_app_mode');
+      if (saved === 'paid_api' || saved === 'ai_studio') return 'gemini_api';
+      if (saved && ['gemini_api', 'ollama', 'llamacpp'].includes(saved)) {
+        return saved as AppMode;
       }
       const legacy = localStorage.getItem('minimax_h3_ai_provider');
       if (legacy === 'ollama') return 'ollama';
       if (legacy === 'llamacpp') return 'llamacpp';
-      return 'ai_studio';
+      return 'gemini_api';
     } catch {
-      return 'ai_studio';
+      return 'gemini_api';
     }
   });
   const [ollamaModel, setOllamaModel] = useState<string>(() => {
@@ -359,8 +357,15 @@ export default function App() {
         });
       }
 
-      const activeMode = data.fixedMode || data.recommendedMode || 'paid_api';
+      const rawMode = data.fixedMode || data.recommendedMode || 'gemini_api';
+      const activeMode: AppMode = (rawMode as string) === 'paid_api' ? 'gemini_api' : rawMode;
       setAppMode(activeMode);
+      try {
+        localStorage.setItem('minimax_h3_app_mode', activeMode);
+      } catch (e) {
+        console.error('Failed to save app mode to localStorage', e);
+      }
+
       const provider: AiProvider = activeMode === 'ollama' ? 'ollama' : activeMode === 'llamacpp' ? 'llamacpp' : 'gemini';
       setConfig((prev) => ({
         ...prev,
@@ -370,8 +375,7 @@ export default function App() {
 
       if (notify) {
         const modeLabels: Record<AppMode, string> = {
-          ai_studio: 'AI Studio 雲端引擎',
-          paid_api: 'Gemini Paid API 直通引擎',
+          gemini_api: 'Gemini API 直通引擎',
           ollama: '本地 Ollama 離線引擎',
           llamacpp: '本地 llama.cpp 離線引擎',
         };
@@ -416,38 +420,25 @@ export default function App() {
     showToast(`已切換本機 llama.cpp 模型：${tag || model}`, 'info');
   };
 
-  const handleEngineTierChange = (tier: EngineTier) => {
-    setEngineTier(tier);
-    setConfig((prev) => ({ ...prev, engineTier: tier }));
-    try {
-      localStorage.setItem('minimax_h3_engine_tier', tier);
-    } catch (e) {
-      console.error('Failed to save engine tier to localStorage', e);
-    }
-    const label = tier === 'pro' ? 'AI Pro (訂閱配額最佳化)' : tier === 'ultra_5x' ? 'AI Ultra 5x (5倍訂閱配額)' : 'AI Ultra 20x (20倍訂閱配額)';
-    showToast(`已切換 AI Studio 訂閱算力方案：${label}`, 'info');
-  };
-
   // Load saved options and history from localStorage on startup
   useEffect(() => {
     checkSystemStatus(false);
 
     try {
-      const savedTier = localStorage.getItem('minimax_h3_engine_tier') as EngineTier;
-      if (savedTier && ['pro', 'ultra_5x', 'ultra_20x'].includes(savedTier)) {
-        setEngineTier(savedTier);
-      }
-    } catch (e) {
-      console.error('Failed to load engine tier from localStorage', e);
-    }
-
-    try {
+      localStorage.removeItem('minimax_h3_engine_tier');
       const savedOptions = localStorage.getItem('minimax_h3_saved_options');
       if (savedOptions) {
-        const parsedOptions = JSON.parse(savedOptions);
+        const { engineTier: _legacyTier, appMode: savedMode, ...restOptions } = JSON.parse(savedOptions);
+        const normalizedSavedMode: AppMode | undefined =
+          savedMode === 'paid_api' || savedMode === 'ai_studio'
+            ? 'gemini_api'
+            : savedMode && ['gemini_api', 'ollama', 'llamacpp'].includes(savedMode)
+            ? (savedMode as AppMode)
+            : undefined;
         setConfig((prev) => ({
           ...prev,
-          ...parsedOptions,
+          ...restOptions,
+          ...(normalizedSavedMode ? { appMode: normalizedSavedMode } : {}),
           idea: prev.idea || '',
         }));
       }
@@ -526,7 +517,6 @@ export default function App() {
       const sanitizedConfig: H3PromptConfig = {
         ...config,
         appMode,
-        engineTier,
         provider: appMode === 'ollama' ? 'ollama' : appMode === 'llamacpp' ? 'llamacpp' : 'gemini',
         ollamaModel,
         llamacppModel,
@@ -643,8 +633,6 @@ export default function App() {
           style: config.style,
           mode: config.mode,
           duration: config.duration,
-          engineTier,
-          subscriptionTier: engineTier,
           appMode,
           ollamaModel,
           llamacppModel,
@@ -697,8 +685,6 @@ export default function App() {
           outputContract: config.outputContract,
           temperatureMode: config.temperatureMode,
           manualTemperature: config.manualTemperature,
-          engineTier,
-          subscriptionTier: engineTier,
           appMode,
           ollamaModel,
           llamacppModel,
@@ -837,7 +823,6 @@ ${ep.fullPrompt}`;
           refineInstruction: refineInstruction.trim(),
           config: {
             ...config,
-            engineTier,
             appMode,
             ollamaModel,
             llamacppModel,
@@ -875,7 +860,8 @@ ${ep.fullPrompt}`;
     const loadedPrompt = item.fullPrompt || item.output?.fullPrompt || '';
 
     if (item.config) {
-      setConfig(item.config);
+      const { engineTier: _legacyTier, appMode: _legacyMode, ...cleanHistoryConfig } = item.config as Record<string, any>;
+      setConfig({ ...(cleanHistoryConfig as H3PromptConfig), appMode });
     } else if (loadedIdea) {
       setConfig((prev) => ({ ...prev, idea: loadedIdea }));
     }
@@ -954,8 +940,6 @@ ${ep.fullPrompt}`;
         appMode={appMode}
         systemStatus={systemStatus}
         onRefreshStatus={() => checkSystemStatus(true)}
-        engineTier={engineTier}
-        onChangeEngineTier={handleEngineTierChange}
         ollamaModel={ollamaModel}
         onChangeOllamaModel={handleOllamaModelChange}
         ollamaModels={ollamaModels}
@@ -1090,7 +1074,7 @@ ${ep.fullPrompt}`;
                     <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-cyan-800/60 bg-cyan-950/70 text-cyan-300 font-bold">
                       {config.temperatureMode === 'manual'
                         ? `${(config.manualTemperature ?? 0.7).toFixed(2)} (手動)`
-                        : appMode === 'ai_studio' || appMode === 'paid_api'
+                        : appMode === 'gemini_api'
                         ? 'Gemini 官方預設'
                         : '0.70 (本地推薦)'}
                     </span>
@@ -1307,7 +1291,6 @@ ${ep.fullPrompt}`;
             references={config.references}
             onChange={(refs) => setConfig({ ...config, references: refs })}
             onToast={showToast}
-            engineTier={engineTier}
             appMode={appMode}
             ollamaModel={ollamaModel}
             llamacppModel={llamacppModel}
@@ -2411,7 +2394,7 @@ ${ep.fullPrompt}`;
         </section>
       </main>
 
-      {/* Studio Global Footer (v5.3.1) */}
+      {/* Studio Global Footer (v6.0.0) */}
       <footer className="mt-auto border-t border-slate-900 bg-slate-950/90 backdrop-blur-md px-4 lg:px-8 py-3.5 text-xs text-slate-500">
         <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Left: Brand, Version & Verification */}
@@ -2421,7 +2404,7 @@ ${ep.fullPrompt}`;
               MiniMax-H3 AI Prompt Studio
             </span>
             <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-mono font-bold text-purple-300">
-              v5.3.1 Flagship
+              v6.0.0 Flagship
             </span>
             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-md">
               <ShieldCheck className="w-3 h-3 text-emerald-400" />
@@ -2433,13 +2416,11 @@ ${ep.fullPrompt}`;
           <div className="flex items-center gap-2 text-[11px]">
             <span className="text-slate-400">當前獨立引擎：</span>
             <span className="font-mono font-semibold text-slate-200">
-              {appMode === 'paid_api'
-                ? 'Gemini Paid API Direct (旗艦 3.8 Flash)'
-                : appMode === 'ollama'
+              {appMode === 'ollama'
                 ? `本地 Ollama (${ollamaModel || '未選擇模型'})`
                 : appMode === 'llamacpp'
                 ? `本地 llama.cpp RTX 5090 (${llamacppModel || '活躍端口 8080'})`
-                : 'Google AI Studio 雲端引擎'}
+                : 'Gemini API Direct (旗艦 3.8 Flash)'}
             </span>
           </div>
 

@@ -1,6 +1,5 @@
-export type EngineTier = 'pro' | 'ultra_5x' | 'ultra_20x' | 'paid_direct';
 export type AiProvider = 'gemini' | 'ollama' | 'llamacpp';
-export type AppMode = 'ai_studio' | 'ollama' | 'llamacpp' | 'paid_api';
+export type AppMode = 'gemini_api' | 'ollama' | 'llamacpp';
 
 export interface OllamaModelItem {
   name: string;
@@ -24,13 +23,11 @@ export interface LlamaCppModelItem {
 
 export interface SystemModeStatus {
   detectedModes: {
-    ai_studio: boolean;
+    gemini_api: boolean;
     ollama: boolean;
     llamacpp: boolean;
-    paid_api: boolean;
   };
   details: {
-    isAiStudioEnv: boolean;
     hasGeminiApiKey: boolean;
     ollamaOnline: boolean;
     ollamaBaseUrl: string;
@@ -80,24 +77,13 @@ export function resolveTemperature(
 }
 
 /**
- * Detect runtime environment: AI Studio (Cloud Run/Applet/Subscription) vs Local
+ * Detect runtime environment: Checks if a valid GEMINI_API_KEY is configured.
  */
-export function detectEnvironment() {
-  const isCloudRun = Boolean(process.env.K_SERVICE || process.env.K_REVISION || process.env.K_CONFIGURATION);
-  const appUrl = (process.env.APP_URL || "").trim();
-  const isAppUrlCloud = appUrl !== "" && appUrl !== "MY_APP_URL" && (
-    appUrl.includes(".run.app") ||
-    appUrl.includes("googleusercontent.com") ||
-    appUrl.includes("aistudio.google.com")
-  );
-  const isExplicitAiStudio = process.env.AI_STUDIO_MODE === "true" || process.env.IS_AI_STUDIO === "true";
-  const isAiStudioEnv = isCloudRun || isAppUrlCloud || isExplicitAiStudio;
-
+export function detectEnvironment(): { hasGeminiApiKey: boolean } {
   const rawKey = (process.env.GEMINI_API_KEY || "").trim();
   const hasGeminiApiKey = rawKey.length > 5 && rawKey !== "MY_GEMINI_API_KEY";
 
   return {
-    isAiStudioEnv,
     hasGeminiApiKey,
   };
 }

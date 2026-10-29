@@ -6,6 +6,3 @@ coverage/
 *.log
 .env*
 !.env.example
-dist-aistudio/
-test-dist-aistudio/
-*.zip

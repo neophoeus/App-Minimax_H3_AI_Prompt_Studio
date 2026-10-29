@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
-import { ReferenceItem, ReferenceRole, EngineTier } from '../types';
+import { ReferenceItem, ReferenceRole, AppMode } from '../types';
 import { Plus, Trash2, Tag, Upload, Film, Image as ImageIcon, Music, Check, Sparkles, Loader2 } from 'lucide-react';
 
 interface ReferenceManagerProps {
   references: ReferenceItem[];
   onChange: (refs: ReferenceItem[]) => void;
   onToast?: (message: string, type?: 'success' | 'error' | 'info', duration?: number) => void;
-  engineTier?: EngineTier;
-  appMode?: string;
+  appMode?: AppMode;
   ollamaModel?: string;
   llamacppModel?: string;
 }
@@ -199,7 +198,6 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
   references,
   onChange,
   onToast,
-  engineTier = 'pro',
   appMode,
   ollamaModel,
   llamacppModel,
@@ -217,8 +215,6 @@ export const ReferenceManager: React.FC<ReferenceManagerProps> = ({
           imageBase64: item.fileUrl,
           role: item.role,
           fileName: item.fileName || item.name,
-          engineTier,
-          subscriptionTier: engineTier,
           appMode,
           ollamaModel,
           llamacppModel,

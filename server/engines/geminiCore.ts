@@ -1,16 +1,17 @@
 import { GoogleGenAI, ThinkingLevel, HarmCategory, HarmBlockThreshold, FinishReason, BlockedReason } from "@google/genai";
-import { EngineTier } from "../core/types";
 
 // Initialize Gemini Client
 export const getGeminiClient = () => {
-  const apiKey = process.env.GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new Error("GEMINI_API_KEY environment variable is missing.");
+  const apiKey = (process.env.GEMINI_API_KEY || "").trim();
+  if (!apiKey || apiKey === "MY_GEMINI_API_KEY") {
+    throw new Error("GEMINI_API_KEY environment variable is missing or not configured.");
   }
   return new GoogleGenAI({
     apiKey,
   });
 };
+
+export type GeminiTaskType = 'dialogue' | 'media_analysis' | 'prompt_generation' | 'optimize';
 
 export interface ExecutionPlan {
   primaryModel: string;
@@ -22,98 +23,16 @@ export interface ExecutionPlan {
 }
 
 /**
- * Strategy Planner based on Google AI Subscription Tiers:
- * 
- * - 'paid_direct':
- *    - Direct Flagship Gemini 3.8 Flash for all tasks with High reasoning, no subscription quota throttling
- * 
- * - 'pro' (Default / Web UI & Free API Optimized):
- *    - Dialogue: gemini-3.5-flash-lite (Minimal thinking)
- *    - Vision / Media Analysis: gemini-3.8-flash (Low thinking)
- *    - Prompt Generation: gemini-3.8-flash (Medium thinking) with fallback to gemini-3.5-flash-lite
- * 
- * - 'ultra_5x' (High Performance):
- *    - Full gemini-3.8-flash with deeper reasoning
- * 
- * - 'ultra_20x' (Extreme Flagship):
- *    - Maximum thinking tokens and high-precision visual analysis
+ * Strategy Planner for Gemini API Direct Engine:
+ * Direct Flagship Gemini 3.8 Flash for all tasks with High reasoning and 3.5 Flash Lite fallback.
+ * Fully compatible with Google AI Studio Free Tier and Google Cloud Pay-as-you-go keys.
  */
-export function getExecutionPlan(
-  task: 'dialogue' | 'media_analysis' | 'prompt_generation' | 'optimize',
-  tier: EngineTier = 'pro'
-): ExecutionPlan {
-  switch (tier) {
-    case 'paid_direct':
-      return {
-        primaryModel: 'gemini-3.8-flash',
-        fallbackModels: ['gemini-3.5-flash-lite'],
-        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
-      };
-
-    case 'ultra_20x':
-      if (task === 'dialogue') {
-        return {
-          primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-3.5-flash-lite'],
-          thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
-        };
-      }
-      if (task === 'media_analysis') {
-        return {
-          primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-3.5-flash-lite'],
-          thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
-        };
-      }
-      return {
-        primaryModel: 'gemini-3.8-flash',
-        fallbackModels: ['gemini-3.5-flash-lite'],
-        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
-      };
-
-    case 'ultra_5x':
-      if (task === 'dialogue') {
-        return {
-          primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-3.5-flash-lite'],
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        };
-      }
-      if (task === 'media_analysis') {
-        return {
-          primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-3.5-flash-lite'],
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
-        };
-      }
-      return {
-        primaryModel: 'gemini-3.8-flash',
-        fallbackModels: ['gemini-3.5-flash-lite'],
-        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
-      };
-
-    case 'pro':
-    default:
-      if (task === 'dialogue') {
-        return {
-          primaryModel: 'gemini-3.5-flash-lite',
-          fallbackModels: ['gemini-3.8-flash'],
-          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
-        };
-      }
-      if (task === 'media_analysis') {
-        return {
-          primaryModel: 'gemini-3.8-flash',
-          fallbackModels: ['gemini-3.5-flash-lite'],
-          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
-        };
-      }
-      return {
-        primaryModel: 'gemini-3.8-flash',
-        fallbackModels: ['gemini-3.5-flash-lite'],
-        thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM },
-      };
-  }
+export function getExecutionPlan(task: GeminiTaskType): ExecutionPlan {
+  return {
+    primaryModel: 'gemini-3.8-flash',
+    fallbackModels: ['gemini-3.5-flash-lite'],
+    thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+  };
 }
 
 /**
@@ -226,11 +145,10 @@ export function checkSafetyViolations(response: any) {
  */
 export async function callGeminiDynamic(
   ai: GoogleGenAI,
-  task: 'dialogue' | 'media_analysis' | 'prompt_generation' | 'optimize',
-  tier: EngineTier = 'pro',
+  task: GeminiTaskType,
   requestOptions: Omit<Parameters<typeof ai.models.generateContent>[0], 'model'>
 ) {
-  const plan = getExecutionPlan(task, tier);
+  const plan = getExecutionPlan(task);
   const modelsToTry = [plan.primaryModel, ...plan.fallbackModels];
   let lastError: any = null;
   const MAX_RETRIES_PER_MODEL = 2; // Total 3 attempts per model: initial + 2 retries
@@ -247,7 +165,7 @@ export async function callGeminiDynamic(
     };
 
     if (isFallback) {
-      console.log(`[Gemini Dynamic Router] Activating fallback model "${currentModel}" for task "${task}" (Tier: ${tier})...`);
+      console.log(`[Gemini Dynamic Router] Activating fallback model "${currentModel}" for task "${task}"...`);
     }
 
     let modelAttemptSucceeded = false;

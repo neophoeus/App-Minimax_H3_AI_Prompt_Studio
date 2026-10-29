@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v5.3.1-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v6.0.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -21,17 +21,21 @@
 
 本工具 100% 嚴格遵循 MiniMax-H3 官方 [`h3-prompt-writing`](https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing) 技能規範，能將使用者的創意概念一鍵轉化為符合模型最佳理解結構的生產級提示詞，並提供一鍵複製功能。
 
-具備全新 **四大獨立引擎架構與專屬入口 (Quad-Engine Independent Architecture)**：
-1. **🏢 訂閱制度 AI Studio 雲端引擎 (`server-aistudio.ts`)**：專為 Google AI Studio 雲端打造，提供一鍵打包工具 (`pack_aistudio.bat`) 產出純淨 Zip 包。支援配額階梯方案（**AI Pro 最佳化**、**AI Ultra 5x**、**AI Ultra 20x**）。
-2. **🔑 本地 Paid API 直通引擎 (`start_paid_api.bat` / `server-paid-api.ts`)**：本機運行搭配使用者自己的付費 Google Gemini API Key，採按量計費（Pay-as-you-go）直通模式，全核心直接調用旗艦級 `gemini-3.8-flash` 深度推理。
-3. **💻 本地 Ollama 離線引擎 (`start_ollama.bat` / `server-ollama.ts`)**：連線至本機端點 `http://127.0.0.1:11434`，具備 **本地已安裝模型動態探索機制**，自動掃描並列出所有本機安裝模型（包含 `Qwen3.8-27B-Uncensored` 等）。
-4. **⚡ 本地 llama.cpp 離線引擎 (`start_llamacpp.bat` / `server-llamacpp.ts`)**：專為 NVIDIA RTX 5090 (32GB VRAM) 打造。自動掃描 `C:\llama.cpp\models` 內的 GGUF、配對 `mmproj` 視覺投影器，並啟用 MTP (Multi-Token Prediction) 2.23x 加速。
+具備全新 **三大獨立引擎架構與專屬入口 (Tri-Engine Independent Architecture)**：
+1. **🔑 本地 Gemini API 直通引擎 (`start_gemini_api.bat` / `server-gemini-api.ts`)**：本機運行支援使用者自備的 Google Gemini API Key（全面相容 Google AI Studio Free Tier 免費金鑰與 Google Cloud Pay-as-you-go 按量計費金鑰），全核心直接調用旗艦級 `gemini-3.8-flash` 深度推理。
+2. **💻 本地 Ollama 離線引擎 (`start_ollama.bat` / `server-ollama.ts`)**：連線至本機端點 `http://127.0.0.1:11434`，具備 **本地已安裝模型動態探索機制**，自動掃描並列出所有本機安裝模型（包含 `Qwen3.8-27B-Uncensored` 等）。
+3. **⚡ 本地 llama.cpp 離線引擎 (`start_llamacpp.bat` / `server-llamacpp.ts`)**：專為 NVIDIA RTX 5090 (32GB VRAM) 打造。自動掃描 `C:\llama.cpp\models` 內的 GGUF、配對 `mmproj` 視覺投影器，並啟用 MTP (Multi-Token Prediction) 2.23x 加速。
 
 前端介面與後端完全解耦獨立化，介面自動依據當前啟動之專屬引擎展示狀態徽章與控制欄，杜絕跨進程切換的混淆。
 
 ## ✨ 核心特色
 
-### 0. 客觀可觀察物理描述、三合一 AI 輔助與 MiniMax-H3 官方全規格對齊 (v5.3.0)
+### 0. 三大獨立引擎架構收斂與 AI Studio 雲端預覽廢除 (v6.0.0)
+- **AI Studio 雲端預覽全面廢除**：由於 Google AI Studio 自建 App 預覽模式已取消前端瀏覽器注入訂閱配額（Subscription Quota）之機制，目前僅支援透過直接配置 API Key 呼叫模型，因此舊版 AI Studio 雲端預覽伺服器 (`server-aistudio.ts`)、打包器 (`pack-aistudio.ts`、`pack_aistudio.bat`) 與多餘的方案選擇器已全數徹底移除，不殘留任何無用代碼。
+- **Gemini API 直通引擎 (`gemini_api`)**：原 Paid API 正式更名並整合為 Gemini API 直通引擎，全核心調用旗艦級 `gemini-3.8-flash` 深入推理，全面相容 Google AI Studio Free Tier（免費方案，15 RPM）與 Google Cloud Pay-as-you-go 按量計費金鑰。
+- **佔位符安全防護與舊版相容**：自動攔截預設佔位符 `MY_GEMINI_API_KEY` 並提示設定，並針對瀏覽器舊版 `localStorage`（如 `'paid_api'`）提供自動平滑遷移至 `'gemini_api'`。
+
+### 1. 客觀可觀察物理描述、三合一 AI 輔助與 MiniMax-H3 官方全規格對齊 (v5.3.0)
 - **客觀可觀察物理原則全面放寬**：移除死板的強制三態公式與 120–250 字數灌水限制，確立「以客觀、具體且視覺上可觀察的物理狀態與動作描述為主，絕不使用抽象空泛的形容詞或詩意比喻」之核心原則。
 - **MiniMax-H3 官方細節規格補齊**：
   - **L2VA 動態時間對齊標頭**：依據影片實際秒數自動產生尾幀對齊標頭（`How the reference pictures align with the target video — <Picture 1> (from [Shot N]) aligns with the S.SS-second mark...`）。
@@ -59,12 +63,11 @@
 - **通用格式中立（Format-Neutral）**：取消對「三視圖」或「角色設定圖」的格式偏誤，全面以通用視覺特徵參考定位，無縫相容人物、物件、載具、建築、場景及風格等多模態圖像。
 - **端到端測試套件擴充**：42 項自動化測試覆蓋主體參考解耦與純淨導出驗證。
 
-### 1. 四大獨立引擎全面解耦、介面專屬化與純淨打包工具 (v5.0.0)
-- **四大專屬服務入口解耦**：徹底移除單體四合一路由相容層，全面採用獨立單引擎入口（`server-paid-api.ts`、`server-ollama.ts`、`server-llamacpp.ts`、`server-aistudio.ts`），架構精簡純淨。
-- **介面專屬化無干擾控制列**：頂部導覽列依據當前啟動之獨立後端呈現專屬面板（Paid API 3.8 旗艦思考鏈標記、Ollama 動態模型探測計數、llama.cpp RTX 5090 32GB 顯存標記、AI Studio 雲端階梯高亮），並增設全域 Studio 狀態底欄。
-- **Google AI Studio 純淨導出工具 (`pack_aistudio.bat`)**：一鍵過濾離線依賴與 Windows 腳本，產出標準純淨 Zip 包。
+### 1. 專屬獨立引擎全面解耦與介面專屬化 (v5.0.0)
+- **專屬服務入口解耦**：徹底移除單體四合一路由相容層，全面採用獨立單引擎入口（`server-gemini-api.ts`、`server-ollama.ts`、`server-llamacpp.ts`），架構精簡純淨。
+- **介面專屬化無干擾控制列**：頂部導覽列依據當前啟動之獨立後端呈現專屬面板（Paid API 3.8 旗艦思考鏈標記、Ollama 動態模型探測計數、llama.cpp RTX 5090 32GB 顯存標記），並增設全域 Studio 狀態底欄。
 - **Windows Pure ASCII 批次檔可靠性**：100% 杜絕 Windows `cmd.exe` 字節偏移截斷與開檔閃退問題。
-- **40+ 端到端自動化測試套件 (`npm test`)**：全面鎖定官方提示詞語法、輸出清洗與純淨打包隔離性。
+- **端到端自動化測試套件 (`npm test`)**：全面鎖定官方提示詞語法、輸出清洗與引擎隔離性。
 
 ### 1. 語法審計自癒、單集精修、雙契約與 ComfyUI 整合 (v4.1.0)
 - **語法審計與無損自癒修復引擎 (Audit & Auto-Repair)**：內建靜態正則分析引擎 (`promptAudit.ts`)，嚴格校驗時間標籤（`MM:SS.mmm`）、修剪超時分鏡、無損清除多模態除錯標記（`contact sheet`、`sampled frame` 等）、並校正相機固定語法。提供即時介面狀態徽章與一鍵修復按鈕。
@@ -137,21 +140,17 @@
 - **嚴格零檔名洩漏標準 (Strict No-Filename Standard)**：
   - 徹底杜絕生成提示詞中出現任何本地檔案名稱與副檔名（`.png`, `.jpg`, `.mp4` 等），確保提示詞完全由純淨專業的影視語意細節構成。
 
-### 4. 四引擎架構體系與本地 llama.cpp 深度整合 (v3.0.0)
-- **四大專屬 AI 驅動引擎**：
-  - **🏢 AI Studio 雲端引擎 (`ai_studio`，優先級 1)**：專為 Google AI Studio 與 Cloud Run 訂閱環境打造。提供彈性訂閱算力方案：
-    - **🟢 AI Pro (Web UI 配額最佳化 - 預設)**：透過模型分流（對話使用 `gemini-3.5-flash-lite`、圖片使用 `gemini-3.6-flash`、提示詞使用 `gemini-3.8-flash`），徹底消弭 429 額度超限。
-    - **🔵 AI Ultra 5x (進階效能)**：5x 訂閱額度階梯，釋放深層多樣本推理。
-    - **🟣 AI Ultra 20x (極致旗艦)**：20x 訂閱額度階梯，具備頂級思考深度與高精參考素材保留分析。
-  - **🔑 本地 Paid API 直通引擎 (`paid_api`，優先級 2)**：直接使用使用者自備的 Google Gemini Paid API Key 進行按量計費直通呼叫。不受限於訂閱額度池，全流程直接啟用旗艦級 `gemini-3.8-flash` 深度推理核心，無需降級分流。
-  - **💻 本地 Ollama 離線引擎 (`ollama`，優先級 3)**：於 `http://127.0.0.1:11434` 實現 100% 本機離線隱私運作，具備**本地模型動態探索機制**（自動掃描已安裝的所有模型如 `Qwen3.8-27B-Uncensored`，絕不寫死清單）、多模態素材視覺審視與思考標記（`<think>...</think>`）自動清洗。
-  - **⚡ 本地 llama.cpp 離線引擎 (`llamacpp`，優先級 4)**：純 C/C++ 極致吞吐離線推理，連線至 `http://127.0.0.1:8080` (`llama-server`)。
+### 4. 三引擎架構體系與本地 llama.cpp 深度整合 (v3.0.0)
+- **三大專屬 AI 驅動引擎**：
+  - **🔑 本地 Gemini API 直通引擎 (`gemini_api`，優先級 1)**：直接使用使用者自備的 Google Gemini API Key 進行直通呼叫（支援 Google AI Studio Free Tier 免費額度與 Google Cloud Pay-as-you-go 按量計費金鑰）。全流程直接啟用旗艦級 `gemini-3.8-flash` 深度推理核心。
+  - **💻 本地 Ollama 離線引擎 (`ollama`，優先級 2)**：於 `http://127.0.0.1:11434` 實現 100% 本機離線隱私運作，具備**本地模型動態探索機制**（自動掃描已安裝的所有模型如 `Qwen3.8-27B-Uncensored`，絕不寫死清單）、多模態素材視覺審視與思考標記（`<think>...</think>`）自動清洗。
+  - **⚡ 本地 llama.cpp 離線引擎 (`llamacpp`，優先級 3)**：純 C/C++ 極致吞吐離線推理，連線至 `http://127.0.0.1:8080` (`llama-server`)。
     - **硬體級極速加速**：針對 NVIDIA RTX 5090 (32GB VRAM) 頂級硬體優化，支援 `-ngl 99` 全層 GPU 卸載、Flash Attention (`--flash-attn on`) 與 32K 旗艦上下文 (`-c 32768`)。
     - **多模態視覺投影 (`mmproj`)**：100% 自動配對掛載 `mmproj-*.gguf`，實現零額度負擔的本機離線分鏡與參考圖片視覺分析。
     - **原生 Embedded MTP 雙倍極速 (`--spec-type draft-mtp`)**：無須第三方補丁，直接深度調用 Qwen3.8 原生 NextN 多 Token 預測架構，立即享有 **2.23x (+123.4%)** 極速生成提升！
-- **專屬獨立服務與狀態自動鎖定**：後端服務採用完全獨立之單引擎實例啟動，前端自動依當前連線之獨立後端鎖定運作模式，免去跨引擎設定衝突。
+- **環境自動偵測與優先級選取**：啟動時依序探測環境並自動選擇最合適之引擎（**Gemini API > Ollama > llama.cpp**），亦可隨時手動切換並保存於 `localStorage`。
 - **指數退避重試與隨機抖動 (1s ➔ 2s)**：針對短暫的 `429 RESOURCE_EXHAUSTED` 或 `503 UNAVAILABLE` 暫態限流，自動執行最多 2 次指數退避重試（含隨機微小抖動），有效平抑瞬間爆發請求（Burst）。
-- **無縫自動容錯降級**：重試耗盡或遇配額瓶頸時，後端自動切換至備援模型鏈（`gemini-3.8-flash` ➔ `gemini-3.6-flash` ➔ `gemini-3.5-flash-lite`）；若遇 404 等永久錯誤則自動快切跳過重試，保障 100% 請求成功率。
+- **無縫自動容錯降級**：重試耗盡或遇配額瓶頸時，後端自動切換至備援模型（`gemini-3.8-flash` ➔ `gemini-3.5-flash-lite`）；若遇 404 等永久錯誤則自動快切跳過重試，保障 100% 請求成功率。
 - **最寬鬆安全性門檻 (`HarmBlockThreshold.BLOCK_NONE`)**：全面解除五大危害類別（騷擾、仇恨、性暗示、危險內容、誠信）的常規過濾限制，極致釋放影視劇作、暗黑科幻、動作衝突的分鏡創作自由度。
 - **即時安全性審查阻擋通知系統**：雙重安全攔截（檢查提示詞 `promptFeedback` 與生成結果 `finishReason`），一旦觸發不可避之敏感審查，前端即刻彈出 8 秒指引 Toast 告知創作者具體原因與調整建議。
 
@@ -170,7 +169,7 @@
 - **專屬提示詞編輯工具列**：在檢視區上方增設獨立工具列，支援「語法亮顯 / 手動微調」雙態切換、即時字元計數與一鍵還原 AI 初版生成結果。
 - **自適應生成模式網格**：自適應 `grid-cols-2 sm:grid-cols-3 xl:grid-cols-5 gap-2`，確保各尺寸螢幕下按鈕文字清晰不截斷破折。
 - **寬裕且可調字級之創意思路畫布**：大幅加高文字框（`rows={8}`、`min-h-[240px]`），支援 5 段字級調控（12px ~ 20px）、步進按鈕與 `localStorage` 記憶。
-- **專屬獨立引擎狀態與控制面板**：頂部導覽列依據當前啟動之引擎呈現專屬控制欄（Paid API 旗艦標籤、Ollama 模型探索、llama.cpp 狀態、AI Studio 算力階梯），專注無干擾。
+- **專屬獨立引擎狀態與控制面板**：頂部導覽列依據當前啟動之引擎呈現專屬控制欄（Gemini API 旗艦標籤、Ollama 模型探索、llama.cpp 狀態），專注無干擾。
 - **全域 Toast 浮動通知**：現代化非阻塞式操作回饋。
 - **場景預設庫與時序分鏡軸**：內建豐富場景預設與互動式可視化分鏡軸。
 - **一鍵導出**：支援一鍵複製完整 Prompt 或分區塊複製，即貼即用。
@@ -183,8 +182,7 @@
 - **樣式 (Styling)**：Tailwind CSS v4
 - **後端服務 (Backend)**：Express 4, TypeScript, `tsx`, `esbuild`
 - **AI 引擎架構**：
-  - **AI Studio 雲端引擎**：Google Gemini 3.8 Flash / 3.6 Flash / 3.5 Flash-Lite（階梯算力 Pro / Ultra 5x / Ultra 20x）
-  - **Paid API 直通引擎**：直通 Google Gemini 3.8 Flash 旗艦深度推理
+  - **Gemini API 直通引擎**：直通 Google Gemini 3.8 Flash 旗艦深度推理（支援 Free Tier 與 Pay-as-you-go）
   - **本地 Ollama 離線引擎**：動態模型掃描探索（原生支援 `Qwen3.8-27B-Uncensored` 之 `q8_0`, `q6_K`, `q5_K_M`）
   - **本地 llama.cpp 離線引擎**：`llama-server`（RTX 5090 `-ngl 99`, Flash Attention, 32K context, `mmproj` 視覺投影, 原生 Embedded MTP 2.23x 極速）
 
@@ -196,14 +194,12 @@
 
 依據您欲使用的 AI 引擎，直接雙擊專案根目錄下對應的啟動腳本：
 
-1. **🔑 Gemini Paid API 直通工作室**：雙擊 **`start_paid_api.bat`**
-   - 適合擁有 Google Gemini API 金鑰之使用者，直接調用旗艦 3.8 Flash 深度推理。
+1. **🔑 Gemini API 直通工作室**：雙擊 **`start_gemini_api.bat`**
+   - 適合擁有 Google Gemini API 金鑰之使用者（Google AI Studio 免費金鑰或付費金鑰），直接調用旗艦 3.8 Flash 深度推理。
 2. **💻 本地 Ollama 離線推論工作室**：雙擊 **`start_ollama.bat`**
    - 自動檢測並喚起本機 Ollama 服務，動態探索並載入本機所有已安裝模型。
 3. **⚡ 本地 llama.cpp (RTX 5090) 離線推論工作室**：雙擊 **`start_llamacpp.bat`**
    - 二合一智慧啟動器！若 llama-server 未啟動，自動掃描 `C:\llama.cpp\models` 並提供編號選擇，自動精準配對 `mmproj` 視覺投影與 Embedded MTP 2.23x 加速，隨後無縫喚起工作室與瀏覽器。
-4. **📦 Google AI Studio 純淨打包器**：雙擊 **`pack_aistudio.bat`**
-   - 自動過濾本機離線依賴與 Windows 腳本，產出輕量化（約 80KB）的 `minimax-h3-aistudio.zip`，可直接上傳 Google AI Studio！
 
 ### 💻 手動安裝與啟動
 
@@ -215,7 +211,7 @@
 2. 設定環境變數：
    在專案根目錄建立 `.env` 檔案（或由 `.env.example` 複製）：
    ```env
-   # 雲端 Gemini 模式必備
+   # 雲端 Gemini 模式（Google AI Studio 免費額度或付費金鑰皆可）
    GEMINI_API_KEY="your_actual_gemini_api_key_here"
 
    # 本機 Ollama 模式選填（預設連線 127.0.0.1:11434）
@@ -244,23 +240,19 @@
 ### 🎛️ 本地啟動腳本 (Windows Batch)
 | 腳本 | 說明 |
 | :--- | :--- |
-| `start_paid_api.bat` | **Gemini Paid API 直通專用啟動器**：直接運行 Flagship 3.8 Flash，高推理深度 |
+| `start_gemini_api.bat` | **Gemini API 直通專用啟動器**：直接運行 Flagship 3.8 Flash，高推理深度（Free Tier / Pay-as-you-go） |
 | `start_ollama.bat` | **本地 Ollama 專用啟動器**：自動喚醒本機 Ollama 服務並啟動專用離線環境 |
 | `start_llamacpp.bat` | **本地 llama.cpp 專用啟動器**：二合一智慧啟動（含 RTX 5090 模型掃描與 Web 服務） |
-| `pack_aistudio.bat` | **Google AI Studio 純淨打包器**：一鍵過濾本機檔案並產出純淨上傳包 `minimax-h3-aistudio.zip` |
 
 ### 💻 NPM 開發與驗證指令
 | 指令 | 說明 |
 | :--- | :--- |
-| `npm test` | **執行自動化行為鎖定測試套件**（覆蓋 5 大面向 40 個測試） |
-| `npm run dev` | 以開發模式啟動四合一多引擎伺服器 |
-| `npm run dev:paid-api` | 啟動獨立 Paid API 伺服器 (`server-paid-api.ts`) |
+| `npm test` | **執行自動化行為鎖定測試套件** |
+| `npm run dev` | 以開發模式啟動多引擎整合伺服器 (`server-gemini-api.ts`) |
+| `npm run dev:gemini-api` | 啟動獨立 Gemini API 伺服器 (`server-gemini-api.ts`) |
 | `npm run dev:ollama` | 啟動獨立 Ollama 伺服器 (`server-ollama.ts`) |
 | `npm run dev:llamacpp` | 啟動獨立 llama.cpp 伺服器 (`server-llamacpp.ts`) |
-| `npm run dev:aistudio` | 啟動獨立 AI Studio 雲端伺服器 (`server-aistudio.ts`) |
-| `npm run pack:aistudio` | 導出純淨 AI Studio 雲端目錄 (`dist-aistudio/`) |
-| `npm run build` | 建置前端 SPA 產物並透過 esbuild 編譯四合一 `server.ts` |
-| `npm run build:aistudio`| 編譯純淨 AI Studio 輕量化伺服器產物 |
+| `npm run build` | 建置前端 SPA 產物並透過 esbuild 編譯 `server-gemini-api.ts` |
 | `npm run lint` | 執行 TypeScript 靜態類型檢查 (`tsc --noEmit`) |
 
 ---
@@ -271,23 +263,19 @@
 App-Minimax_H3_AI_Prompt_Studio/
 ├── server/
 │   ├── core/             # 共用核心（提示詞規範、輸出淨化、Express/Vite 工廠、型別）
-│   └── engines/          # 獨立推論引擎（AI Studio、Paid API、Ollama、llama.cpp、Gemini Core）
-├── tests/                # 行為鎖定測試套件（提示詞規格、淨化、稽核、引擎調度、導出包驗證）
-├── scripts/
-│   └── pack-aistudio.ts  # Google AI Studio 純淨導出腳本
+│   └── engines/          # 獨立推論引擎（Gemini API、Ollama、llama.cpp、Gemini Core）
+├── tests/                # 行為鎖定測試套件（提示詞規格、淨化、稽核、引擎調度）
 ├── src/                  # React 19 + Vite 前端使用者介面
-├── server.ts             # 四合一多引擎整合入口
-├── server-aistudio.ts    # AI Studio 獨立入口（上傳包預設核心）
-├── server-paid-api.ts    # Paid API 直通獨立入口
+├── server.ts             # 多引擎整合入口
+├── server-gemini-api.ts  # Gemini API 直通獨立入口
 ├── server-ollama.ts      # 本機 Ollama 獨立入口
 ├── server-llamacpp.ts    # 本機 llama.cpp 獨立入口
-├── pack_aistudio.bat     # AI Studio 一鍵打包批次檔 (產出 minimax-h3-aistudio.zip)
-├── start.bat             # 四合一多引擎啟動檔
-├── start_paid_api.bat    # Paid API 直通啟動檔
+├── start.bat             # 多引擎整合啟動檔
+├── start_gemini_api.bat  # Gemini API 直通啟動檔
 ├── start_ollama.bat      # 本機 Ollama 啟動檔
 ├── start_llamacpp.bat    # 本機 llama.cpp 啟動檔
 ├── package.json          # 專案依賴與腳本定義
-└── metadata.json         # Google AI Studio Web Applet 元資料宣告
+└── tsconfig.json         # TypeScript 編譯設定
 ```
 
 ---

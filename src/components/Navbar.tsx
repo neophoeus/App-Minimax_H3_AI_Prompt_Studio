@@ -9,18 +9,15 @@ import {
   Zap,
   HelpCircle,
   RefreshCw,
-  Layers,
   Key,
   Terminal,
 } from 'lucide-react';
-import { EngineTier, AppMode, SystemModeStatus, OllamaModelItem, LlamaCppModelItem } from '../types';
+import { AppMode, SystemModeStatus, OllamaModelItem, LlamaCppModelItem } from '../types';
 
 interface NavbarProps {
   appMode: AppMode;
   systemStatus: SystemModeStatus | null;
   onRefreshStatus: () => void;
-  engineTier: EngineTier;
-  onChangeEngineTier: (tier: EngineTier) => void;
   ollamaModel: string;
   onChangeOllamaModel: (model: string) => void;
   ollamaModels: OllamaModelItem[];
@@ -37,8 +34,6 @@ export const Navbar: React.FC<NavbarProps> = ({
   appMode,
   systemStatus,
   onRefreshStatus,
-  engineTier,
-  onChangeEngineTier,
   ollamaModel,
   onChangeOllamaModel,
   ollamaModels,
@@ -50,8 +45,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onResetOptions,
   savedCount,
 }) => {
-  const [showTierInfo, setShowTierInfo] = useState(false);
-  const [showPaidApiInfo, setShowPaidApiInfo] = useState(false);
+  const [showGeminiApiInfo, setShowGeminiApiInfo] = useState(false);
 
   return (
     <header className="sticky top-0 z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80 px-4 lg:px-8 py-3.5">
@@ -71,7 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </h1>
               <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-full bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-cyan-500/20 text-purple-200 border border-purple-400/40 shadow-sm shadow-purple-500/20 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                v5.3.1 • 客觀物理描述、AI 輔助三合一、MiniMax-H3 官方全標籤與 Gemini 3.8 旗艦
+                v6.0.0 • 三大獨立引擎、客觀物理描述、AI 輔助三合一與 Gemini 3.8 旗艦
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
@@ -92,19 +86,19 @@ export const Navbar: React.FC<NavbarProps> = ({
 
         {/* Active Dedicated Engine Status & Controls */}
         <div className="flex items-center flex-wrap gap-2.5 sm:gap-3">
-          {/* 1. Paid API Direct Flagship Engine */}
-          {appMode === 'paid_api' && (
+          {/* 1. Gemini API Direct Flagship Engine */}
+          {appMode === 'gemini_api' && (
             <div className="relative flex items-center bg-slate-900/90 px-3 py-1.5 rounded-xl border border-teal-500/40 shadow-inner gap-2">
               <Key className="w-4 h-4 text-teal-400" />
               <div className="flex items-center gap-1.5">
-                <span className="text-xs font-semibold text-teal-200">Gemini Paid API 直通引擎</span>
+                <span className="text-xs font-semibold text-teal-200">Gemini API 直通引擎</span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-950/80 border border-teal-500/30 text-teal-300 font-mono">
                   3.8 Flash 旗艦
                 </span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/30 text-amber-300 font-mono hidden sm:inline-flex items-center gap-0.5">
                   <Zap className="w-2.5 h-2.5" /> High Thinking
                 </span>
-                {systemStatus?.detectedModes.paid_api ? (
+                {systemStatus?.detectedModes.gemini_api ? (
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="已配置 GEMINI_API_KEY (線上就緒)" />
                 ) : (
                   <span className="w-2 h-2 rounded-full bg-amber-400" title="未設定 GEMINI_API_KEY" />
@@ -112,23 +106,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               </div>
               <button
                 type="button"
-                onClick={() => setShowPaidApiInfo(!showPaidApiInfo)}
+                onClick={() => setShowGeminiApiInfo(!showGeminiApiInfo)}
                 className="p-1 rounded text-slate-400 hover:text-teal-300 transition-colors"
-                title="查看 Paid API 直通引擎說明"
+                title="查看 Gemini API 直通引擎說明"
               >
                 <HelpCircle className="w-3.5 h-3.5" />
               </button>
 
-              {/* Paid API Info Modal */}
-              {showPaidApiInfo && (
+              {/* Gemini API Info Modal */}
+              {showGeminiApiInfo && (
                 <div className="absolute right-0 top-full mt-2 w-80 p-3.5 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-50 text-xs text-slate-300 space-y-2.5">
                   <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                     <span className="font-bold text-white flex items-center gap-1.5">
                       <Key className="w-3.5 h-3.5 text-teal-400" />
-                      Gemini Paid API 直通引擎說明
+                      Gemini API 直通引擎說明
                     </span>
                     <button
-                      onClick={() => setShowPaidApiInfo(false)}
+                      onClick={() => setShowGeminiApiInfo(false)}
                       className="text-slate-500 hover:text-slate-300 text-[11px]"
                     >
                       關閉
@@ -136,10 +130,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   </div>
                   <div className="space-y-1.5 leading-relaxed text-[11px]">
                     <p>
-                      <strong className="text-teal-300">🔑 按量計費 (Pay-as-you-go)</strong>：使用您自行在 Google Cloud 綁定信用卡建立的 Paid API Key，具備高並發配額。
+                      <strong className="text-teal-300">🔑 Free Tier / Pay-as-you-go 全面支援</strong>：可直接使用 Google AI Studio 申請的免費 API Key（享有每分鐘 15 請求免費額度）或 Google Cloud 綁定信用卡之按量計費金鑰。
                     </p>
                     <p>
-                      <strong className="text-emerald-400">⚡ 旗艦全核心解鎖</strong>：不受 Google 訂閱制免費額度約束，對話、視覺分析與提示詞生成皆直接呼叫旗艦級 <code className="text-amber-300">gemini-3.8-flash</code> 進行深度推理，無需降級或進行 3.5-lite 分流。
+                      <strong className="text-emerald-400">⚡ 旗艦 3.8 Flash 全核心直通</strong>：提示詞生成與視覺解析直接呼叫旗艦級 <code className="text-amber-300">gemini-3.8-flash</code> 深度推理，具備自動指數退避重試與 <code className="text-cyan-300">gemini-3.5-flash-lite</code> 容錯備援。
                     </p>
                   </div>
                 </div>
@@ -242,98 +236,6 @@ export const Navbar: React.FC<NavbarProps> = ({
               >
                 <RefreshCw className="w-3.5 h-3.5" />
               </button>
-            </div>
-          )}
-
-          {/* 4. Google AI Studio Cloud Engine */}
-          {appMode === 'ai_studio' && (
-            <div className="relative flex items-center bg-slate-900/90 px-3 py-1.5 rounded-xl border border-purple-500/40 shadow-inner gap-2">
-              <Layers className="w-4 h-4 text-indigo-400" />
-              <div className="flex items-center gap-1.5 mr-1">
-                <span className="text-xs font-semibold text-purple-200">AI Studio 雲端引擎</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded bg-indigo-950/80 border border-indigo-500/30 text-indigo-300 font-mono hidden sm:inline-block">
-                  Google AI Studio
-                </span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" title="AI Studio 雲端環境就緒" />
-              </div>
-              <div className="flex items-center gap-1 border-l border-slate-700/80 pl-2">
-                <button
-                  type="button"
-                  onClick={() => onChangeEngineTier('pro')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                    engineTier === 'pro'
-                      ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="AI Pro (訂閱配額最佳化)：智慧多模型分流，極速響應且零 429 報錯"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  <span>Pro 最佳化</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onChangeEngineTier('ultra_5x')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                    engineTier === 'ultra_5x'
-                      ? 'bg-blue-600/30 text-blue-300 border border-blue-500/50 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="AI Ultra 5x (5倍訂閱配額)：全核心 gemini-3.8-flash 深度推理"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400" />
-                  <span>Ultra 5x</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => onChangeEngineTier('ultra_20x')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1.5 ${
-                    engineTier === 'ultra_20x'
-                      ? 'bg-purple-600/30 text-purple-300 border border-purple-500/50 shadow-sm'
-                      : 'text-slate-400 hover:text-slate-200'
-                  }`}
-                  title="AI Ultra 20x (20倍訂閱配額)：極致深度推理與高精多模態鎖定"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400" />
-                  <span>Ultra 20x</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => setShowTierInfo(!showTierInfo)}
-                  className="p-1 rounded text-slate-500 hover:text-slate-300 transition-colors"
-                  title="查看訂閱算力方案說明"
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-              {/* Tier Info Modal for AI Studio Subscription */}
-              {showTierInfo && (
-                <div className="absolute right-0 top-full mt-2 w-80 p-3.5 rounded-xl bg-slate-900 border border-slate-700 shadow-2xl z-50 text-xs text-slate-300 space-y-2.5">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-white flex items-center gap-1.5">
-                      <Zap className="w-3.5 h-3.5 text-amber-400" />
-                      AI Studio 訂閱制配額階梯說明
-                    </span>
-                    <button
-                      onClick={() => setShowTierInfo(false)}
-                      className="text-slate-500 hover:text-slate-300 text-[11px]"
-                    >
-                      關閉
-                    </button>
-                  </div>
-                  <div className="space-y-1.5 leading-relaxed text-[11px]">
-                    <p>
-                      <strong className="text-emerald-400">🟢 AI Pro (最佳化分流 - 推薦)</strong>：專為使用 Google AI 訂閱免費配額打造，對話使用極速 <code className="text-cyan-300">gemini-3.5-flash-lite</code>，圖片使用 <code className="text-purple-300">gemini-3.6-flash</code>，核心生成使用 <code className="text-amber-300">gemini-3.8-flash</code>，零超額且具備自動降級保護。
-                    </p>
-                    <p>
-                      <strong className="text-blue-400">🔵 AI Ultra 5x / 20x</strong>：適合已訂閱 Google One AI Premium / Ultra 方案的用戶，享有更高並發配額，全模組開啟旗艦深度思考。
-                    </p>
-                  </div>
-                </div>
-              )}
             </div>
           )}
 

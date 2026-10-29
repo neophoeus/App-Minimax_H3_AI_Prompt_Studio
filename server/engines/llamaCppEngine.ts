@@ -68,13 +68,11 @@ export class LlamaCppEngine implements StudioEngine {
 
     return {
       detectedModes: {
-        ai_studio: false,
-        paid_api: false,
+        gemini_api: false,
         ollama: false,
         llamacpp: online,
       },
       details: {
-        isAiStudioEnv: false,
         hasGeminiApiKey: false,
         ollamaOnline: false,
         ollamaBaseUrl: "",

@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v6.0.0] - 2026-10-29
+
+### 🚀 Tri-Engine Architecture & Google AI Studio Decommissioning (三大獨立引擎收斂與 AI Studio 預覽模式廢除)
+
+#### 🛑 1. Decommissioning of Google AI Studio Cloud Engine & Packager (廢止 AI Studio 雲端引擎與打包器)
+- **廢除根本原因 (Decommissioning Rationale)**:
+  - Google AI Studio 自建 App 預覽模式（Preview App）已取消前端瀏覽器直接注入訂閱配額（Subscription Quota）之機制，不再支援免 API Key 之雲端預覽呼叫，目前僅支援透過直接配置 API Key 呼叫模型。
+  - 原設計之 `ai_studio` 模式、方案切換（Free Tier / Pay-as-you-go）以及預覽打包流程已失去實質意義與運作基礎。
+- **徹底清除無用程式碼 (Zero Residual Dead Code)**:
+  - 徹底刪除雲端預覽專用伺服器 `server-aistudio.ts` 與引擎核心 `server/engines/aiStudioEngine.ts`。
+  - 徹底刪除打包專案腳本 `scripts/pack-aistudio.ts`、`pack_aistudio.bat`、`metadata.json` 與相關測試 `tests/export/packAistudio.test.ts`。
+  - 清理 `.gitignore` 中殘留之 `aistudio/`、`minimax-h3-studio-aistudio.zip` 等無效打包配置。
+
+#### 🔑 2. Unified Gemini API Direct Engine (`gemini_api`) (全面更名為 Gemini API 官方直通引擎)
+- **統一更名消除語意歧義**:
+  - 原「Paid API / 付費 API」全面重新定義並更名為 **Gemini API 官方直通引擎 (`gemini_api`)**。
+  - 核心檔案全面重構升級：`start_paid_api.bat` 升級為 `start_gemini_api.bat`，`server-paid-api.ts` 升級為 `server-gemini-api.ts`，`paidApiEngine.ts` 升級為 `geminiApiEngine.ts`。
+- **免費與付費金鑰全相容 (Universal Free Tier & Pay-as-you-go Support)**:
+  - 明確揭示 Gemini API 同時支援 **Google AI Studio 免費金鑰（Free Tier，15 RPM 免費額度）** 與 **Google Cloud 按量計費金鑰（Pay-as-you-go）**，破除「必須付費才能調用 API」的認知誤區。
+  - 全核心調用旗艦級 `gemini-3.8-flash` 進行提示詞架構推導與影視導演級深入推理。
+
+#### 🛡️ 3. Placeholder Interception & Backward Compatibility (佔位符安全防護與舊版向下相容)
+- **佔位符嚴格攔截保護**:
+  - 增設安全防護，於初始化與客戶端建立時自動檢測未填寫之範例佔位符 `MY_GEMINI_API_KEY`，阻斷無效遠端連線並給予精準中文提示。
+- **客戶端快取自動平滑遷移 (Auto-Migration)**:
+  - 前端 `ReferenceManager.tsx` 自動將舊版儲存在瀏覽器 `localStorage` 中的 `'paid_api'` 狀態無感平滑遷移至 `'gemini_api'`。
+
+#### 🏛️ 4. Tri-Engine Standard Architecture (確立三大獨立引擎體系)
+- **三大獨立專屬架構確立 (Tri-Engine)**:
+  - 1. **Gemini API 官方直通引擎** (`start_gemini_api.bat` / `server-gemini-api.ts` / Port 3000)
+  - 2. **Ollama 本地離線引擎** (`start_ollama.bat` / `server-ollama.ts` / Port 3001)
+  - 3. **llama.cpp 本地離線引擎** (`start_llamacpp.bat` / `server-llamacpp.ts` / Port 3002)
+- **全域版本與導覽狀態同步**:
+  - 頂部導覽列更新為 `v6.0.0 • 三大獨立引擎、客觀物理描述、AI 輔助三合一與 Gemini 3.8 旗艦`。
+  - 全域頁尾同步更新為 `v6.0.0 Flagship`。
+
 ## [v5.3.1] - 2026-10-20
 
 ### 🩹 Footer Status Synchronization & Release Alignment (頁尾全域狀態同步與發行對齊)

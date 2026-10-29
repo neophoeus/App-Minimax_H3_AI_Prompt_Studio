@@ -2,9 +2,7 @@ export type GenerationMode = 'T2VA' | 'I2VA' | 'FL2VA' | 'L2VA' | 'Ref2VA';
 
 export type AiProvider = 'gemini' | 'ollama' | 'llamacpp';
 
-export type AppMode = 'ai_studio' | 'ollama' | 'llamacpp' | 'paid_api';
-
-export type EngineTier = 'pro' | 'ultra_5x' | 'ultra_20x'; // AI Studio 訂閱制階梯方案 (AI Pro / Ultra 5x / Ultra 20x)
+export type AppMode = 'gemini_api' | 'ollama' | 'llamacpp';
 
 export interface OllamaModelItem {
   name: string;
@@ -42,13 +40,11 @@ export interface LlamaCppStatus {
 
 export interface SystemModeStatus {
   detectedModes: {
-    ai_studio: boolean;
+    gemini_api: boolean;
     ollama: boolean;
     llamacpp: boolean;
-    paid_api: boolean;
   };
   details: {
-    isAiStudioEnv: boolean;
     hasGeminiApiKey: boolean;
     ollamaOnline: boolean;
     ollamaBaseUrl: string;
@@ -159,7 +155,6 @@ export interface H3PromptConfig {
   temperatureMode?: TemperatureMode; // 'auto' (Gemini官方預設, 本機0.7) | 'manual'
   manualTemperature?: number; // 手動溫度 (0.0 ~ 1.5, 預設 0.7)
   creativityLevel?: number; // 向下相容歷史與預設集
-  engineTier?: EngineTier;
   provider?: AiProvider;
   appMode?: AppMode;
   ollamaModel?: string;

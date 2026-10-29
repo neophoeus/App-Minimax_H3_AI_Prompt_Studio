@@ -46,13 +46,11 @@ export class OllamaEngine implements StudioEngine {
 
     return {
       detectedModes: {
-        ai_studio: false,
-        paid_api: false,
+        gemini_api: false,
         ollama: online,
         llamacpp: false,
       },
       details: {
-        isAiStudioEnv: false,
         hasGeminiApiKey: false,
         ollamaOnline: online,
         ollamaBaseUrl: this.baseUrl,
