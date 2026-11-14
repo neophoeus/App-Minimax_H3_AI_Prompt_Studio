@@ -371,24 +371,26 @@ export function buildH3UserPrompt(config: any): {
             const base64Data = r.fileUrl.split(',')[1];
             if (base64Data) {
               multimodalParts.push({
-                inlineData: {
-                  mimeType,
-                  data: base64Data,
-                },
+                type: 'image',
+                mime_type: mimeType,
+                data: base64Data,
               });
 
               if (r.physicalTag && r.tag && r.tag.startsWith('<Subject')) {
-                multimodalParts.push(
-                  `[Visual Reference Image attached above is physical upload slot ${r.physicalTag} (@image${r.pictureIndex}), providing the general visual reference for ${r.tag} (Role: ${r.role}, Label: ${cleanName}). Inspect its real visual characteristics (appearance, colors, style, texture, structure). In "subject_definitions", define ${r.tag} using its physical traits as depicted in ${r.physicalTag} (e.g. "${r.tag} is the [detailed appearance traits] as depicted in ${r.physicalTag}, with locked visual identity."). CRITICAL: ${r.physicalTag} is a general visual reference for ${r.tag} and is NOT an opening keyframe! Do NOT declare "${r.physicalTag} is the first keyframe image...". In "retention_analysis", state that ${r.tag} is fully_preserved from ${r.physicalTag}. Do NOT add a standalone ${r.physicalTag} keyframe entry. Do NOT use any file names.]`
-                );
+                multimodalParts.push({
+                  type: 'text',
+                  text: `[Visual Reference Image attached above is physical upload slot ${r.physicalTag} (@image${r.pictureIndex}), providing the general visual reference for ${r.tag} (Role: ${r.role}, Label: ${cleanName}). Inspect its real visual characteristics (appearance, colors, style, texture, structure). In "subject_definitions", define ${r.tag} using its physical traits as depicted in ${r.physicalTag} (e.g. "${r.tag} is the [detailed appearance traits] as depicted in ${r.physicalTag}, with locked visual identity."). CRITICAL: ${r.physicalTag} is a general visual reference for ${r.tag} and is NOT an opening keyframe! Do NOT declare "${r.physicalTag} is the first keyframe image...". In "retention_analysis", state that ${r.tag} is fully_preserved from ${r.physicalTag}. Do NOT add a standalone ${r.physicalTag} keyframe entry. Do NOT use any file names.]`,
+                });
               } else if (r.physicalTag && (['first_keyframe', 'keyframe', 'composition'].includes(r.role) || (r.tag && r.tag.startsWith('<Picture')))) {
-                multimodalParts.push(
-                  `[Visual Reference Image attached above is physical upload slot ${r.physicalTag} (@image${r.pictureIndex}) (Role: ${r.role}, Label: ${cleanName}). This image is the target keyframe/composition frame (${r.tag}). In "subject_definitions", define ${r.tag} as the first keyframe image showing the setting, lighting, atmosphere, and composition. In "summary" and "detailed_description" [Shot 1], explicitly reference this frame (${r.tag}). Do NOT use any file names.]`
-                );
+                multimodalParts.push({
+                  type: 'text',
+                  text: `[Visual Reference Image attached above is physical upload slot ${r.physicalTag} (@image${r.pictureIndex}) (Role: ${r.role}, Label: ${cleanName}). This image is the target keyframe/composition frame (${r.tag}). In "subject_definitions", define ${r.tag} as the first keyframe image showing the setting, lighting, atmosphere, and composition. In "summary" and "detailed_description" [Shot 1], explicitly reference this frame (${r.tag}). Do NOT use any file names.]`,
+                });
               } else {
-                multimodalParts.push(
-                  `[Visual reference image attached above corresponds to ${r.tag} (Role: ${r.role}, Label: ${cleanName}). Inspect its real visual characteristics (face, clothing, lighting, style, colors, materials) and describe them faithfully in subject_definitions and retention_analysis without including any file names.]`
-                );
+                multimodalParts.push({
+                  type: 'text',
+                  text: `[Visual reference image attached above corresponds to ${r.tag} (Role: ${r.role}, Label: ${cleanName}). Inspect its real visual characteristics (face, clothing, lighting, style, colors, materials) and describe them faithfully in subject_definitions and retention_analysis without including any file names.]`,
+                });
               }
               ollamaImages.push(base64Data);
             }

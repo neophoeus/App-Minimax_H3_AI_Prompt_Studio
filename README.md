@@ -4,8 +4,8 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v6.2.0-blue.svg)](CHANGELOG.md)
-[![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
+[![Version](https://img.shields.io/badge/version-v6.3.0-blue.svg)](CHANGELOG.md)
+[![Model](https://img.shields.io/badge/AI%20Engine-Gemini%204%20Hydrogen%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
 
@@ -22,11 +22,19 @@
 Adhering 100% to the official MiniMax-H3 [`h3-prompt-writing`](https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing) skill specification, the studio transforms high-level creative concepts into production-ready, perfectly formatted prompts with one-click copy functionality.
 
 Featuring a **Tri-Engine Independent Architecture with Dedicated UI Panels**:
-1. **🔑 Local Gemini API Direct Engine (`start_gemini_api.bat` / `server-gemini-api.ts`)**: Direct Pay-as-you-go execution utilizing Google Gemini API, aligned with official default Off safety policies, featuring task-adaptive thinking budgets, 75% image token reduction (`MediaResolution.MEDIA_RESOLUTION_LOW`), and dynamic schema pruning.
+1. **🔑 Local Gemini API Direct Engine (`start_gemini_api.bat` / `server-gemini-api.ts`)**: Powered by flagship **`gemini-4-hydrogen`** and the official **Interactions API (`ai.interactions.create`)**, featuring task-adaptive `thinking_level` (`high` for generation, `low` for optimization & media analysis), ultra-low-latency **`gemini-3.5-flash-lite`** (`minimal`) dialogue routing, per-image `resolution: "low"` compression, and native `response_format` JSON Schema with deprecated `temperature` parameters omitted.
 2. **💻 Local Ollama Offline Engine (`start_ollama.bat` / `server-ollama.ts`)**: 100% private and offline on `http://127.0.0.1:11434`, with **dynamic local model discovery** (automatically scans all installed models like `Qwen3.8-27B-Uncensored`).
 3. **⚡ Local llama.cpp Offline Engine (`start_llamacpp.bat` / `server-llamacpp.ts`)**: Pure C/C++ ultra-low latency offline inference for the NVIDIA RTX 5090 (32GB VRAM), with Flash Attention, 32K context windows, and `mmproj` multimodal vision support.
 
 ## ✨ Key Features
+
+### Gemini 4 Hydrogen & Interactions API Architecture (v6.3.0)
+- **Flagship Model Routing (`gemini-4-hydrogen` + `gemini-3.5-flash-lite`)**:
+  - **Prompt Generation & Episode Refinement (`prompt_generation`)**: Routes to **`gemini-4-hydrogen`** (1M context window) with `thinking_level: "high"` and per-image `resolution: "low"`.
+  - **Spec Optimization (`optimize`) & Media Analysis (`media_analysis`)**: Routes to **`gemini-4-hydrogen`** with `thinking_level: "low"` (`resolution: "low"` for uploaded images).
+  - **Dialogue & SFX Suggestions (`dialogue`)**: Preserves ultra-fast, low-cost routing to **`gemini-3.5-flash-lite`** with `thinking_level: "minimal"`.
+- **Stateless Interactions API (`ai.interactions.create`)**: Replaces legacy `generateContent`, `Type.OBJECT`, and deprecated `temperature`/`top_p`/`top_k` sampling parameters with standard JSON Schema `response_format`, `thinking_summaries: "none"`, `store: false`, and strict status/truncation/safety inspection.
+- **Native Reasoning UI Calibration**: In Gemini API mode, replaces ineffective manual temperature sliders with a clean **Gemini 4 原生推理校準** notice while preserving manual `0.0 ~ 1.5` sampling temperature controls for local Ollama and llama.cpp engines.
 
 ### 0. Parallel Ensemble Choreography, Fluid Macro-Trajectory & Engine Alignment (v6.2.0)
 - **Zero-Freeze Multi-Subject Choreography**: Eliminates sequential turn-taking in 2+ character scenes by binding overlapping actions via concurrent connectors (`while`, `as`, `simultaneously`) and intra-shot micro-timestamps, while enforcing active eye-line tracking and anticipatory reactions for secondary subjects.
@@ -154,17 +162,15 @@ Featuring a **Tri-Engine Independent Architecture with Dedicated UI Panels**:
 
 ### 4. Tri-Engine Operating Architecture & Native llama.cpp Integration (v3.0.0)
 - **Three Distinct AI Engines**:
-  - **🔑 Local Gemini API Direct Engine (`gemini_api`, Priority 1)**: Direct execution utilizing Google Gemini API keys (supporting both Google AI Studio Free Tier and Google Cloud Pay-as-you-go). Directly unlocks full-core flagship `gemini-3.8-flash` deep reasoning across all tasks.
+  - **🔑 Local Gemini API Direct Engine (`gemini_api`, Priority 1)**: Direct execution utilizing Google Gemini API keys (supporting both Google AI Studio Free Tier and Google Cloud Pay-as-you-go) via the official **Interactions API**, pairing flagship **`gemini-4-hydrogen`** deep reasoning with **`gemini-3.5-flash-lite`** ultra-low-latency dialogue routing.
   - **💻 Local Ollama Offline Engine (`ollama`, Priority 2)**: 100% private and offline on `http://127.0.0.1:11434`, with **dynamic local model discovery** (automatically scans all installed models like `Qwen3.8-27B-Uncensored` without hardcoding), multimodal reference image vision analysis, and reasoning token (`<think>...</think>`) cleansing.
   - **⚡ Local llama.cpp Offline Engine (`llamacpp`, Priority 3)**: Pure C/C++ ultra-high throughput offline inference connecting to `http://127.0.0.1:8080` (`llama-server`).
     - **Hardware-Level Acceleration**: Tailored for flagship consumer GPUs like NVIDIA RTX 5090 (32GB VRAM) with `-ngl 99` full GPU offloading, Flash Attention (`--flash-attn on`), and 32K context windows (`-c 32768`).
     - **Multimodal Projector (`mmproj`)**: 100% automated pairing with vision projectors (`mmproj-*.gguf`), unlocking zero-quota offline image inspection and video scene comprehension.
     - **Native Embedded MTP Acceleration (`--spec-type draft-mtp`)**: Activates Qwen3.8's built-in NextN multi-token prediction heads without third-party patches, providing an immediate **2.23x (+123.4%)** token generation speedup!
 - **Priority-Based Auto-Detection & Selection**: Probes the runtime environment on startup and auto-selects the highest priority engine (**Gemini API > Ollama > llama.cpp**), while preserving full freedom to manually switch anytime with `localStorage` persistence.
-- **Exponential Backoff Retry with Jitter (1s ➔ 2s)**: Automatically catches transient `429 RESOURCE_EXHAUSTED` and `503 UNAVAILABLE` errors, retrying up to 2 times with randomized jitter before failover to smooth out burst rate limits.
-- **Resilient Multi-Model Fallback**: Automatically switches to backup models (`gemini-3.8-flash` ➔ `gemini-3.5-flash-lite`) if a model's quota is exhausted. Automatically skips retries for permanent errors (e.g. 404).
-- **Ultra-Relaxed Safety Policy (`HarmBlockThreshold.BLOCK_NONE`)**: Configured `BLOCK_NONE` across all core harm categories (harassment, hate speech, sexually explicit, dangerous content, civic integrity) to maximize creative storytelling freedom.
-- **Real-Time Safety Block Notification System**: Dual-layer detection inspecting both prompt-level and candidate-level safety filters (`SAFETY`, `PROHIBITED_CONTENT`, `BLOCKLIST`, `IMAGE_SAFETY`), providing actionable guidance toasts in the UI when sensitive content is flagged.
+- **Adaptive Task Routing & Model-Safe Thinking Normalization**: Deterministic routing pairs **`gemini-4-hydrogen`** (`high` / `low` thinking + `low` media resolution) with **`gemini-3.5-flash-lite`** (`minimal` thinking) via stateless `ai.interactions.create({ store: false })` and SDK-managed `p-retry` resilience.
+- **Real-Time Interaction Status, Truncation & Safety Inspection**: Inspects `interaction.status` and `interaction.errors` (`safety`, `prohibited`, `blocklist`, `spii`, `image_safety`, plus `incomplete` / `budget_exceeded` truncation), providing actionable guidance toasts in the UI when sensitive content or output truncation is flagged.
 
 ### 3. Multimodal Reference Asset Manager (Zero-Quota Direct Vision)
 - Upload character, scene, or prop reference assets directly in the browser.
@@ -194,7 +200,7 @@ Featuring a **Tri-Engine Independent Architecture with Dedicated UI Panels**:
 - **Styling**: Tailwind CSS v4
 - **Backend / API**: Express 4, TypeScript, `tsx`, `esbuild`
 - **AI Engines**:
-  - **Gemini API Direct Engine**: Direct Google Gemini 3.8 Flash flagship execution (Free Tier & Pay-as-you-go)
+  - **Gemini API Direct Engine**: Flagship **`gemini-4-hydrogen`** + **`gemini-3.5-flash-lite`** dialogue routing over Interactions API (Free Tier & Pay-as-you-go)
   - **Local Ollama Offline Engine**: Dynamic model scanning (native support for `Qwen3.8-27B-Uncensored` in `q8_0`, `q6_K`, `q5_K_M`)
   - **Local llama.cpp Offline Engine**: `llama-server` (RTX 5090 `-ngl 99`, Flash Attention, 32K context, `mmproj` vision, Native Embedded MTP)
 
@@ -207,7 +213,7 @@ Featuring a **Tri-Engine Independent Architecture with Dedicated UI Panels**:
 Double-click the dedicated launcher for your target AI inference backend:
 
 1. **🔑 Gemini API Direct Studio**: Double-click **`start_gemini_api.bat`**
-   - Direct flagship Gemini 3.8 Flash execution with deep reasoning for API key owners (Free Tier & Pay-as-you-go).
+   - Direct flagship **Gemini 4 Hydrogen (`gemini-4-hydrogen`)** execution via Interactions API for API key owners (Free Tier & Pay-as-you-go).
 2. **💻 Local Ollama Offline Studio**: Double-click **`start_ollama.bat`**
    - Automatically wakes the local Ollama service and scans all installed models.
 3. **⚡ Local llama.cpp (RTX 5090) Offline Studio**: Double-click **`start_llamacpp.bat`**
@@ -252,7 +258,7 @@ Double-click the dedicated launcher for your target AI inference backend:
 ### 🎛️ Windows Launchers
 | Script | Description |
 | :--- | :--- |
-| `start_gemini_api.bat` | **Gemini API Direct**: Flagship 3.8 Flash direct execution (Free Tier / Pay-as-you-go) |
+| `start_gemini_api.bat` | **Gemini API Direct**: Flagship Gemini 4 Hydrogen + Interactions API (Free Tier / Pay-as-you-go) |
 | `start_ollama.bat` | **Local Ollama Studio**: Auto-starts Ollama service and web studio |
 | `start_llamacpp.bat` | **Local llama.cpp Studio**: 2-in-1 launcher with RTX 5090 model scanner |
 
@@ -280,7 +286,7 @@ App-Minimax_H3_AI_Prompt_Studio/
 │   ├── App.tsx           # Main application state and layout
 │   ├── main.tsx          # React application entry point
 │   └── index.css         # Tailwind CSS styles
-├── server.ts             # Express backend with Gemini 3.8 Flash API integration
+├── server-gemini-api.ts  # Dedicated Gemini 4 Hydrogen Interactions API server entrypoint
 ├── CHANGELOG.md          # Release history and migration notes
 ├── README.md             # English documentation
 ├── README.zh-TW.md       # Traditional Chinese documentation

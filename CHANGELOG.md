@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v6.3.0] - 2026-11-14
+
+### 🚀 Gemini 4 Hydrogen Flagship & Stateless Interactions API Modernization (Gemini 4 Hydrogen 旗艦升級與 Interactions API 現代化重構)
+
+#### ⚡ 1. Gemini 4 Hydrogen Routing & Official Interactions API (`server/engines/geminiCore.ts`, `geminiApiEngine.ts`, `prompts.ts`)
+- **精準雙模任務分流（無多餘選單干擾）**:
+  - **提示詞生成與單集精修 (`prompt_generation`)**：由 `gemini-3.8-flash` 全面升級為旗艦 **`gemini-4-hydrogen`**（1M 上下文，配置 `thinking_level: "high"` + 參考圖 `resolution: "low"`）。
+  - **規格優化與參考圖視覺解析 (`optimize` / `media_analysis`)**：路由至 **`gemini-4-hydrogen`**（`thinking_level: "low"`，圖片自動注入 `resolution: "low"`）。
+  - **對白與音效靈感生成 (`dialogue`)**：維持超低延遲輕量路由 **`gemini-3.5-flash-lite`**（`thinking_level: "minimal"`）。
+- **全面遷移至 `ai.interactions.create()`**:
+  - 升級 `@google/genai` 至 `^2.17.0`（本機已安裝 `2.17.0` 完整支援 Interactions API），徹底淘汰舊版 `ai.models.generateContent()`、`Type.OBJECT`、`responseMimeType` 與 `responseSchema`。
+  - 統一採用無狀態請求（`store: false`）、標準 JSON Schema 頂層 `response_format`、`generation_config`（`thinking_level` + `thinking_summaries: "none"`），並以 `normalizeThinkingLevelForModel` 防止跨模型不支援層級引發 HTTP 400。
+  - 更新 `buildH3UserPrompt` 多模態輸出為 Interactions 原生 `{ type: "image", mime_type, data }` 與 `{ type: "text", text }` 區塊（`ollamaImages` 完整保留），並實作 `checkInteractionStatus` 與 `extractInteractionText` 處理安全性阻擋、`incomplete`/`budget_exceeded` 截斷與多步文字擷取。
+
+#### 🌡️ 2. Gemini 4 Sampling Temperature Deprecation & Native Calibration UI (`server/core/types.ts`, `src/App.tsx`, `Navbar.tsx`)
+- **後端零 `temperature` 傳參**：更新 `resolveTemperature`，當 `provider === 'gemini'` 時不論 `auto` 或 `manual` 模式皆回傳 `undefined`，完全符合 Gemini 4 官方規範；本機 `ollama` / `llamacpp` 仍完整保留 `0.7` 預設與 `0.0 ~ 1.5` 手動滑桿。
+- **前端原生校準介面與無障礙補強**：在 `gemini_api` 模式下隱藏無效手動溫度滑桿並顯示「Gemini 4 原生推理校準」，連同 `exportSeriesMarkdown`、導覽列 `4 Hydrogen 旗艦` 徽章／說明彈窗、底欄及 `start_gemini_api.bat` 同步更新，並為按鈕與表單控制項補齊 `aria-expanded`、`aria-pressed`、`htmlFor`/`id` 與 `focus-visible` 鍵盤焦點樣式。
+
+#### 🧪 3. Verification Coverage
+- 新增 [tests/engines/geminiInteractions.test.ts](tests/engines/geminiInteractions.test.ts)（13 項全鏈路單元與 `GeminiApiEngine` 五大方法整合測試）並更新 `engineRouting.test.ts` 與 `prompts.test.ts`；全套自動化測試擴增至 **87 / 87 通過**（28 suites，0 fails），`npm.cmd run lint` 與 `npm.cmd run build` 均零錯誤通過。
+
 ## [v6.2.0] - 2026-11-14
 
 ### 🎭 Parallel Ensemble Choreography, Fluid Macro-Trajectory & Full Engine Alignment (並行群像場面調度、流暢動作軌跡與全引擎規格對齊)

@@ -1,6 +1,5 @@
 import { test, describe } from "node:test";
 import assert from "node:assert/strict";
-import { MediaResolution, ThinkingLevel } from "@google/genai";
 import { resolveTemperature } from "../../server/core/types";
 import { buildModularSystemInstruction, formatReferencesSummary } from "../../server/core/prompts";
 import * as geminiCore from "../../server/engines/geminiCore";
@@ -11,9 +10,10 @@ import { LlamaCppEngine } from "../../server/engines/llamaCppEngine";
 
 describe("Engine Routing & Strategy Specifications", () => {
   describe("resolveTemperature", () => {
-    test("Gemini in auto mode returns undefined for model native calibration", () => {
+    test("Gemini in both auto and manual modes returns undefined because Gemini 4 deprecates temperature", () => {
       assert.equal(resolveTemperature("gemini", "auto"), undefined);
       assert.equal(resolveTemperature("gemini"), undefined);
+      assert.equal(resolveTemperature("gemini", "manual", 0.3), undefined);
     });
 
     test("Local engines (Ollama and llama.cpp) in auto mode default to 0.7", () => {
@@ -21,52 +21,53 @@ describe("Engine Routing & Strategy Specifications", () => {
       assert.equal(resolveTemperature("llamacpp", "auto"), 0.7);
     });
 
-    test("Manual mode clamps temperature between 0.0 and 1.5", () => {
-      assert.equal(resolveTemperature("gemini", "manual", 0.3), 0.3);
+    test("Manual mode clamps temperature between 0.0 and 1.5 for local engines", () => {
+      assert.equal(resolveTemperature("ollama", "manual", 0.3), 0.3);
       assert.equal(resolveTemperature("ollama", "manual", -0.5), 0.0);
       assert.equal(resolveTemperature("llamacpp", "manual", 2.5), 1.5);
     });
   });
 
-  describe("getExecutionPlan for Gemini API Flagship Direct Engine (Pay-as-you-go & Token Optimized)", () => {
-    test("prompt_generation routes to flagship gemini-3.8-flash with HIGH thinking and MEDIA_RESOLUTION_LOW", () => {
+  describe("getExecutionPlan for Gemini 4 Hydrogen Interactions Engine", () => {
+    test("prompt_generation routes to gemini-4-hydrogen with high thinking and low media resolution", () => {
       const plan = getExecutionPlan("prompt_generation");
-      assert.equal(plan.primaryModel, "gemini-3.8-flash");
+      assert.equal(plan.primaryModel, "gemini-4-hydrogen");
       assert.equal("fallbackModels" in plan, false);
-      assert.deepEqual(plan.thinkingConfig, {
-        thinkingLevel: ThinkingLevel.HIGH,
-        includeThoughts: false,
+      assert.deepEqual(plan.generationConfig, {
+        thinking_level: "high",
+        thinking_summaries: "none",
       });
-      assert.equal(plan.mediaResolution, MediaResolution.MEDIA_RESOLUTION_LOW);
+      assert.equal(plan.mediaResolution, "low");
     });
 
-    test("dialogue routes to high-throughput gemini-3.5-flash-lite with MINIMAL thinking to save tokens", () => {
+    test("dialogue routes to low-latency gemini-3.5-flash-lite with minimal thinking", () => {
       const plan = getExecutionPlan("dialogue");
       assert.equal(plan.primaryModel, "gemini-3.5-flash-lite");
       assert.equal("fallbackModels" in plan, false);
-      assert.deepEqual(plan.thinkingConfig, {
-        thinkingLevel: ThinkingLevel.MINIMAL,
-        includeThoughts: false,
+      assert.deepEqual(plan.generationConfig, {
+        thinking_level: "minimal",
+        thinking_summaries: "none",
       });
     });
 
-    test("media_analysis and optimize route to gemini-3.8-flash with LOW thinking", () => {
+    test("media_analysis and optimize route to gemini-4-hydrogen with low thinking", () => {
       const mediaPlan = getExecutionPlan("media_analysis");
-      assert.equal(mediaPlan.primaryModel, "gemini-3.8-flash");
+      assert.equal(mediaPlan.primaryModel, "gemini-4-hydrogen");
       assert.equal("fallbackModels" in mediaPlan, false);
-      assert.deepEqual(mediaPlan.thinkingConfig, {
-        thinkingLevel: ThinkingLevel.LOW,
-        includeThoughts: false,
+      assert.deepEqual(mediaPlan.generationConfig, {
+        thinking_level: "low",
+        thinking_summaries: "none",
       });
-      assert.equal(mediaPlan.mediaResolution, MediaResolution.MEDIA_RESOLUTION_LOW);
+      assert.equal(mediaPlan.mediaResolution, "low");
 
       const optPlan = getExecutionPlan("optimize");
-      assert.equal(optPlan.primaryModel, "gemini-3.8-flash");
+      assert.equal(optPlan.primaryModel, "gemini-4-hydrogen");
       assert.equal("fallbackModels" in optPlan, false);
-      assert.deepEqual(optPlan.thinkingConfig, {
-        thinkingLevel: ThinkingLevel.LOW,
-        includeThoughts: false,
+      assert.deepEqual(optPlan.generationConfig, {
+        thinking_level: "low",
+        thinking_summaries: "none",
       });
+      assert.equal(optPlan.mediaResolution, undefined);
     });
 
     test("safety settings and quota retry artifacts are removed from geminiCore exports", () => {

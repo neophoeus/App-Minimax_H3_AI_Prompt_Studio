@@ -4,8 +4,8 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v6.2.0-blue.svg)](CHANGELOG.md)
-[![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
+[![版本](https://img.shields.io/badge/版本-v6.3.0-blue.svg)](CHANGELOG.md)
+[![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%204%20Hydrogen%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
 
@@ -22,13 +22,21 @@
 本工具 100% 嚴格遵循 MiniMax-H3 官方 [`h3-prompt-writing`](https://github.com/MiniMax-AI/MiniMax-H3/tree/main/skills/h3-prompt-writing) 技能規範，能將使用者的創意概念一鍵轉化為符合模型最佳理解結構的生產級提示詞，並提供一鍵複製功能。
 
 具備全新 **三大獨立引擎架構與專屬入口 (Tri-Engine Independent Architecture)**：
-1. **🔑 本地 Gemini API 直通引擎 (`start_gemini_api.bat` / `server-gemini-api.ts`)**：本機運行純 Pay-as-you-go 按量計費直通，對齊 Gemini 官方安全過濾器預設關閉（Default Off）規範，具備任務自適應思考預算深度、影像 Token 壓縮 -75%（`MediaResolution.MEDIA_RESOLUTION_LOW`）與動態 Schema 裁剪。
+1. **🔑 本地 Gemini API 直通引擎 (`start_gemini_api.bat` / `server-gemini-api.ts`)**：全面升級旗艦 **`gemini-4-hydrogen`** 與官方 **Interactions API (`ai.interactions.create`)**，搭配任務自適應 `thinking_level`（生成 `high`／優化與視覺解析 `low`）、超低延遲 **`gemini-3.5-flash-lite`**（`minimal`）對白分流、參考圖 `resolution: "low"` Token 壓縮與標準 `response_format` JSON Schema，並移除已棄用之 `temperature` 參數。
 2. **💻 本地 Ollama 離線引擎 (`start_ollama.bat` / `server-ollama.ts`)**：連線至本機端點 `http://127.0.0.1:11434`，具備 **本地已安裝模型動態探索機制**，自動掃描並列出所有本機安裝模型（包含 `Qwen3.8-27B-Uncensored` 等）。
 3. **⚡ 本地 llama.cpp 離線引擎 (`start_llamacpp.bat` / `server-llamacpp.ts`)**：專為 NVIDIA RTX 5090 (32GB VRAM) 打造。自動掃描 `C:\llama.cpp\models` 內的 GGUF、配對 `mmproj` 視覺投影器，並啟用 MTP (Multi-Token Prediction) 2.23x 加速。
 
 前端介面與後端完全解耦獨立化，介面自動依據當前啟動之專屬引擎展示狀態徽章與控制欄，杜絕跨進程切換的混淆。
 
 ## ✨ 核心特色
+
+### Gemini 4 Hydrogen 與 Interactions API 全核心現代化 (v6.3.0)
+- **旗艦雙模精準任務分流 (`gemini-4-hydrogen` + `gemini-3.5-flash-lite`)**：
+  - **提示詞生成與單集精修 (`prompt_generation`)**：路由至 **`gemini-4-hydrogen`**（1M 統一上下文視窗），設定 `thinking_level: "high"` 與參考圖 `resolution: "low"`。
+  - **提示詞規格優化 (`optimize`) 與參考圖解析 (`media_analysis`)**：路由至 **`gemini-4-hydrogen`**，設定 `thinking_level: "low"`（圖片維持 `resolution: "low"`）。
+  - **對白與音效靈感生成 (`dialogue`)**：維持超低延遲輕量路由 **`gemini-3.5-flash-lite`** 搭配 `thinking_level: "minimal"`，兼顧極致回應速度與成本。
+- **無狀態 Interactions API (`ai.interactions.create`)**：全面汰換舊版 `generateContent`、`Type.OBJECT` 與已棄用之 `temperature`／`top_p`／`top_k`，採用頂層標準 JSON Schema `response_format`、`thinking_summaries: "none"` 與 `store: false`，並內建安全性阻擋與 `incomplete` 截斷診斷。
+- **Gemini 4 原生推理校準介面**：於 Gemini API 模式下自動隱藏無效手動溫度滑桿，清晰顯示 **Gemini 4 原生推理校準**，同時完整保留本地 Ollama／llama.cpp 之 `0.0 ~ 1.5` 手動採樣溫度控制。
 
 ### 0. 並行群像場面調度、流暢動態軌跡與全引擎規格對齊 (v6.2.0)
 - **多人並行調度與零呆立規則**：消除雙人／多人場景中「一人動作、另一人像木頭呆立等待」的序列僵直問題，強制使用 `while`、`as`、`simultaneously` 與段內微時間戳建立重疊動作時間窗，並要求配角維持視線追蹤、重心移動與同步反應。
@@ -157,17 +165,15 @@
 
 ### 4. 三引擎架構體系與本地 llama.cpp 深度整合 (v3.0.0)
 - **三大專屬 AI 驅動引擎**：
-  - **🔑 本地 Gemini API 直通引擎 (`gemini_api`，優先級 1)**：直接使用使用者自備的 Google Gemini API Key 進行直通呼叫（支援 Google AI Studio Free Tier 免費額度與 Google Cloud Pay-as-you-go 按量計費金鑰）。全流程直接啟用旗艦級 `gemini-3.8-flash` 深度推理核心。
+  - **🔑 本地 Gemini API 直通引擎 (`gemini_api`，優先級 1)**：直接使用使用者自備的 Google Gemini API Key 透過官方 **Interactions API** 呼叫（支援 Google AI Studio Free Tier 免費額度與 Google Cloud Pay-as-you-go 按量計費金鑰），主力啟用旗艦級 **`gemini-4-hydrogen`** 深度推理核心，並由 **`gemini-3.5-flash-lite`** 專責高速對白靈感分流。
   - **💻 本地 Ollama 離線引擎 (`ollama`，優先級 2)**：於 `http://127.0.0.1:11434` 實現 100% 本機離線隱私運作，具備**本地模型動態探索機制**（自動掃描已安裝的所有模型如 `Qwen3.8-27B-Uncensored`，絕不寫死清單）、多模態素材視覺審視與思考標記（`<think>...</think>`）自動清洗。
   - **⚡ 本地 llama.cpp 離線引擎 (`llamacpp`，優先級 3)**：純 C/C++ 極致吞吐離線推理，連線至 `http://127.0.0.1:8080` (`llama-server`)。
     - **硬體級極速加速**：針對 NVIDIA RTX 5090 (32GB VRAM) 頂級硬體優化，支援 `-ngl 99` 全層 GPU 卸載、Flash Attention (`--flash-attn on`) 與 32K 旗艦上下文 (`-c 32768`)。
     - **多模態視覺投影 (`mmproj`)**：100% 自動配對掛載 `mmproj-*.gguf`，實現零額度負擔的本機離線分鏡與參考圖片視覺分析。
     - **原生 Embedded MTP 雙倍極速 (`--spec-type draft-mtp`)**：無須第三方補丁，直接深度調用 Qwen3.8 原生 NextN 多 Token 預測架構，立即享有 **2.23x (+123.4%)** 極速生成提升！
 - **環境自動偵測與優先級選取**：啟動時依序探測環境並自動選擇最合適之引擎（**Gemini API > Ollama > llama.cpp**），亦可隨時手動切換並保存於 `localStorage`。
-- **指數退避重試與隨機抖動 (1s ➔ 2s)**：針對短暫的 `429 RESOURCE_EXHAUSTED` 或 `503 UNAVAILABLE` 暫態限流，自動執行最多 2 次指數退避重試（含隨機微小抖動），有效平抑瞬間爆發請求（Burst）。
-- **無縫自動容錯降級**：重試耗盡或遇配額瓶頸時，後端自動切換至備援模型（`gemini-3.8-flash` ➔ `gemini-3.5-flash-lite`）；若遇 404 等永久錯誤則自動快切跳過重試，保障 100% 請求成功率。
-- **最寬鬆安全性門檻 (`HarmBlockThreshold.BLOCK_NONE`)**：全面解除五大危害類別（騷擾、仇恨、性暗示、危險內容、誠信）的常規過濾限制，極致釋放影視劇作、暗黑科幻、動作衝突的分鏡創作自由度。
-- **即時安全性審查阻擋通知系統**：雙重安全攔截（檢查提示詞 `promptFeedback` 與生成結果 `finishReason`），一旦觸發不可避之敏感審查，前端即刻彈出 8 秒指引 Toast 告知創作者具體原因與調整建議。
+- **自適應任務分流與模型思考層級安全正規化**：透過無狀態 `ai.interactions.create({ store: false })` 與 SDK 內建 `p-retry` 韌性重試，精準將主力任務路由至 **`gemini-4-hydrogen`**（`high` / `low` 推理 + `low` 影像解析度），並將高速對白交由 **`gemini-3.5-flash-lite`**（`minimal` 推理）。
+- **即時 Interaction 狀態、截斷與安全性審查通知系統**：全面檢測 `interaction.status` 與 `interaction.errors`（涵蓋 `safety`、`prohibited`、`blocklist`、`spii`、`image_safety` 及 `incomplete` / `budget_exceeded` 截斷保護），一旦觸發敏感審查或輸出截斷，前端即刻彈出 8 秒指引 Toast 告知具體原因與調整建議。
 
 ### 5. 多模態參考素材管理 (零額度負擔直通看圖)
 - 支援直接於瀏覽器上傳角色、場景、動作或音訊素材。
@@ -197,7 +203,7 @@
 - **樣式 (Styling)**：Tailwind CSS v4
 - **後端服務 (Backend)**：Express 4, TypeScript, `tsx`, `esbuild`
 - **AI 引擎架構**：
-  - **Gemini API 直通引擎**：直通 Google Gemini 3.8 Flash 旗艦深度推理（支援 Free Tier 與 Pay-as-you-go）
+  - **Gemini API 直通引擎**：旗艦 **`gemini-4-hydrogen`** × **`gemini-3.5-flash-lite`** 對白分流 × Interactions API（支援 Free Tier 與 Pay-as-you-go）
   - **本地 Ollama 離線引擎**：動態模型掃描探索（原生支援 `Qwen3.8-27B-Uncensored` 之 `q8_0`, `q6_K`, `q5_K_M`）
   - **本地 llama.cpp 離線引擎**：`llama-server`（RTX 5090 `-ngl 99`, Flash Attention, 32K context, `mmproj` 視覺投影, 原生 Embedded MTP 2.23x 極速）
 
@@ -210,7 +216,7 @@
 依據您欲使用的 AI 引擎，直接雙擊專案根目錄下對應的啟動腳本：
 
 1. **🔑 Gemini API 直通工作室**：雙擊 **`start_gemini_api.bat`**
-   - 適合擁有 Google Gemini API 金鑰之使用者（Google AI Studio 免費金鑰或付費金鑰），直接調用旗艦 3.8 Flash 深度推理。
+   - 適合擁有 Google Gemini API 金鑰之使用者（Google AI Studio 免費金鑰或付費金鑰），直接透過官方 Interactions API 調用旗艦 **Gemini 4 Hydrogen (`gemini-4-hydrogen`)** 深度推理。
 2. **💻 本地 Ollama 離線推論工作室**：雙擊 **`start_ollama.bat`**
    - 自動檢測並喚起本機 Ollama 服務，動態探索並載入本機所有已安裝模型。
 3. **⚡ 本地 llama.cpp (RTX 5090) 離線推論工作室**：雙擊 **`start_llamacpp.bat`**
@@ -255,7 +261,7 @@
 ### 🎛️ 本地啟動腳本 (Windows Batch)
 | 腳本 | 說明 |
 | :--- | :--- |
-| `start_gemini_api.bat` | **Gemini API 直通專用啟動器**：直接運行 Flagship 3.8 Flash，高推理深度（Free Tier / Pay-as-you-go） |
+| `start_gemini_api.bat` | **Gemini API 直通專用啟動器**：直接運行 Flagship Gemini 4 Hydrogen + Interactions API（Free Tier / Pay-as-you-go） |
 | `start_ollama.bat` | **本地 Ollama 專用啟動器**：自動喚醒本機 Ollama 服務並啟動專用離線環境 |
 | `start_llamacpp.bat` | **本地 llama.cpp 專用啟動器**：二合一智慧啟動（含 RTX 5090 模型掃描與 Web 服務） |
 

@@ -1,10 +1,10 @@
 @echo off
-title MiniMax-H3 Studio [Gemini API Direct Engine]
+title MiniMax-H3 Studio [Gemini 4 Hydrogen Direct Engine]
 cls
 
 echo ======================================================================
 echo           MiniMax-H3 AI Prompt Studio
-echo           Engine: Gemini API Direct (Free Tier / Pay-as-you-go)
+echo           Engine: Gemini 4 Hydrogen Direct (Free Tier / Pay-as-you-go)
 echo ======================================================================
 echo.
 

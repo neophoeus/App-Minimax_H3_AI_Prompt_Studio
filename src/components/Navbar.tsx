@@ -65,7 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               </h1>
               <span className="px-2.5 py-0.5 text-[10px] font-mono font-bold rounded-full bg-gradient-to-r from-purple-500/20 via-indigo-500/20 to-cyan-500/20 text-purple-200 border border-purple-400/40 shadow-sm shadow-purple-500/20 flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                v6.2.0 • 並行群像場面調度、流暢動作軌跡與全引擎規格對齊
+                v6.3.0 • Gemini 4 Hydrogen 與 Interactions API 全面升級
               </span>
             </div>
             <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
@@ -93,7 +93,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold text-teal-200">Gemini API 直通引擎</span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-teal-950/80 border border-teal-500/30 text-teal-300 font-mono">
-                  3.8 Flash 旗艦
+                  4 Hydrogen 旗艦
                 </span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-950/60 border border-amber-500/30 text-amber-300 font-mono hidden sm:inline-flex items-center gap-0.5">
                   <Zap className="w-2.5 h-2.5" /> High Thinking
@@ -107,10 +107,12 @@ export const Navbar: React.FC<NavbarProps> = ({
               <button
                 type="button"
                 onClick={() => setShowGeminiApiInfo(!showGeminiApiInfo)}
-                className="p-1 rounded text-slate-400 hover:text-teal-300 transition-colors"
+                aria-expanded={showGeminiApiInfo}
+                aria-label="查看 Gemini API 直通引擎說明"
+                className="p-1 rounded text-slate-400 hover:text-teal-300 focus-visible:outline-2 focus-visible:outline-teal-400 transition-colors"
                 title="查看 Gemini API 直通引擎說明"
               >
-                <HelpCircle className="w-3.5 h-3.5" />
+                <HelpCircle className="w-3.5 h-3.5" aria-hidden="true" />
               </button>
 
               {/* Gemini API Info Modal */}
@@ -133,7 +135,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <strong className="text-teal-300">🔑 Pay-as-you-go 按量計費直通</strong>：直通 Google Gemini API 官方端點，全流程無額度回退降級，享受穩定低延遲之專業級影視推論。
                     </p>
                     <p>
-                      <strong className="text-emerald-400">⚡ 旗艦 3.8 Flash 智慧 Token 最佳化</strong>：提示詞生成全核心啟用旗艦級 <code className="text-amber-300">gemini-3.8-flash</code> 深度推理，搭配任務自適應思考深度、多模態解析度 Token 壓縮（-75%）與動態 Schema 裁剪，兼顧極致品質與生成成本。
+                      <strong className="text-emerald-400">⚡ 旗艦 4 Hydrogen × Interactions API</strong>：提示詞生成全核心升級至 <code className="text-amber-300">gemini-4-hydrogen</code>（1M 統一上下文視窗），透過官方 <code className="text-cyan-300">Interactions API</code> 搭配任務自適應推理深度（<code className="text-slate-200">thinking_level</code>）、低功耗參考圖 Token 壓縮（<code className="text-slate-200">resolution: "low"</code>）與 <code className="text-teal-300">gemini-3.5-flash-lite</code> 超低延遲對白分流，兼顧極致品質與生成速度。
                     </p>
                   </div>
                 </div>

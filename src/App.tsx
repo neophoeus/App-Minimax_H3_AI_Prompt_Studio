@@ -806,7 +806,7 @@ ${ep.fullPrompt}`;
     const mdLines = [
       `# MiniMax-H3 系列連續提示詞專案: ${output.seriesTitle || config.idea || '未命名系列'}`,
       `> 故事弧概要: ${output.storyArcSummary || '無'}`,
-      `> 生成模式: ${config.mode} | 時長: ${config.duration} | 比例: ${config.aspectRatio} | 輔助導演: ${config.assistantDirector !== false ? '已啟用' : '關閉'} | 採樣溫度: ${config.temperatureMode === 'manual' ? (config.manualTemperature ?? 0.7) : '自動預設'}`,
+      `> 生成模式: ${config.mode} | 時長: ${config.duration} | 比例: ${config.aspectRatio} | 輔助導演: ${config.assistantDirector !== false ? '已啟用' : '關閉'} | 採樣溫度: ${appMode === 'gemini_api' ? 'Gemini 4 原生推理校準' : config.temperatureMode === 'manual' ? (config.manualTemperature ?? 0.7) : '自動預設'}`,
       `> 建立時間: ${new Date().toLocaleString('zh-TW')}`,
       '',
       '---',
@@ -1114,86 +1114,111 @@ ${ep.fullPrompt}`;
                 </button>
               </div>
 
-              {/* Sampling Temperature Control */}
+              {/* Sampling Temperature / Reasoning Calibration Control */}
               <div className="pt-2.5 border-t border-slate-800/70 space-y-2">
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
-                    <Thermometer className="w-3.5 h-3.5 text-cyan-400" />
-                    <label className="text-xs font-semibold text-slate-300">
-                      採樣溫度 (Temperature)
-                    </label>
+                    <Thermometer className="w-3.5 h-3.5 text-cyan-400" aria-hidden="true" />
+                    {appMode !== 'gemini_api' && config.temperatureMode === 'manual' ? (
+                      <label htmlFor="manual-temperature-slider" className="text-xs font-semibold text-slate-300">
+                        採樣溫度 (Temperature)
+                      </label>
+                    ) : (
+                      <span className="text-xs font-semibold text-slate-300">
+                        {appMode === 'gemini_api' ? '推理校準 (Reasoning)' : '採樣溫度 (Temperature)'}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-1.5">
-                    {config.temperatureMode === 'manual' && (
+                    {appMode !== 'gemini_api' && config.temperatureMode === 'manual' && (
                       <button
                         type="button"
                         onClick={() => setConfig({ ...config, temperatureMode: 'auto', manualTemperature: 0.7 })}
-                        className="text-[10px] text-slate-400 hover:text-cyan-300 transition-colors underline decoration-dotted"
+                        className="text-[10px] text-slate-400 hover:text-cyan-300 focus-visible:outline-2 focus-visible:outline-cyan-400 rounded transition-colors underline decoration-dotted"
                         title="恢復自動推薦預設值"
                       >
                         恢復預設
                       </button>
                     )}
-                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-cyan-800/60 bg-cyan-950/70 text-cyan-300 font-bold">
-                      {config.temperatureMode === 'manual'
+                    <span
+                      className={`text-[10px] font-mono px-2 py-0.5 rounded-full border font-bold ${
+                        appMode === 'gemini_api'
+                          ? 'border-teal-700/60 bg-teal-950/70 text-teal-300'
+                          : 'border-cyan-800/60 bg-cyan-950/70 text-cyan-300'
+                      }`}
+                    >
+                      {appMode === 'gemini_api'
+                        ? 'Gemini 4 原生推理校準'
+                        : config.temperatureMode === 'manual'
                         ? `${(config.manualTemperature ?? 0.7).toFixed(2)} (手動)`
-                        : appMode === 'gemini_api'
-                        ? 'Gemini 官方預設'
                         : '0.70 (本地推薦)'}
                     </span>
                   </div>
                 </div>
 
-                {/* Mode Selector Tabs: Auto vs Manual */}
-                <div className="grid grid-cols-2 gap-1 bg-slate-900/90 p-0.5 rounded-lg border border-slate-800/80">
-                  <button
-                    type="button"
-                    onClick={() => setConfig({ ...config, temperatureMode: 'auto' })}
-                    className={`py-1 text-[11px] font-medium rounded-md transition-all ${
-                      config.temperatureMode !== 'manual'
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    自動模式 (Auto)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setConfig({ ...config, temperatureMode: 'manual' })}
-                    className={`py-1 text-[11px] font-medium rounded-md transition-all ${
-                      config.temperatureMode === 'manual'
-                        ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    手動自訂 (Manual)
-                  </button>
-                </div>
-
-                {/* Manual Slider (only shown when manual mode is active) */}
-                {config.temperatureMode === 'manual' && (
-                  <div className="space-y-1 pt-1">
-                    <input
-                      type="range"
-                      min="0.0"
-                      max="1.5"
-                      step="0.05"
-                      value={config.manualTemperature ?? 0.7}
-                      onChange={(e) =>
-                        setConfig({
-                          ...config,
-                          manualTemperature: parseFloat(e.target.value),
-                        })
-                      }
-                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400 focus:outline-none"
-                    />
-                    <div className="flex justify-between text-[10px] text-slate-500 font-mono">
-                      <span>0.0 (精準收斂)</span>
-                      <span className="text-cyan-400 font-bold">0.7 (平衡)</span>
-                      <span>1.5 (高發散度)</span>
+                {appMode === 'gemini_api' ? (
+                  <p className="text-[11px] leading-relaxed text-slate-300 bg-slate-900/75 border border-teal-500/25 rounded-lg px-2.5 py-2">
+                    <span className="font-semibold text-teal-300">Interactions API 任務自適應：</span>
+                    Gemini 4 Hydrogen 依任務自動調度 <code className="text-slate-200">thinking_level</code>（生成 High / 優化 Low / 對白 3.5 Flash-Lite Minimal），官方已棄用手動 Temperature，免調參即達最佳穩定度。
+                  </p>
+                ) : (
+                  <>
+                    {/* Mode Selector Tabs: Auto vs Manual (Local Engines Only) */}
+                    <div className="grid grid-cols-2 gap-1 bg-slate-900/90 p-0.5 rounded-lg border border-slate-800/80" role="group" aria-label="本地引擎採樣溫度模式">
+                      <button
+                        type="button"
+                        aria-pressed={config.temperatureMode !== 'manual'}
+                        onClick={() => setConfig({ ...config, temperatureMode: 'auto' })}
+                        className={`py-1 text-[11px] font-medium rounded-md transition-all focus-visible:outline-2 focus-visible:outline-cyan-400 ${
+                          config.temperatureMode !== 'manual'
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        自動模式 (Auto)
+                      </button>
+                      <button
+                        type="button"
+                        aria-pressed={config.temperatureMode === 'manual'}
+                        onClick={() => setConfig({ ...config, temperatureMode: 'manual' })}
+                        className={`py-1 text-[11px] font-medium rounded-md transition-all focus-visible:outline-2 focus-visible:outline-cyan-400 ${
+                          config.temperatureMode === 'manual'
+                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 font-semibold'
+                            : 'text-slate-400 hover:text-slate-200'
+                        }`}
+                      >
+                        手動自訂 (Manual)
+                      </button>
                     </div>
-                  </div>
+
+                    {/* Manual Slider (only shown when manual mode is active for local engines) */}
+                    {config.temperatureMode === 'manual' && (
+                      <div className="space-y-1 pt-1">
+                        <input
+                          id="manual-temperature-slider"
+                          type="range"
+                          min="0.0"
+                          max="1.5"
+                          step="0.05"
+                          aria-describedby="manual-temperature-scale"
+                          value={config.manualTemperature ?? 0.7}
+                          onChange={(e) =>
+                            setConfig({
+                              ...config,
+                              manualTemperature: parseFloat(e.target.value),
+                            })
+                          }
+                          className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-cyan-400 focus-visible:outline-2 focus-visible:outline-cyan-400 focus-visible:outline-offset-2"
+                        />
+                        <div id="manual-temperature-scale" className="flex justify-between text-[10px] text-slate-400 font-mono">
+                          <span>0.0 (精準收斂)</span>
+                          <span className="text-cyan-400 font-bold">0.7 (平衡)</span>
+                          <span>1.5 (高發散度)</span>
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -2567,7 +2592,7 @@ ${ep.fullPrompt}`;
         </section>
       </main>
 
-      {/* Studio Global Footer (v6.2.0) */}
+      {/* Studio Global Footer (v6.3.0) */}
       <footer className="mt-auto border-t border-slate-900 bg-slate-950/90 backdrop-blur-md px-4 lg:px-8 py-3.5 text-xs text-slate-500">
         <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Left: Brand, Version & Verification */}
@@ -2577,7 +2602,7 @@ ${ep.fullPrompt}`;
               MiniMax-H3 AI Prompt Studio
             </span>
             <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-mono font-bold text-purple-300">
-              v6.2.0 Flagship
+              v6.3.0 Flagship
             </span>
             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-md">
               <ShieldCheck className="w-3 h-3 text-emerald-400" />
@@ -2593,7 +2618,7 @@ ${ep.fullPrompt}`;
                 ? `本地 Ollama (${ollamaModel || '未選擇模型'})`
                 : appMode === 'llamacpp'
                 ? `本地 llama.cpp RTX 5090 (${llamacppModel || '活躍端口 8080'})`
-                : 'Gemini API Direct (旗艦 3.8 Flash)'}
+                : 'Gemini API Direct (旗艦 4 Hydrogen)'}
             </span>
           </div>
 

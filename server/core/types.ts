@@ -57,21 +57,21 @@ export interface StudioEngine {
 
 /**
  * Resolves sampling temperature per engine according to strategy:
- * - Google Gemini: Omit temperature (undefined) to use Gemini native default in Auto mode.
+ * - Google Gemini (Gemini 4 Hydrogen / 3.5 Flash-Lite): Official API deprecates and ignores temperature;
+ *   always return undefined so reasoning depth is governed by thinking_level.
  * - Local Engines (Ollama & llama.cpp): Default to 0.7 in Auto mode.
- * - Manual mode: Use user-specified manualTemperature (clamped to 0.0 ~ 1.5).
+ * - Manual mode (Local Engines only): Use user-specified manualTemperature (clamped to 0.0 ~ 1.5).
  */
 export function resolveTemperature(
   provider: 'gemini' | 'ollama' | 'llamacpp',
   temperatureMode?: string,
   manualTemperature?: number
 ): number | undefined {
+  if (provider === 'gemini') {
+    return undefined;
+  }
   if (temperatureMode === 'manual' && typeof manualTemperature === 'number' && !isNaN(manualTemperature)) {
     return Math.max(0.0, Math.min(1.5, manualTemperature));
-  }
-  // Auto mode
-  if (provider === 'gemini') {
-    return undefined; // Model native default
   }
   return 0.7; // Local engines default
 }

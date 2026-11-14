@@ -172,7 +172,13 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
 
       assert.equal(res.ollamaImages.length, 1);
       assert.equal(res.ollamaImages[0], "samplebase64data");
-      assert.ok(res.multimodalParts.length > 0);
+      assert.ok(res.multimodalParts.length >= 2);
+      assert.deepEqual(res.multimodalParts[0], {
+        type: "image",
+        mime_type: "image/jpeg",
+        data: "samplebase64data",
+      });
+      assert.equal(res.multimodalParts[1]?.type, "text");
       assert.ok(res.userPrompt.includes("<Picture 1>"));
       assert.ok(!res.userPrompt.includes("opening_frame.png")); // filename must be sanitized out
     });
@@ -204,8 +210,16 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
       assert.ok(res.userPrompt.includes("[reference generation]"));
       assert.ok(res.userPrompt.includes("is purely a general visual reference for the subject and is NOT an opening keyframe"));
       assert.ok(res.userPrompt.includes("Do NOT generate any standalone \"<Picture N> is ...\" definition lines"));
-      // Multimodal prompt directive check
-      const multiPartString = res.multimodalParts.join("\n");
+      // Interactions API multimodal parts check
+      assert.deepEqual(res.multimodalParts[0], {
+        type: "image",
+        mime_type: "image/jpeg",
+        data: "herobase64data",
+      });
+      const multiPartString = res.multimodalParts
+        .filter((part: any) => part?.type === "text")
+        .map((part: any) => part.text)
+        .join("\n");
       assert.ok(multiPartString.includes("general visual reference"));
       assert.ok(multiPartString.includes("NOT an opening keyframe"));
     });
