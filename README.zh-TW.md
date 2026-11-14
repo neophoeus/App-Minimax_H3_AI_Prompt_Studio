@@ -4,7 +4,7 @@
 
 **專為 MiniMax-H3 (海螺 3 / H3) 影音生成大模型量身打造的專業級 Prompt Engineering 工作站**
 
-[![版本](https://img.shields.io/badge/版本-v6.1.0-blue.svg)](CHANGELOG.md)
+[![版本](https://img.shields.io/badge/版本-v6.2.0-blue.svg)](CHANGELOG.md)
 [![AI 引擎](https://img.shields.io/badge/AI%20引擎-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![前端框架](https://img.shields.io/badge/前端-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![樣式系統](https://img.shields.io/badge/樣式-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -30,7 +30,13 @@
 
 ## ✨ 核心特色
 
-### 0. 官方預設安全對齊、純 Pay-as-you-go 直通與深度 Token 節約最佳化 (v6.1.0)
+### 0. 並行群像場面調度、流暢動態軌跡與全引擎規格對齊 (v6.2.0)
+- **多人並行調度與零呆立規則**：消除雙人／多人場景中「一人動作、另一人像木頭呆立等待」的序列僵直問題，強制使用 `while`、`as`、`simultaneously` 與段內微時間戳建立重疊動作時間窗，並要求配角維持視線追蹤、重心移動與同步反應。
+- **四段式場面調度選擇器 (`choreographyMode`) 與動量預算**：支援 `auto`、`ensemble_parallel`、`fluid_action`、`subtle_acting` 切換並依片長自動配給分鏡節拍；拔除未選運鏡時寫死的 `"Push In, Arc Shot"`，改為情境自適應 `Auto Director Selection`。
+- **本地引擎動態 Schema 與全域規格統一**：修復 Ollama / llama.cpp 單鏡頭模式混入 `episodes` Schema 的衝突；修正 `buildOptimizePrompt` 的 `non_diegetic_music: N/A`、關鍵影格標頭與並行改寫規則；升級雙人 `(S1)/(S2)` 對白靈感生成與單集精修資產上下文傳遞。
+- **審計自癒升級與無損快捷修飾器**：新增 `NON_MONOTONIC_TIMESTAMPS`、`INVALID_MUSIC_SUPPRESSION` 與 `SEQUENTIAL_ENSEMBLE_RISK` 偵測，修復安全分鏡內標籤閉合；補齊 `LIGHTING_PRESETS` 光影選單、`AbortController`「中止生成」控制、結構無損 `insertQuickModifier` 與「雙人雨夜情報交鋒」示範模板。
+
+### 1. 官方預設安全對齊、純 Pay-as-you-go 直通與深度 Token 節約最佳化 (v6.1.0)
 - **官方安全設定預設關閉（Default Off）對齊**：依據 Google Gemini API 官方安全性文件規範，Gemini 2.5 / 3.x / 4 模型的可調式過濾器預設均為關閉狀態。全面移除 `safetySettings` 手動設定與 `HarmCategory` / `HarmBlockThreshold` 代碼，回歸原生預設行為，並保有被動式系統違規阻擋檢測。
 - **純 Pay-as-you-go 按量計費直通**：徹底清除跨模型降級備援迴圈（`fallbackModels`）、429 指數退避重試邏輯與過時的免費額度文案，請求單次直通無額外延遲與重複計費。
 - **深度 Token 節省架構**：

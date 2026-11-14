@@ -213,6 +213,14 @@ Video diffusion models synthesize visual frames from concrete physical descripti
   - Describe what can be physically seen on camera: subject posture, facial expression or gaze, clothing/object materials, lighting direction, and clear physical movements.
   - Instead of "a ball bouncing around" → "A red ball moves to the right, bounces off the wall, and returns to the center"
   - Instead of "fluid pouring" → "Water flows from the left container through the connecting tube into the right container until both levels are equal"
+- **Fluid Macro-Trajectory vs. Micro-Fragmentation**:
+  - Describe actions as cohesive, momentum-driven physical trajectories rather than robotic joint-by-joint checklists.
+  - While abstract emotional/poetic fluff is forbidden, **concrete kinematic adverbs and momentum qualifiers** ("briskly", "fluidly", "hesitantly", "abruptly", "in one continuous motion", "with heavy momentum", "without pausing") ARE encouraged to prevent stiff, uniform-speed robotic motion.
+- **Multi-Subject Parallel Choreography & Zero-Freeze Rule (CRITICAL FOR 2+ CHARACTERS)**:
+  - NEVER serialize multi-character interactions into turn-taking sequential sentences ("Character A does X. Character B does Y."), which causes video diffusion models to freeze Character B like a mannequin while Character A acts.
+  - ALWAYS bind characters into the SAME temporal window using concurrent connectors ("while", "as", "simultaneously", "at the same moment") or intra-shot micro-timestamps (e.g., "At 00:02.000, as <Subject 1>..., <Subject 2> already...").
+  - **Continuous Presence & Anticipatory Reaction**: Every visible character must maintain an active physical baseline (gaze tracking the other person's hands/face, natural breathing, subtle weight shift, nodding, or initiating a counter-action mid-way through the first character's movement).
+  - Instead of turn-taking "Subject 1 places the folder on the desk. Subject 2 looks at it and steps back" → "As <Subject 1> leans forward to slide the manila folder across the desk, <Subject 2> simultaneously tracks the folder with her eyes, shifts her weight onto her back heel, and raises her right hand to intercept it before it stops moving"
 - Keep the narrative natural and flexible: adjust description length and detail density naturally according to the scene's complexity without rigid word-count padding or formulaic templates.
 
 ### 4. Speakers, Dialogue, Voiceover, Singing & Visible Text Rules:
@@ -250,9 +258,9 @@ export function getAssistantDirectorDirective(assistantDirector: boolean = true)
     return `
 ### ASSISTANT DIRECTOR DIRECTIVE (ENABLED / 輔助導演開啟 - 自然物理細節與環境互動豐富化):
 - ROLE: Cinematographer & Visual Scene Director.
-- MISSION: Naturally enrich the user's core concept with concrete, visually observable physical states and scene details while keeping the narrative organic and well-paced.
+- MISSION: Naturally enrich the user's core concept with concrete, visually observable physical states, fluid macro-momentum, and concurrent multi-character interaction while keeping the narrative organic and well-paced.
 - OBSERVABLE PHYSICAL ENRICHMENT GUIDELINES:
-  1. Observable Subject & Action Details: Express character states and intentions through visible posture, gaze, hand movements, and physical interactions with objects.
+  1. Observable Subject & Action Details: Express character states and intentions through visible posture, gaze tracking, natural weight transfer, fluid hand movements, and cohesive momentum rather than stiff joint-by-joint micro-checklists. When 2+ subjects appear together, always choreograph continuous active reactions (gaze tracking, breathing, nodding, mid-action counter-motion) so secondary characters never look frozen.
   2. Environment & Spatial Layering: Ground the subject in a believable physical setting with natural lighting, surface textures, and plausible ambient movements (e.g., wind moving fabric or leaves, light reflections on wet pavement, steam rising).
   3. Natural Pacing & Flexible Density: Let the description length adapt naturally to the shot duration and scene complexity—do NOT force rigid word counts or artificial padding.
 - CRITICAL ZERO-ABSTRACTION COMPLIANCE:
@@ -262,8 +270,57 @@ export function getAssistantDirectorDirective(assistantDirector: boolean = true)
 ### ASSISTANT DIRECTOR DIRECTIVE (DISABLED / 保守忠實模式):
 - ROLE: Precision Technical Transcriber & Spec Compliance Officer.
 - STRICT & FAITHFUL: Follow ONLY what the user explicitly requested without introducing unasked creative extrapolation or extra background elements.
-- OBJECTIVE PHYSICAL DESCRIPTION: Convert any abstract terms in the user's request into concise, objective, and visually observable physical states and actions.`;
+- OBJECTIVE PHYSICAL DESCRIPTION: Convert any abstract terms in the user's request into concise, objective, and visually observable physical states and concurrent actions without inventing unrelated plot beats.`;
   }
+}
+
+/**
+ * Builds Choreography & Pacing directives tailored to scene interaction style and target duration.
+ */
+export function getChoreographyDirective(
+  choreographyMode: string = 'auto',
+  durationSec: number = 10
+): string {
+  const safeDuration = Number.isFinite(durationSec) && durationSec > 0 ? durationSec : 10;
+
+  let pacingBudget = '';
+  if (safeDuration <= 6) {
+    pacingBudget = `Pacing Budget (${safeDuration}s short clip): Focus on 1 fluid macro-interaction arc (1–2 shots max). Avoid cramming excessive disconnected micro-steps so movements have breathing room to unfold smoothly.`;
+  } else if (safeDuration <= 10) {
+    pacingBudget = `Pacing Budget (${safeDuration}s standard clip): Structure 1–2 shots with 2 connected dramatic beats, ensuring overlapping concurrent reactions and physical follow-through.`;
+  } else {
+    pacingBudget = `Pacing Budget (${safeDuration}s extended clip): Structure 2–3 cohesive shots ([Shot 1] -> [Shot 2] -> [Shot 3]) with escalating physical interaction, clear spatial beats, and concurrent character reactions.`;
+  }
+
+  let modeGuidance = '';
+  switch (choreographyMode) {
+    case 'ensemble_parallel':
+      modeGuidance = `- CHOREOGRAPHY FOCUS (ENSEMBLE PARALLEL / 雙人及群像並行調度):
+  * Strictly synchronize multiple characters within the same temporal window using concurrent connectors ("while", "as", "simultaneously", "at the same moment") or intra-shot micro-timestamps (At MM:SS.mmm).
+  * Enforce continuous active listening, eye-line tracking, weight shifting, and mid-action anticipatory reactions so NO character ever freezes waiting for another to finish speaking or acting.`;
+      break;
+    case 'fluid_action':
+      modeGuidance = `- CHOREOGRAPHY FOCUS (FLUID ACTION / 流暢巨觀動量軌跡):
+  * Write physical motion as continuous macro-trajectories with visible inertia, weight transfer, and follow-through ("sweeps", "lunges", "pivots fluidly", "with heavy momentum", "in one continuous motion", "without pausing").
+  * Avoid robotic joint-by-joint micro-step breakdowns that cause stiff stop-and-go video synthesis.`;
+      break;
+    case 'subtle_acting':
+      modeGuidance = `- CHOREOGRAPHY FOCUS (SUBTLE ACTING / 細膩微表情與穩定對手戲):
+  * Keep camera movement restrained (static shot or gentle slow push-in) to preserve motion budget for nuanced human performance.
+  * Foreground micro-expressions, chest rise from breathing, subtle eye-line shifts, finger adjustments, and tactile contact between hands and props.`;
+      break;
+    case 'auto':
+    default:
+      modeGuidance = `- CHOREOGRAPHY FOCUS (AUTO ADAPTIVE / 智慧自適應調度):
+  * Automatically enforce parallel ensemble choreography ("while", "as", "simultaneously", continuous eye-line and posture reactions) whenever 2+ characters share a shot, preventing turn-taking freeze.
+  * Express all physical movements as fluid, momentum-driven macro-trajectories rather than stiff micro-checklists.`;
+      break;
+  }
+
+  return `
+### CHOREOGRAPHY & PACING DIRECTIVE:
+- ${pacingBudget}
+${modeGuidance}`;
 }
 
 /**
@@ -346,10 +403,12 @@ export function buildH3UserPrompt(config: any): {
     ? config.assistantDirector
     : (config.creativityLevel !== 0);
   const assistantDirectorDirective = getAssistantDirectorDirective(assistantDirector);
+  const choreographyMode = config.choreographyMode || 'auto';
 
   const isSeriesMode = Boolean(config.isSeriesMode);
   const seriesCount = Math.min(10, Math.max(2, Number(config.seriesCount) || 5));
   const durationSec = parseFloat(config.duration || '10') || 10;
+  const choreographyDirective = getChoreographyDirective(choreographyMode, durationSec);
 
   const seriesDirective = isSeriesMode
     ? `
@@ -416,12 +475,18 @@ CRITICAL MULTI-EPISODE SERIES GENERATION PROTOCOL (${seriesCount} CONSECUTIVE EP
 ${hasOpeningKeyframe ? `  * In "subject_definitions": Define each <Subject K> as depicted in its corresponding <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity."). Define the keyframe image as ${openingKeyframeTag} (e.g. "${openingKeyframeTag} is the first keyframe image showing...").
   * In "summary": [keyframe completion + reference generation] Generated from ${openingKeyframeTag}, preserving <Subject 1> (from <Picture 1>), <Subject 2> (from <Picture 2>)...
   * In "retention_analysis": Analyze retention for both <Subject K> (from <Picture P>) and ${openingKeyframeTag}.
-  * In "detailed_description" [Shot 1]: The opening frame matches ${openingKeyframeTag}.` : `  * In "subject_definitions": Define each <Subject K> with its objective visual characteristics as depicted in its physical upload slot <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity.").
+  * In "detailed_description" [Shot 1]: The opening frame matches ${openingKeyframeTag}.` : !hasReferenceImage ? `  * Pure-Text / Non-Image Ref2VA Mode: No physical <Picture N> images are uploaded. Define each <Subject K> directly from its text description with locked visual identity, and do NOT cite or invent any <Picture N> tags.
+  * In "summary": Begin with [reference generation] (or [video continuation] / [audio reference] if video/audio assets are provided) without referencing <Picture N>.
+  * In "retention_analysis": Analyze retention for each declared <Subject K>, <Video N>, or <Audio N> directly.` : `  * In "subject_definitions": Define each <Subject K> with its objective visual characteristics as depicted in its physical upload slot <Picture P> (e.g. "<Subject 1> is the ... as depicted in <Picture 1>, with locked visual identity.").
     CRITICAL: ${rawRefs.filter((r: any) => r.physicalTag).map((r: any) => r.physicalTag).join(', ') || '<Picture 1>'} is purely a general visual reference for the subject and is NOT an opening keyframe! Do NOT generate any standalone "<Picture N> is ..." definition lines, and do NOT declare any Picture as the first keyframe image!
   * In "summary": MUST begin with [reference generation] (or [reference generation + other types]). Summarize the scene featuring <Subject 1> with visual traits from its reference image. Do NOT write "Generated from <Picture 1>" and do NOT treat any picture as an initial keyframe!
   * In "retention_analysis": Analyze retention for <Subject K> (e.g. "<Subject 1> (appears in [Shot 1]): fully_preserved - visual characteristics maintained from <Picture 1>"). Do NOT create a separate retention entry for <Picture 1>.
   * In "detailed_description" [Shot 1]: Objectively describe the opening shot according to the narrative. [Shot 1] does NOT match any picture as an opening frame.`}`;
   }
+
+  const cameraMoveInstruction = config.cameraMoves && config.cameraMoves.length > 0
+    ? `${config.cameraMoves.join(", ")} (If multiple moves are selected, weave them smoothly or distribute them across different shots rather than stacking conflicting moves simultaneously.)`
+    : "Auto Director Selection (Select natural, context-appropriate camera work; for multi-character interactions, prefer stable or gentle framing so character acting and parallel movements remain the primary focus without excessive orbital parallax)";
 
   const userPrompt = `
 Generate an optimal MiniMax-H3 prompt based on the following user input:
@@ -430,9 +495,10 @@ Generate an optimal MiniMax-H3 prompt based on the following user input:
 - Duration: ${config.duration || "10s"}
 - Aspect Ratio: ${config.aspectRatio || "16:9"}
 ${styleInstruction}
-- Preferred Camera Movements (Motion types): ${config.cameraMoves && config.cameraMoves.length > 0 ? config.cameraMoves.join(", ") : "Push In, Arc Shot"}
+- Preferred Camera Movements (Motion types): ${cameraMoveInstruction}
 - Camera Motion Amplitude: ${config.cameraAmplitude && config.cameraAmplitude !== 'default' ? config.cameraAmplitude : "medium / default (omit)"}
 - Camera Motion Speed: ${config.cameraSpeed && config.cameraSpeed !== 'default' ? config.cameraSpeed : "normal / default (omit)"}
+- Choreography & Pacing Mode: ${choreographyMode}
 - Spoken Dialogue to be voiced by character (MUST format inside <d>[Language] ...</d>): ${config.dialogueText ? config.dialogueText : "None"}
 - Sound Effects / Audio: ${config.sfxText || "Ambient soundscape"}
 - Suppress Background Music: ${config.suppressMusic ? "Yes (Add non_diegetic_music: N/A)" : "No"}
@@ -445,6 +511,9 @@ CRITICAL OBJECTIVE & OBSERVABLE PHYSICAL STATE PRINCIPLE (MUST FOLLOW):
 - Focus primarily on objective, concrete, and visually observable physical states and actions (what is physically visible in the frame, how subjects/objects move and interact).
 - Instead of "a ball bouncing around" → "A red ball moves to the right, bounces off the wall, and returns to the center"
 - Instead of "fluid pouring" → "Water flows from the left container through the connecting tube into the right container until both levels are equal"
+- For 2+ characters, NEVER write turn-taking sequential sentences where one character freezes waiting for the other; always synchronize actions and active reactions with "while", "as", "simultaneously", or intra-shot micro-timestamps.
+
+${choreographyDirective}
 
 ${assistantDirectorDirective}
 
@@ -479,11 +548,16 @@ Based on the following scene parameters:
 - Mode: "${params.mode || 'T2VA'}"
 - Video Duration: "${params.duration || '10s'}"
 
-Generate 1-2 punchy, immersive, character-driven on-screen dialogue sentences or monologues in English (with optional Traditional Chinese translation if requested). The dialogue must sound natural for video generation models (MiniMax-H3).
+Instructions:
+1. Detect whether the Core Idea implies 1 character (monologue) or 2+ characters interacting (dialogue exchange).
+   - For 1 character: output 1–2 punchy, natural lines.
+   - For 2+ characters: output a crisp, overlapping back-and-forth exchange labeled with (S1) and (S2) so both actors actively respond to each other within the ${params.duration || '10s'} clip.
+2. Language Adaptation: Match the primary language implied by the Core Idea (e.g. if the Core Idea contains Chinese/Mandarin dialogue lines or explicitly asks for Mandarin/Japanese/Cantonese, write the spoken lines in that language and tag appropriately; otherwise write natural English lines).
+3. Ensure the lines fit comfortably within ${params.duration || '10s'} and sound natural for MiniMax-H3 lip-sync generation.
 
 Return JSON format:
 {
-  "dialogueEn": "English dialogue text...",
+  "dialogueEn": "Generated character dialogue or multi-speaker exchange (S1 / S2)...",
   "sfxSuggestion": "Suggested atmospheric sound effects (e.g. rain dripping, mechanical hum, wind gust)"
 }
 `;
@@ -496,11 +570,27 @@ export function buildOptimizePrompt(params: {
   assistantDirectorDirective: string;
   mode?: string;
   outputContract?: string;
+  choreographyMode?: string;
 }) {
+  const mode = params.mode || "T2VA";
+  const durationSec = parseFloat(params.duration || '10') || 10;
   const modeText = params.mode ? `Generation Mode: ${params.mode}` : "";
   const contractText = params.outputContract === "compact"
     ? `Output Format Requirement: Generate in Compact Single-Block format (omitting section headers, outputting only continuous shot-by-shot text with natural camera and physical soundscape).`
     : `Output Format Requirement: Generate in Standard Multi-Section format with standard headers ([Shot 1], overall_soundscape, etc.).`;
+
+  let keyframeHeaderGuidance = "";
+  if (params.outputContract !== "compact") {
+    if (mode === "I2VA") {
+      keyframeHeaderGuidance = `\n- Official I2VA First Line Header Requirement: The prompt MUST begin with:\n  For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced.`;
+    } else if (mode === "FL2VA") {
+      keyframeHeaderGuidance = `\n- Official FL2VA First Line Header Requirement: The prompt MUST begin with:\n  How the reference pictures align with the target video — Picture 1 (from Shot 1) aligns with the 0.00-second mark of the target video; Picture 2 (from Shot N) aligns with the ${durationSec.toFixed(2)}-second mark of the target video.`;
+    } else if (mode === "L2VA") {
+      keyframeHeaderGuidance = `\n- Official L2VA First Line Header Requirement: The prompt MUST begin with:\n  How the reference pictures align with the target video — <Picture 1> (from [Shot N]) aligns with the ${durationSec.toFixed(2)}-second mark of the target video.`;
+    }
+  }
+
+  const choreographyDirective = getChoreographyDirective(params.choreographyMode || 'auto', durationSec);
 
   return `
 Take the user's rough prompt or idea below and optimize/rewrite it into the official MiniMax-H3 prompt standard:
@@ -508,7 +598,7 @@ Rough Prompt: "${params.rawPrompt}"
 ${modeText}
 Duration: ${params.duration || "10s"}
 Suppress Music: ${params.suppressMusic ? "Yes" : "No"}
-${contractText}
+${contractText}${keyframeHeaderGuidance}
 
 Refine it strictly following official MiniMax-H3 specifications:
 CRITICAL OBJECTIVE PHYSICAL STATE PRINCIPLE:
@@ -516,14 +606,34 @@ CRITICAL OBJECTIVE PHYSICAL STATE PRINCIPLE:
 - DO NOT use flowery language, poetic metaphors, emotional adjectives, or abstract concepts (avoid "ethereal", "breathtaking", "mysterious aura", "soul-stirring").
 - Instead of "a ball bouncing around" → "A red ball moves to the right, bounces off the wall, and returns to the center"
 - Instead of "fluid pouring" → "Water flows from the left container through the connecting tube into the right container until both levels are equal"
+- MULTI-SUBJECT PARALLEL CHOREOGRAPHY & FLUID MACRO-ACTION REWRITE RULE:
+  * If the rough prompt contains 2 or more characters acting sequentially (turn-taking, where one waits motionless while the other acts), you MUST rewrite their actions into overlapping concurrent clauses ("while", "as", "simultaneously", or intra-shot micro-timestamps) with continuous gaze tracking, posture shifts, and mid-action anticipatory reactions.
+  * Replace stiff joint-by-joint micro-steps with cohesive, momentum-driven physical trajectories using natural kinematic adverbs ("fluidly", "briskly", "in one continuous motion", "with heavy momentum").
 - Divide into shots starting with [Shot 1] (setting style/composition, NO timestamp on Shot 1), and subsequent shots with cut timecodes: "[Shot 2] At MM:SS.mmm, the camera cuts to...".
 - Express camera motion as natural English actions within the shot (e.g. "The camera pushes in with small amplitude at slow speed toward..."). DO NOT use bracketed camera tags like "[Push In]".
 - Format spoken dialogue inside <d>[Language] ...</d> tags with speaker IDs (e.g. (S1) says: <d>[English] ...</d>), lyrics inside <l>[Language] ...</l> tags, and reserve double quotes "" strictly for visible on-screen text.
-- Formulate complete overall_soundscape and non_diegetic_music sections according to the guide (or "non_diegetic_music: none" if music is suppressed).
+- Formulate complete overall_soundscape and non_diegetic_music sections according to the guide (or "non_diegetic_music: N/A" if music is suppressed).
 DO NOT include any file names or file extensions in the generated prompt!
+
+${choreographyDirective}
 
 ${params.assistantDirectorDirective}
 `;
+}
+
+export function formatReferencesSummary(references?: any[]): string | undefined {
+  if (!Array.isArray(references) || references.length === 0) return undefined;
+  const parts = references
+    .filter((r: any) => r && (r.tag || r.name || r.description))
+    .map((r: any) => {
+      const tag = r.tag || r.physicalTag || 'Asset';
+      const slot = r.physicalTag && r.physicalTag !== tag ? ` (${r.physicalTag})` : '';
+      const cleanDesc = String(r.description || r.name || '')
+        .replace(/\b[\w-]+\.(?:png|jpe?g|webp|gif|mp4|mov|webm|mp3|wav)\b/gi, '')
+        .trim();
+      return `${tag}${slot}: ${r.role || 'reference'}${cleanDesc ? ` - ${cleanDesc}` : ''}`;
+    });
+  return parts.length > 0 ? parts.join('; ') : undefined;
 }
 
 export function buildRefineSeriesPrompt(params: {
@@ -536,6 +646,8 @@ export function buildRefineSeriesPrompt(params: {
   refineInstruction: string;
   durationToUse: string;
   assistantDirectorDirective: string;
+  mode?: string;
+  referencesSummary?: string;
 }) {
   const prevAnchor = params.previousEpisode
     ? `CRITICAL PRECEDING EPISODE CONTINUITY (Episode #${params.previousEpisode.episodeIndex}):
@@ -550,11 +662,14 @@ YOU MUST STRICTLY CONTINUE FROM THIS EXACT PHYSICAL POSTURE, POSITION, AND HELD 
 Ensure your refined end state provides a natural, logical hand-off to this following state.`
     : `This is the final episode of the sequence.`;
 
+  const modeContext = params.mode ? `\n- Generation Mode: ${params.mode}` : '';
+  const refContext = params.referencesSummary ? `\n- Active Reference Tags & Assets: ${params.referencesSummary}` : '';
+
   return `
 You are performing an IN-PLACE SURGICAL REFINEMENT of Episode #${params.targetEpisodeIndex} in a multi-episode consecutive video series.
 Series Context:
 - Series Title: "${params.seriesTitle}"
-- Overall Story Arc: "${params.storyArcSummary}"
+- Overall Story Arc: "${params.storyArcSummary}"${modeContext}${refContext}
 
 ${prevAnchor}
 
@@ -572,12 +687,13 @@ SPECIFIC USER REFINEMENT INSTRUCTION (CRITICAL - APPLY THESE ADJUSTMENTS EXACTLY
 "${params.refineInstruction.trim()}"
 
 REFINEMENT PROTOCOL:
-1. Preserve physical continuity with Episode #${params.previousEpisode ? params.previousEpisode.episodeIndex : 1}.
+1. Preserve physical continuity with Episode #${params.previousEpisode ? params.previousEpisode.episodeIndex : 1} and retain all required subject/picture reference tags (${params.referencesSummary ? 'listed above' : 'if any'}) and mode headers.
 2. Apply the user's specific adjustment to the action sequence and resulting end state.
-3. Express camera movements naturally in English.
-4. Output a 100% complete, independent, copy-ready MiniMax-H3 prompt in "fullPrompt".
-5. DO NOT mention meta-instructions or compliance checks. DO NOT include any file names or extensions.
-6. Provide Traditional Chinese for title, and continuityNotes.
+3. Preserve or enhance parallel multi-subject choreography ("while", "as", "simultaneously", continuous active reactions) and fluid physical momentum whenever 2+ characters share a shot.
+4. Express camera movements naturally in English.
+5. Output a 100% complete, independent, copy-ready MiniMax-H3 prompt in "fullPrompt".
+6. DO NOT mention meta-instructions or compliance checks. DO NOT include any file names or extensions.
+7. Provide Traditional Chinese for title, and continuityNotes.
 
 ${params.assistantDirectorDirective}
 `;

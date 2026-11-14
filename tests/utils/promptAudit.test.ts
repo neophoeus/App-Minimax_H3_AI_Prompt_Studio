@@ -70,6 +70,77 @@ describe("Prompt Audit & Repair System", () => {
       assert.equal(res.isValid, false);
       assert.ok(res.issues.some((i) => i.code === "UNBALANCED_LYRICS_TAGS"));
     });
+
+    test("detects non-monotonic or duplicate shot timestamps", () => {
+      const inverted = "[Shot 1] Opening. [Shot 2] At 00:06.000, cuts. [Shot 3] At 00:04.000, cuts back.";
+      const res1 = auditPrompt(inverted, { duration: "10s" });
+      assert.equal(res1.hasTimestampError, true);
+      assert.ok(res1.issues.some((i) => i.code === "NON_MONOTONIC_TIMESTAMPS"));
+
+      const duplicate = "[Shot 1] Opening. [Shot 2] At 00:05.000, cuts. [Shot 3] At 00:05.000, cuts again.";
+      const res2 = auditPrompt(duplicate, { duration: "10s" });
+      assert.equal(res2.hasTimestampError, true);
+      assert.ok(res2.issues.some((i) => i.code === "NON_MONOTONIC_TIMESTAMPS"));
+    });
+
+    test("detects non-standard non_diegetic_music: none", () => {
+      const text = "integrated_multimodal_description: [Shot 1] A quiet hallway.\n\noverall_soundscape:\nHum.\n\nnon_diegetic_music: none";
+      const res = auditPrompt(text, { duration: "10s" });
+      assert.equal(res.hasConstraintViolation, true);
+      assert.ok(res.issues.some((i) => i.code === "INVALID_MUSIC_SUPPRESSION"));
+    });
+
+    test("detects sequential multi-subject turn-taking risk and passes when concurrency words exist", () => {
+      const sequential = [
+        "subject_definitions:",
+        "<Subject 1> is a detective.",
+        "<Subject 2> is an informant.",
+        "",
+        "detailed_description:",
+        "[Shot 1] <Subject 1> walks up to the table and sets down a folder. <Subject 2> opens the folder and reads the first page.",
+        "",
+        "overall_soundscape:",
+        "Rain outside.",
+        "",
+        "non_diegetic_music:",
+        "N/A",
+      ].join("\n");
+
+      const riskRes = auditPrompt(sequential, { duration: "10s", mode: "Ref2VA" });
+      assert.ok(riskRes.issues.some((i) => i.code === "SEQUENTIAL_ENSEMBLE_RISK"));
+
+      const parallel = [
+        "subject_definitions:",
+        "<Subject 1> is a detective.",
+        "<Subject 2> is an informant.",
+        "",
+        "detailed_description:",
+        "[Shot 1] As <Subject 1> slides a folder across the table, <Subject 2> simultaneously leans in and reaches for the edge.",
+        "",
+        "overall_soundscape:",
+        "Rain outside.",
+        "",
+        "non_diegetic_music:",
+        "N/A",
+      ].join("\n");
+
+      const cleanRes = auditPrompt(parallel, { duration: "10s", mode: "Ref2VA" });
+      assert.ok(!cleanRes.issues.some((i) => i.code === "SEQUENTIAL_ENSEMBLE_RISK"));
+    });
+
+    test("does not falsely flag single-subject prompts with SEQUENTIAL_ENSEMBLE_RISK", () => {
+      const solo = [
+        "integrated_multimodal_description: [Shot 1] <Subject 1> opens the door. <Subject 1> steps into the rain.",
+        "",
+        "overall_soundscape:",
+        "Rain.",
+        "",
+        "non_diegetic_music:",
+        "N/A",
+      ].join("\n");
+      const res = auditPrompt(solo, { duration: "10s" });
+      assert.ok(!res.issues.some((i) => i.code === "SEQUENTIAL_ENSEMBLE_RISK"));
+    });
   });
 
   describe("repairPrompt", () => {
@@ -100,6 +171,60 @@ describe("Prompt Audit & Repair System", () => {
       const repaired = repairPrompt(dirty, 10);
       assert.ok(repaired.includes("</d>"));
       assert.ok(repaired.includes("</l>"));
+    });
+
+    test("closes unclosed <d> inside its shot/line before overall_soundscape and non_diegetic_music", () => {
+      const dirty = [
+        "integrated_multimodal_description: [Shot 1] (S1) says: <d>[English] Wait for me [Shot 2] At 00:05.000, the shot cuts.",
+        "",
+        "overall_soundscape:",
+        "Footsteps on wet stone.",
+        "",
+        "non_diegetic_music:",
+        "N/A",
+      ].join("\n");
+      const repaired = repairPrompt(dirty, 10);
+      const idxCloseD = repaired.indexOf("</d>");
+      const idxShot2 = repaired.indexOf("[Shot 2]");
+      const idxSoundscape = repaired.indexOf("overall_soundscape:");
+      assert.ok(idxCloseD !== -1);
+      assert.ok(idxCloseD < idxShot2);
+      assert.ok(idxCloseD < idxSoundscape);
+    });
+
+    test("keeps multiple out-of-range shot timestamps strictly increasing after clamping", () => {
+      const dirty = "[Shot 1] Opening. [Shot 2] At 00:12.000, cut one. [Shot 3] At 00:15.000, cut two.";
+      const repaired = repairPrompt(dirty, 10);
+      assert.ok(repaired.includes("00:09.000"));
+      assert.ok(repaired.includes("00:09.500"));
+      const reAudit = auditPrompt(repaired, { duration: "10s" });
+      assert.equal(reAudit.hasTimestampError, false);
+    });
+
+    test("repairs non_diegetic_music: none to N/A", () => {
+      const dirty = "integrated_multimodal_description: [Shot 1] Quiet room.\n\noverall_soundscape:\nHum.\n\nnon_diegetic_music: none";
+      const repaired = repairPrompt(dirty, 10);
+      assert.ok(repaired.includes("non_diegetic_music: N/A"));
+      assert.ok(!repaired.includes("none"));
+    });
+
+    test("preserves valid multi-line <d>...</d> while closing a subsequent unclosed <d> without over-closing", () => {
+      const dirty = [
+        "integrated_multimodal_description: [Shot 1] (S1) says: <d>[English] Keep moving",
+        "before the patrol turns.</d>",
+        "[Shot 2] At 00:04.500, (S2) replies: <d>[English] Already on it",
+        "",
+        "overall_soundscape:",
+        "Rain.",
+        "",
+        "non_diegetic_music:",
+        "N/A",
+      ].join("\n");
+      const repaired = repairPrompt(dirty, 10);
+      const reAudit = auditPrompt(repaired, { duration: "10s" });
+      assert.equal((repaired.match(/<d>/gi) || []).length, 2);
+      assert.equal((repaired.match(/<\/d>/gi) || []).length, 2);
+      assert.equal(reAudit.isValid, true);
     });
   });
 });

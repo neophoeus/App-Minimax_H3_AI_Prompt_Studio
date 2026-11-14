@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v6.2.0] - 2026-11-14
+
+### 🎭 Parallel Ensemble Choreography, Fluid Macro-Trajectory & Full Engine Alignment (並行群像場面調度、流暢動作軌跡與全引擎規格對齊)
+
+#### 🎬 1. Parallel Ensemble Choreography & Zero-Freeze Engine (`server/core/prompts.ts`)
+- **消除雙人場景呆立排隊 (Zero-Freeze Concurrent Binding)**:
+  - 於 `buildModularSystemInstruction` 與 `buildH3UserPrompt` 建立多主體同時性契約，禁止「A 做完動作 → B 再開始動作」的序列輪流句型，強制使用 `while`、`as`、`simultaneously` 或段內微時間戳（`At MM:SS.mmm`）同步描述，並為非主述角色注入持續物理反應基底（視線追蹤、重心轉移、預判反應）。
+- **流暢巨觀動量軌跡 (Fluid Macro-Trajectory)**:
+  - 以運動學動量副詞（`fluidly`、`briskly`、`in one continuous motion`、`with heavy momentum`）取代機械式拆碎微動作，並透過新增之 `getChoreographyDirective(choreographyMode, durationSec)` 依據影片時長（4–6s / 8–10s / 12–15s）動態配給分鏡節拍預算。
+- **拔除隱藏預設運鏡偏移**:
+  - 移除未選運鏡時硬編碼注入 `"Push In, Arc Shot"` 的行為，改為情境自適應 `Auto Director Selection`，多人對手戲優先採用穩定／微幅跟拍以保留肢體表演運動預算。
+- **優化器、對白與系列精修全面升級**:
+  - 修正 `buildOptimizePrompt` 中的違規示例字樣為官方標準 `non_diegetic_music: N/A`，補齊 `I2VA` / `FL2VA` / `L2VA` 首行對齊標頭與並行改寫規則。
+  - 升級 `buildDialoguePrompt` 支援多說話者 `(S1)`/`(S2)` 交錯接力與語系自適應；升級 `buildRefineSeriesPrompt` 與 `formatReferencesSummary` 保留模式與參考資產標籤上下文，並為純文字無圖片 `Ref2VA` 補齊零 `<Picture N>` 契約。
+
+#### ⚙️ 2. Local Engine Dynamic Schema & Parameter Parity (`ollamaEngine.ts`, `llamaCppEngine.ts`, `geminiApiEngine.ts`)
+- **消除本地引擎單鏡頭 Schema 衝突**:
+  - `OllamaEngine` 與 `LlamaCppEngine` 呼叫 `buildModularSystemInstruction` 時正確傳入 `isSeriesMode`，徹底移除單段模式下冗餘且矛盾的硬編碼 `episodes` Schema 定義。
+- **三引擎參數齊一**:
+  - Gemini、Ollama 與 llama.cpp 全面支援傳遞 `choreographyMode` 至 `optimizePrompt`，並於 `refineSeriesEpisode` 傳入 `mode` 與 `formatReferencesSummary(config.references)`。
+
+#### 🛡️ 3. Prompt Audit & Structure-Safe Modifiers (`promptAudit.ts`, `promptModifiers.ts`)
+- **審計與無損自癒補強**:
+  - 新增 `NON_MONOTONIC_TIMESTAMPS`（檢查 `[Shot N]` 時間點嚴格遞增）、`INVALID_MUSIC_SUPPRESSION`（偵測 `non_diegetic_music: none`）與 `SEQUENTIAL_ENSEMBLE_RISK`（多角色卻缺乏同時性連接詞之警告）。
+  - 修復 `repairPrompt` 多筆超時時間戳壓平衝突與 `</d>` / `</l>` 錯置全文尾端的漏洞，改由配對優先正則精準於當前句段／分鏡末尾安全閉合。
+- **結構無損快捷修飾工具 (`src/utils/promptModifiers.ts`)**:
+  - 新增純函式 `insertQuickModifier(currentPrompt, modifierText)`，將運鏡與同步反應標籤安全插入 `overall_soundscape:` 區塊之前，並在附加 `non_diegetic_music: N/A` 時原地替換既有音樂區段。
+
+#### 🎨 4. Studio UI, Accessibility & Two-Person Preset (`src/App.tsx`, `src/data/presets.ts`, `Navbar.tsx`)
+- **四段式場面調度選擇器**: 新增無障礙 `<fieldset>` / `<legend>` 與原生 `sr-only` radio 卡片組切換 `auto` / `ensemble_parallel` / `fluid_action` / `subtle_acting`。
+- **復原光影設定選單 (`LIGHTING_PRESETS`)**: 於無圖片自訂模式中顯示具有明確 `htmlFor`/`id` 與鍵盤焦點外框的光影氛圍預設下拉與自訂輸入框。
+- **雙人並行示範模板與即時中止**: 新增 `'two-person-dossier-handover'`（雙人雨夜情報交鋒）純文字預設模板與 `+ 雙人同步反應` 快捷按鈕，並為生成請求加入 `AbortController`「中止生成」控制。
+
+#### 🧪 5. Verification Coverage
+- 擴充並通過全套自動化測試：**73 / 73 通過**（21 suites，0 fails，0 skipped），涵蓋 `promptModifiers.test.ts`、`prompts.test.ts`、`engineRouting.test.ts`、`promptAudit.test.ts` 與 `sanitizer.test.ts`；`tsc --noEmit` 與 `vite build` 均零錯誤通過。
+
 ## [v6.1.0] - 2026-10-29
 
 ### 🚀 Default Safety Alignment, Pure Pay-as-you-go & Deep Token Optimization (官方預設安全對齊、純 Pay-as-you-go 直通與深度 Token 節約最佳化)

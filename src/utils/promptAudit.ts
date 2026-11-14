@@ -16,6 +16,58 @@ const SHOT1_TIMESTAMP_REGEX = /\[Shot 1\]\s*(?:At\s+)?(?:\d{1,2}:)?\d{1,2}:\d{2,
 const BRACKETED_CAMERA_REGEX =
   /\[\s*(?:Camera\s*:\s*)?(?:Zoom[- ](?:In|Out)|Push[- ](?:In|Out)|Pull[- ](?:In|Out)|Pan[- ](?:Left|Right|Across|Up|Down)|Truck[- ](?:Left|Right)|Tilt[- ](?:Up|Down)|Pedestal[- ](?:Up|Down)|Arc[- ]Shot|Tracking[- ]Shot|Static[- ]Shot|Dolly[- ](?:In|Out)|Shake[- ](?:Slightly|Strongly)|POV|Roll(?:\s+(?:Clockwise|Counterclockwise))?)\s*\]/gi;
 
+const SHOT_TIMESTAMP_REGEX = /\[Shot\s+(\d+)\]\s*(?:At\s+)?((?:\d{1,2}:)?\d{1,2}:\d{2,3}(?:\.\d{1,3})?)/gi;
+
+const INVALID_MUSIC_NONE_REGEX = /\bnon_diegetic_music:\s*none\b/i;
+
+const CONCURRENCY_MARKER_REGEX =
+  /\b(?:while|as|simultaneously|meanwhile|together|both|each\s+other|in\s+unison|at\s+the\s+same\s+(?:time|moment)|mid-(?:motion|stride|sentence|gesture)|already)\b/i;
+
+function timestampToMs(normalizedTs: string): number | null {
+  const match = normalizedTs.match(VALID_TIMESTAMP_REGEX);
+  if (!match) return null;
+  const mins = parseInt(match[1], 10);
+  const secs = parseInt(match[2], 10);
+  const millis = parseInt(match[3], 10);
+  return (mins * 60 + secs) * 1000 + millis;
+}
+
+function msToTimestamp(totalMs: number): string {
+  const clamped = Math.max(0, Math.round(totalMs));
+  const totalSeconds = Math.floor(clamped / 1000);
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  const millis = clamped % 1000;
+  return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(millis).padStart(3, '0')}`;
+}
+
+function extractShotNarrative(prompt: string): string {
+  let text = prompt;
+  const footerMatch = /(?:^|\r?\n)\s*(?:overall_soundscape|non_diegetic_music):/i.exec(text);
+  if (footerMatch && typeof footerMatch.index === 'number') {
+    text = text.slice(0, footerMatch.index);
+  }
+  const integratedMatch = /integrated_multimodal_description:/i.exec(text);
+  if (integratedMatch && typeof integratedMatch.index === 'number') {
+    return text.slice(integratedMatch.index + integratedMatch[0].length);
+  }
+  const detailedMatch = /detailed_description:/i.exec(text);
+  if (detailedMatch && typeof detailedMatch.index === 'number') {
+    return text.slice(detailedMatch.index + detailedMatch[0].length);
+  }
+  return text;
+}
+
+function closeUnbalancedTagSafely(text: string, tagName: 'd' | 'l'): string {
+  const pairOrUnclosed = new RegExp(
+    `<${tagName}>(?:(?!<\\/?${tagName}>)[\\s\\S])*?<\\/${tagName}>|<${tagName}>([^\\r\\n]*?)(?=[ \\t]*(?:<\\/?[dl]>|\\[Shot\\s+\\d+\\]|\\b(?:overall_soundscape|non_diegetic_music):|\\r?\\n|$))`,
+    'gi'
+  );
+  return text.replace(pairOrUnclosed, (fullMatch, unclosedBody) =>
+    unclosedBody !== undefined ? `<${tagName}>${unclosedBody}</${tagName}>` : fullMatch
+  );
+}
+
 /**
  * Parses duration string like '10s' to seconds number (10)
  */
@@ -231,6 +283,71 @@ export function auditPrompt(
     });
   }
 
+  // 9. Monotonic Shot Cut Timestamps Check
+  const shotMatches = Array.from(prompt.matchAll(SHOT_TIMESTAMP_REGEX));
+  let prevShotMs: number | null = null;
+  let hasNonMonotonic = false;
+  for (const sm of shotMatches) {
+    const shotNum = parseInt(sm[1], 10);
+    if (shotNum <= 1) continue;
+    const ms = timestampToMs(normalizeTimestamp(sm[2]));
+    if (ms === null) continue;
+    if (prevShotMs !== null && ms <= prevShotMs) {
+      hasNonMonotonic = true;
+      break;
+    }
+    prevShotMs = ms;
+  }
+  if (hasNonMonotonic) {
+    hasTimestampError = true;
+    issues.push({
+      level: 'warning',
+      code: 'NON_MONOTONIC_TIMESTAMPS',
+      messageZh: '偵測到分鏡時間戳未按時間順序遞增或發生重複',
+      suggestionZh: '多個 [Shot N] 的切換時間點必須嚴格遞增（例如 [Shot 2] 00:03.500 -> [Shot 3] 00:07.000），可點擊「一鍵修復」自動校正。',
+    });
+  }
+
+  // 10. Invalid Music Suppression ("none" instead of "N/A")
+  if (INVALID_MUSIC_NONE_REGEX.test(prompt)) {
+    hasConstraintViolation = true;
+    issues.push({
+      level: 'warning',
+      code: 'INVALID_MUSIC_SUPPRESSION',
+      messageZh: 'non_diegetic_music 使用了非標準的 "none"，官方規範應使用 "N/A"',
+      suggestionZh: '點擊「一鍵修復」將自動將 "non_diegetic_music: none" 修正為官方標準 "non_diegetic_music: N/A"。',
+    });
+  }
+
+  // 11. Multi-Subject Sequential Turn-Taking Risk Detection
+  const shotNarrative = extractShotNarrative(prompt);
+  const distinctSubjects = new Set(
+    (shotNarrative.match(/<Subject\s+\d+>/gi) || []).map((s) => s.toLowerCase().replace(/\s+/g, ' '))
+  );
+  const distinctSpeakers = new Set<string>();
+  for (const spkGroup of shotNarrative.match(/\(S\d+(?:,S\d+)*\)/g) || []) {
+    for (const spk of spkGroup.match(/S\d+/g) || []) {
+      distinctSpeakers.add(spk);
+    }
+  }
+
+  if (distinctSubjects.size >= 2 || distinctSpeakers.size >= 2) {
+    const narrativeWithoutTimestamps = shotNarrative.replace(TIMESTAMP_CANDIDATE_REGEX, ' ');
+    const sentences = narrativeWithoutTimestamps
+      .split(/[.!?]+/)
+      .map((s) => s.trim())
+      .filter((s) => /[a-zA-Z]/.test(s));
+
+    if (sentences.length >= 2 && !CONCURRENCY_MARKER_REGEX.test(shotNarrative)) {
+      issues.push({
+        level: 'warning',
+        code: 'SEQUENTIAL_ENSEMBLE_RISK',
+        messageZh: '偵測到雙人/多主體場景缺乏並行時間連接詞（如 while / simultaneously），可能導致角色輪流排隊動作、另一人呆若木雞',
+        suggestionZh: '建議點擊「🪄 AI 規格優化」或加入 "+ 雙人同步反應" 修飾詞，讓角色在對手動作期間保持視線追蹤與同步微動態。',
+      });
+    }
+  }
+
   const isValid = issues.filter((i) => i.level === 'error').length === 0;
 
   return {
@@ -261,38 +378,56 @@ export function repairPrompt(prompt: string, durationSeconds: number = 10): stri
     )
     .replace(FILENAME_LEAK_REGEX, '');
 
-  // 3. Normalize and clamp timestamps
-  text = text.replace(TIMESTAMP_CANDIDATE_REGEX, (rawTs) => {
-    try {
-      const norm = normalizeTimestamp(rawTs);
-      const m = norm.match(VALID_TIMESTAMP_REGEX);
-      if (!m) return rawTs;
-      const mins = parseInt(m[1], 10);
-      const secs = parseInt(m[2], 10);
-      const millis = parseInt(m[3], 10);
-      const totalSecs = mins * 60 + secs + millis / 1000;
-
-      // If out of range, clamp to (duration - 0.5s)
-      if (totalSecs > durationSeconds) {
-        const clampedTotal = Math.max(0, durationSeconds - 0.5);
-        const cMins = Math.floor(clampedTotal / 60);
-        const cSecs = Math.floor(clampedTotal % 60);
-        const cMillis = Math.floor((clampedTotal % 1) * 1000);
-        return `${String(cMins).padStart(2, '0')}:${String(cSecs).padStart(2, '0')}.${String(cMillis).padStart(3, '0')}`;
-      }
-      return norm;
-    } catch {
-      return rawTs;
-    }
-  });
-
-  // 4. Strip timestamp from [Shot 1] if accidentally added
+  // 3. Strip timestamp from [Shot 1] first so it does not skew monotonic timestamp repair
   text = text.replace(/\[Shot 1\]\s*(?:At\s+)?(?:\d{1,2}:)?\d{1,2}:\d{2,3}(?:\.\d{1,3})?,?\s*/gi, '[Shot 1] ');
+
+  // 4. Normalize, clamp, and enforce strictly increasing timestamps
+  const durationMs = Math.max(1000, Math.round(durationSeconds * 1000));
+  const maxAllowedMs = Math.max(500, durationMs - 500);
+  const rawTimestampMatches = Array.from(text.matchAll(TIMESTAMP_CANDIDATE_REGEX));
+
+  if (rawTimestampMatches.length > 0) {
+    const parsedEntries = rawTimestampMatches.map((m) => {
+      const raw = m[0];
+      const norm = normalizeTimestamp(raw);
+      const ms = timestampToMs(norm);
+      return { raw, norm, ms };
+    });
+
+    const validMsList = parsedEntries.map((e) => (e.ms !== null ? e.ms : 0));
+    const adjustedMsList = validMsList.map((ms) => (ms > durationMs ? maxAllowedMs : ms));
+
+    if (adjustedMsList.length >= 2) {
+      const stepMs = Math.min(500, Math.max(100, Math.floor(maxAllowedMs / (adjustedMsList.length + 1))));
+      for (let i = adjustedMsList.length - 2; i >= 0; i--) {
+        if (adjustedMsList[i] >= adjustedMsList[i + 1]) {
+          adjustedMsList[i] = Math.max(100, adjustedMsList[i + 1] - stepMs);
+        }
+      }
+      for (let i = 1; i < adjustedMsList.length; i++) {
+        if (adjustedMsList[i] <= adjustedMsList[i - 1]) {
+          adjustedMsList[i] = Math.min(durationMs - 50, adjustedMsList[i - 1] + stepMs);
+        }
+      }
+    }
+
+    let tsCursor = 0;
+    text = text.replace(TIMESTAMP_CANDIDATE_REGEX, (rawTs) => {
+      const entry = parsedEntries[tsCursor];
+      const adjustedMs = adjustedMsList[tsCursor];
+      tsCursor += 1;
+      if (!entry || entry.ms === null) return rawTs;
+      return msToTimestamp(adjustedMs);
+    });
+  }
 
   // 5. Strip bracketed camera tags like [Push In]
   text = text.replace(BRACKETED_CAMERA_REGEX, '');
 
-  // 6. Clean formatting punctuation leftovers
+  // 6. Normalize non_diegetic_music: none -> non_diegetic_music: N/A
+  text = text.replace(/(\bnon_diegetic_music:\s*)none\b/gi, '$1N/A');
+
+  // 7. Clean formatting punctuation leftovers
   text = text
     .replace(/\bis\s*,\s*/gi, 'is ')
     .replace(/,\s*,/g, ',')
@@ -301,17 +436,9 @@ export function repairPrompt(prompt: string, durationSeconds: number = 10): stri
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 
-  // 7. Balance unclosed speech/lyrics tags
-  const openD = (text.match(/<d>/gi) || []).length;
-  const closeD = (text.match(/<\/d>/gi) || []).length;
-  if (openD > closeD) {
-    text += '</d>'.repeat(openD - closeD);
-  }
-  const openL = (text.match(/<l>/gi) || []).length;
-  const closeL = (text.match(/<\/l>/gi) || []).length;
-  if (openL > closeL) {
-    text += '</l>'.repeat(openL - closeL);
-  }
+  // 8. Safely balance unclosed speech and lyrics tags within their own line/shot segment
+  text = closeUnbalancedTagSafely(text, 'd');
+  text = closeUnbalancedTagSafely(text, 'l');
 
   return text;
 }

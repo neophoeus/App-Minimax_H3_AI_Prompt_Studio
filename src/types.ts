@@ -118,6 +118,12 @@ export type CameraSpeed = 'default' | 'at slow speed' | 'at fast speed';
 
 export type OutputContract = 'official' | 'compact';
 
+export type ChoreographyMode =
+  | 'auto'
+  | 'ensemble_parallel'
+  | 'fluid_action'
+  | 'subtle_acting';
+
 export type TemperatureMode = 'auto' | 'manual';
 export type CreativityLevel = 0 | 1 | 2 | 3;
 
@@ -151,6 +157,7 @@ export interface H3PromptConfig {
   sfxText: string;
   suppressMusic: boolean; // non_diegetic_music: N/A
   assistantDirector?: boolean; // 輔助導演開關 (預設 true: 深度推理前因後果、周遭環境動態、補全實體材質與擴充高密度文字量)
+  choreographyMode?: ChoreographyMode; // 場面調度與動態節奏模式 (預設 'auto')
   outputContract?: OutputContract; // 'official' (預設 官方全量架構) | 'compact' (簡約精煉模式)
   temperatureMode?: TemperatureMode; // 'auto' (Gemini官方預設, 本機0.7) | 'manual'
   manualTemperature?: number; // 手動溫度 (0.0 ~ 1.5, 預設 0.7)

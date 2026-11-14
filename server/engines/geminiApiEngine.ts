@@ -6,6 +6,7 @@ import {
   buildDialoguePrompt,
   buildOptimizePrompt,
   buildRefineSeriesPrompt,
+  formatReferencesSummary,
   getAssistantDirectorDirective,
 } from "../core/prompts";
 import { formatGeneratedPromptResult, parseJsonSafely, sanitizeGeneratedPromptText } from "../core/sanitizer";
@@ -205,6 +206,7 @@ export class GeminiApiEngine implements StudioEngine {
       assistantDirectorDirective,
       mode: params.mode || 'T2VA',
       outputContract: params.outputContract,
+      choreographyMode: params.choreographyMode,
     });
 
     const geminiConfig: any = {
@@ -262,6 +264,8 @@ export class GeminiApiEngine implements StudioEngine {
       refineInstruction: params.refineInstruction,
       durationToUse,
       assistantDirectorDirective,
+      mode: config.mode,
+      referencesSummary: formatReferencesSummary(config.references),
     });
 
     const geminiConfig: any = {

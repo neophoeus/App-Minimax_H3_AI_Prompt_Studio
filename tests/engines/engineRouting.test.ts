@@ -2,6 +2,7 @@ import { test, describe } from "node:test";
 import assert from "node:assert/strict";
 import { MediaResolution, ThinkingLevel } from "@google/genai";
 import { resolveTemperature } from "../../server/core/types";
+import { buildModularSystemInstruction, formatReferencesSummary } from "../../server/core/prompts";
 import * as geminiCore from "../../server/engines/geminiCore";
 import { getExecutionPlan, getGeminiClient } from "../../server/engines/geminiCore";
 import { GeminiApiEngine } from "../../server/engines/geminiApiEngine";
@@ -122,6 +123,74 @@ describe("Engine Routing & Strategy Specifications", () => {
       assert.equal("paid_api" in llamaStatus.detectedModes, false);
       assert.equal("ai_studio" in llamaStatus.detectedModes, false);
       assert.equal("isAiStudioEnv" in llamaStatus.details, false);
+    });
+  });
+
+  describe("Local Engines Dynamic Single-Shot vs Series Schema Alignment", () => {
+    test("buildModularSystemInstruction cleanly separates single-shot and series schemas", () => {
+      const single = buildModularSystemInstruction("T2VA", "official", false);
+      const series = buildModularSystemInstruction("T2VA", "official", true);
+
+      assert.ok(single.includes("Single Shot Mode"));
+      assert.ok(!single.includes('"episodes"'));
+      assert.ok(series.includes("Series Mode"));
+      assert.ok(series.includes('"episodes"'));
+    });
+
+    test("OllamaEngine and LlamaCppEngine omit episodes schema in single-shot mode and include it in series mode", async () => {
+      const originalFetch = globalThis.fetch;
+      const capturedBodies: any[] = [];
+
+      globalThis.fetch = (async (_url: any, init?: any) => {
+        const body = init?.body ? JSON.parse(init.body) : {};
+        capturedBodies.push(body);
+        const isOllama = String(_url).includes("/api/chat");
+        const content = JSON.stringify({
+          fullPrompt: "integrated_multimodal_description: [Shot 1] A person walks.\n\noverall_soundscape:\nFootsteps.\n\nnon_diegetic_music:\nN/A",
+          explanationZh: "解析",
+          suggestions: ["建議"],
+        });
+        const responseBody = isOllama
+          ? { message: { content } }
+          : { choices: [{ message: { content } }] };
+        return new Response(JSON.stringify(responseBody), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }) as typeof fetch;
+
+      try {
+        const ollama = new OllamaEngine();
+        const llamacpp = new LlamaCppEngine();
+
+        await ollama.generateH3Prompt({ idea: "Single shot test", mode: "T2VA", isSeriesMode: false });
+        await llamacpp.generateH3Prompt({ idea: "Single shot test", mode: "T2VA", isSeriesMode: false });
+        await ollama.generateH3Prompt({ idea: "Series test", mode: "T2VA", isSeriesMode: true, seriesCount: 3 });
+        await llamacpp.generateH3Prompt({ idea: "Series test", mode: "T2VA", isSeriesMode: true, seriesCount: 3 });
+
+        assert.equal(capturedBodies.length, 4);
+        assert.ok(!capturedBodies[0].messages[0].content.includes('"episodes"'));
+        assert.ok(!capturedBodies[1].messages[0].content.includes('"episodes"'));
+        assert.ok(capturedBodies[2].messages[0].content.includes('"episodes"'));
+        assert.ok(capturedBodies[3].messages[0].content.includes('"episodes"'));
+      } finally {
+        globalThis.fetch = originalFetch;
+      }
+    });
+
+    test("formatReferencesSummary preserves semantic/physical tags while stripping filenames", () => {
+      const summary = formatReferencesSummary([
+        { tag: "<Subject 1>", physicalTag: "<Picture 1>", role: "character", name: "hero.png", description: "Woman in red coat" },
+        { tag: "<Subject 2>", role: "character", name: "partner_ref.jpg", description: "" },
+        { tag: "<Subject 3>", role: "scene", name: "Rainy Alley", description: "" },
+      ]);
+      assert.ok(summary);
+      assert.ok(summary.includes("<Subject 1> (<Picture 1>): character - Woman in red coat"));
+      assert.ok(summary.includes("<Subject 2>: character"));
+      assert.ok(summary.includes("<Subject 3>: scene - Rainy Alley"));
+      assert.ok(!summary.includes(".png"));
+      assert.ok(!summary.includes(".jpg"));
+      assert.ok(!summary.includes("partner_ref"));
     });
   });
 });

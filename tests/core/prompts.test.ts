@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildModularSystemInstruction,
   getAssistantDirectorDirective,
+  getChoreographyDirective,
   buildH3UserPrompt,
   buildDialoguePrompt,
   buildOptimizePrompt,
@@ -71,6 +72,33 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
       assert.ok(instruction.includes('"seriesTitle"'));
       assert.ok(instruction.includes('"storyArcSummary"'));
       assert.ok(instruction.includes('"episodes"'));
+    });
+
+    test("includes multi-subject parallel choreography and fluid macro-trajectory rules", () => {
+      const instruction = buildModularSystemInstruction("T2VA", "official", false);
+      assert.ok(instruction.includes("Multi-Subject Parallel Choreography & Zero-Freeze Rule"));
+      assert.ok(instruction.includes("Fluid Macro-Trajectory vs. Micro-Fragmentation"));
+      assert.ok(instruction.includes("while"));
+      assert.ok(instruction.includes("simultaneously"));
+      assert.ok(instruction.includes("slide the manila folder across the desk"));
+    });
+  });
+
+  describe("getChoreographyDirective", () => {
+    test("adapts pacing budget to short, standard, and extended durations", () => {
+      const short = getChoreographyDirective("auto", 5);
+      const standard = getChoreographyDirective("auto", 10);
+      const extended = getChoreographyDirective("auto", 15);
+      assert.ok(short.includes("5s short clip"));
+      assert.ok(standard.includes("10s standard clip"));
+      assert.ok(extended.includes("15s extended clip"));
+    });
+
+    test("generates tailored guidance for ensemble_parallel, fluid_action, subtle_acting, and auto", () => {
+      assert.ok(getChoreographyDirective("ensemble_parallel", 10).includes("ENSEMBLE PARALLEL"));
+      assert.ok(getChoreographyDirective("fluid_action", 10).includes("FLUID ACTION"));
+      assert.ok(getChoreographyDirective("subtle_acting", 10).includes("SUBTLE ACTING"));
+      assert.ok(getChoreographyDirective("auto", 10).includes("AUTO ADAPTIVE"));
     });
   });
 
@@ -246,6 +274,32 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
       });
       assert.ok(res.userPrompt.includes("Film Noir Black and White"));
       assert.ok(res.userPrompt.includes("Dramatic chiaroscuro shadow"));
+      assert.ok(res.userPrompt.includes("do NOT cite or invent any <Picture N> tags"));
+      assert.ok(!res.userPrompt.includes("as depicted in <Picture 1>"));
+    });
+
+    test("omitting cameraMoves uses Auto Director Selection and never hardcodes Push In, Arc Shot", () => {
+      const res = buildH3UserPrompt({
+        idea: "Two detectives negotiating across a rainy cafe table",
+        mode: "T2VA",
+        cameraMoves: [],
+      });
+      assert.ok(res.userPrompt.includes("Auto Director Selection"));
+      assert.ok(!res.userPrompt.includes("Push In, Arc Shot"));
+    });
+
+    test("injects choreographyMode directive into userPrompt", () => {
+      const modes = ["ensemble_parallel", "fluid_action", "subtle_acting", "auto"] as const;
+      for (const m of modes) {
+        const res = buildH3UserPrompt({
+          idea: "Two characters interacting",
+          mode: "T2VA",
+          duration: "8s",
+          choreographyMode: m,
+        });
+        assert.ok(res.userPrompt.includes(`Choreography & Pacing Mode: ${m}`));
+        assert.ok(res.userPrompt.includes("CHOREOGRAPHY & PACING DIRECTIVE"));
+      }
     });
   });
 
@@ -255,19 +309,37 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
       assert.ok(p.includes("Sci-fi confrontation"));
       assert.ok(p.includes("dialogueEn"));
       assert.ok(p.includes("sfxSuggestion"));
+      assert.ok(p.includes("(S1) and (S2)"));
     });
 
-    test("buildOptimizePrompt preserves objective action rules", () => {
+    test("buildOptimizePrompt preserves objective action rules, uses N/A, and includes parallel rewrite + mode headers", () => {
       const p = buildOptimizePrompt({
         rawPrompt: "A cool guy walking",
         duration: "10s",
+        mode: "I2VA",
+        outputContract: "official",
+        choreographyMode: "ensemble_parallel",
         assistantDirectorDirective: "DIRECTOR DIRECTIVE",
       });
       assert.ok(p.includes("A cool guy walking"));
       assert.ok(p.includes("CRITICAL OBJECTIVE PHYSICAL STATE PRINCIPLE"));
+      assert.ok(p.includes("MULTI-SUBJECT PARALLEL CHOREOGRAPHY"));
+      assert.ok(p.includes("non_diegetic_music: N/A"));
+      assert.ok(!p.includes("non_diegetic_music: none"));
+      assert.ok(p.includes("For the target video, at 0.00 seconds into the target video, <Picture 1> (from [Shot 1]) is fully referenced."));
+      assert.ok(p.includes("ENSEMBLE PARALLEL"));
+
+      const fl = buildOptimizePrompt({
+        rawPrompt: "Car morphing",
+        duration: "8s",
+        mode: "FL2VA",
+        outputContract: "official",
+        assistantDirectorDirective: "DIRECTOR DIRECTIVE",
+      });
+      assert.ok(fl.includes("Picture 2 (from Shot N) aligns with the 8.00-second mark"));
     });
 
-    test("buildRefineSeriesPrompt anchors previous and next episode states", () => {
+    test("buildRefineSeriesPrompt anchors previous and next episode states and passes mode/references", () => {
       const p = buildRefineSeriesPrompt({
         seriesTitle: "Epic Adventure",
         storyArcSummary: "Journey to the mountain",
@@ -290,12 +362,16 @@ describe("Prompt Engineering Specifications (MiniMax-H3)", () => {
         },
         refineInstruction: "Make the walk slower and add rain",
         durationToUse: "10s",
+        mode: "Ref2VA",
+        referencesSummary: "<Subject 1> (<Picture 1>): character - traveler",
         assistantDirectorDirective: "DIRECTOR DIRECTIVE",
       });
 
       assert.ok(p.includes("CRITICAL PRECEDING EPISODE CONTINUITY (Episode #1)"));
       assert.ok(p.includes("FOLLOWING EPISODE CONTINUITY CONTEXT (Episode #3)"));
       assert.ok(p.includes("Make the walk slower and add rain"));
+      assert.ok(p.includes("Generation Mode: Ref2VA"));
+      assert.ok(p.includes("<Subject 1> (<Picture 1>)"));
     });
   });
 });

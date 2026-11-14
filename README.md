@@ -4,7 +4,7 @@
 
 **Professional Prompt Engineering Platform Tailored for MiniMax-H3 (Hailuo 3) Video & Audio Generation Models**
 
-[![Version](https://img.shields.io/badge/version-v6.1.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-v6.2.0-blue.svg)](CHANGELOG.md)
 [![Model](https://img.shields.io/badge/AI%20Engine-Gemini%203.8%20%7C%20Ollama%20%7C%20llama.cpp-orange.svg)](https://deepmind.google/technologies/gemini/)
 [![Framework](https://img.shields.io/badge/Frontend-React%2019%20%7C%20Vite-green.svg)](https://react.dev/)
 [![Styling](https://img.shields.io/badge/Styling-Tailwind%20CSS%20v4-38bdf8.svg)](https://tailwindcss.com/)
@@ -28,7 +28,13 @@ Featuring a **Tri-Engine Independent Architecture with Dedicated UI Panels**:
 
 ## ✨ Key Features
 
-### 0. Default Safety Alignment, Pure Pay-as-you-go & Deep Token Optimization (v6.1.0)
+### 0. Parallel Ensemble Choreography, Fluid Macro-Trajectory & Engine Alignment (v6.2.0)
+- **Zero-Freeze Multi-Subject Choreography**: Eliminates sequential turn-taking in 2+ character scenes by binding overlapping actions via concurrent connectors (`while`, `as`, `simultaneously`) and intra-shot micro-timestamps, while enforcing active eye-line tracking and anticipatory reactions for secondary subjects.
+- **Choreography Mode Selector (`choreographyMode`) & Macro-Trajectory Pacing**: Choose between `auto`, `ensemble_parallel`, `fluid_action`, and `subtle_acting` with duration-adaptive pacing budgets; removes the hidden hardcoded `"Push In, Arc Shot"` camera fallback in favor of context-aware `Auto Director Selection`.
+- **Local Engine Dynamic Schema Parity & Prompt Spec Alignment**: Syncs `isSeriesMode` in `OllamaEngine` and `LlamaCppEngine` to eliminate redundant `episodes` schema noise in single-shot mode, fixes `buildOptimizePrompt` (`non_diegetic_music: N/A`, keyframe headers), adds multi-speaker `(S1)/(S2)` dialogue generation, and preserves `referencesSummary` across series refinements.
+- **Enhanced Audit, Safe Tag Repair & Structure-Preserving Modifiers**: Detects `NON_MONOTONIC_TIMESTAMPS`, `INVALID_MUSIC_SUPPRESSION`, and `SEQUENTIAL_ENSEMBLE_RISK`; closes unbalanced `<d>`/`</l>` tags inside their own shot lines; exposes `LIGHTING_PRESETS`, `AbortController` request cancellation, and the `'two-person-dossier-handover'` preset.
+
+### 1. Default Safety Alignment, Pure Pay-as-you-go & Deep Token Optimization (v6.1.0)
 - **Official Safety Settings Default Off Alignment**: Per official Gemini API documentation, safety filters are Off by default in Gemini 2.5 / 3.x / 4 models. All manual `safetySettings` configurations have been removed, relying strictly on native default Off behavior while retaining passive system block detection.
 - **Pure Pay-as-you-go Architecture**: Completely eliminated quota fallback loops, multi-model downgrade chains (`fallbackModels`), exponential backoff retries, and legacy Free Tier UI copy for ultra-low latency direct calls.
 - **Deep Token Optimization Matrix**:

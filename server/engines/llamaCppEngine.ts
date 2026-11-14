@@ -5,6 +5,7 @@ import {
   buildDialoguePrompt,
   buildOptimizePrompt,
   buildRefineSeriesPrompt,
+  formatReferencesSummary,
   getAssistantDirectorDirective,
 } from "../core/prompts";
 import { cleanModelOutput, formatGeneratedPromptResult, parseJsonSafely, sanitizeGeneratedPromptText } from "../core/sanitizer";
@@ -169,32 +170,7 @@ export class LlamaCppEngine implements StudioEngine {
     const temperature = resolveTemperature('llamacpp', config.temperatureMode, config.manualTemperature);
     const modelToUse = config.llamacppModel || this.defaultModel;
 
-    const systemPrompt = `${buildModularSystemInstruction(config.mode || "T2VA", config.outputContract || "official")}
-
-CRITICAL FORMAT REQUIREMENT:
-You MUST output a valid JSON object matching this schema:
-{
-  "fullPrompt": "string (The complete assembled MiniMax-H3 prompt)",
-  "explanationZh": "string (Traditional Chinese explanation of the prompt design and cinematography)",
-  "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"],
-  "isSeries": ${isSeriesMode ? "true" : "false"},
-  "seriesTitle": "string (Series Title)",
-  "storyArcSummary": "string (Story Arc Summary)",
-  "episodes": [
-    {
-      "episodeIndex": 1,
-      "title": "string (Title in Traditional Chinese)",
-      "duration": "${config.duration || '10s'}",
-      "startingState": "string (Physical starting state)",
-      "actionSequence": "string (Continuous physical action sequence)",
-      "endState": "string (Physical end state)",
-      "fullPrompt": "string (Independent, valid, complete prompt)",
-      "cameraMovement": "string (Camera motion)",
-      "audioSoundscape": "string (Sound effects)",
-      "continuityNotes": "string (Continuity notes in Traditional Chinese)"
-    }
-  ]
-}
+    const systemPrompt = `${buildModularSystemInstruction(config.mode || "T2VA", config.outputContract || "official", isSeriesMode)}
 Do NOT output any markdown tags outside the JSON. Return only the valid JSON object.`;
 
     const raw = await this.callChat({
@@ -259,17 +235,10 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
       assistantDirectorDirective,
       mode: params.mode || 'T2VA',
       outputContract: params.outputContract,
+      choreographyMode: params.choreographyMode,
     });
 
-    const systemPrompt = `${buildModularSystemInstruction(params.mode || "T2VA", params.outputContract || "official")}
-
-CRITICAL FORMAT REQUIREMENT:
-You MUST output a valid JSON object matching this schema:
-{
-  "fullPrompt": "string (The complete assembled MiniMax-H3 prompt)",
-  "explanationZh": "string (Traditional Chinese explanation of the prompt design and cinematography)",
-  "suggestions": ["string (Suggestions and tips for MiniMax-H3 generation in Traditional Chinese)"]
-}
+    const systemPrompt = `${buildModularSystemInstruction(params.mode || "T2VA", params.outputContract || "official", false)}
 Do NOT output any markdown tags outside the JSON. Return only the valid JSON object.`;
 
     const raw = await this.callChat({
@@ -305,6 +274,8 @@ Do NOT output any markdown tags outside the JSON. Return only the valid JSON obj
       refineInstruction: params.refineInstruction,
       durationToUse,
       assistantDirectorDirective,
+      mode: config.mode,
+      referencesSummary: formatReferencesSummary(config.references),
     });
 
     const jsonSchemaInstructions = `

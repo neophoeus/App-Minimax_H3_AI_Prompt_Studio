@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   H3PromptConfig,
   H3PromptOutput,
@@ -23,8 +23,10 @@ import {
   LlamaCppModelItem,
   OutputContract,
   AuditResult,
+  ChoreographyMode,
 } from './types';
 import { auditPrompt, repairPrompt } from './utils/promptAudit';
+import { insertQuickModifier } from './utils/promptModifiers';
 import { Navbar } from './components/Navbar';
 import { ReferenceManager } from './components/ReferenceManager';
 import { PromptSyntaxHighlighter } from './components/PromptSyntaxHighlighter';
@@ -151,9 +153,42 @@ const LIGHTING_PRESETS = [
   'Cinematic dark shadows with directional moonlight',
 ];
 
+const CHOREOGRAPHY_OPTIONS: Array<{
+  value: ChoreographyMode;
+  label: string;
+  badge: string;
+  desc: string;
+}> = [
+  {
+    value: 'auto',
+    label: '✨ 自動導演 (Auto)',
+    badge: '預設',
+    desc: '依腳本角色數量與動作幅度自動配置最適動態與時間軸節奏。',
+  },
+  {
+    value: 'ensemble_parallel',
+    label: '🤝 雙人/多人並行互動',
+    badge: '防呆板',
+    desc: '強制多角色時間軸重疊、視線物理連動與同步反應，杜絕輪流待機。',
+  },
+  {
+    value: 'fluid_action',
+    label: '🌊 流暢動作連貫',
+    badge: '去碎裂',
+    desc: '強調宏觀身體動量軌跡與物理慣性銜接，避免過多碎裂微動作指令。',
+  },
+  {
+    value: 'subtle_acting',
+    label: '🎭 細膩文戲/特寫節制',
+    badge: '微表情',
+    desc: '抑制誇張大動作，專注呼吸起伏、眼神交會與微表情張力。',
+  },
+];
+
 const DEFAULT_CONFIG: H3PromptConfig = {
   idea: '',
   mode: 'T2VA',
+  choreographyMode: 'auto',
   duration: '10s',
   aspectRatio: '16:9',
   style: 'Cinematic 8K Photorealistic, Anamorphic Lens',
@@ -235,6 +270,13 @@ export default function App() {
 
   // Prompt Audit State
   const [showAuditDetails, setShowAuditDetails] = useState<boolean>(false);
+  const generateAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      generateAbortRef.current?.abort();
+    };
+  }, []);
 
   const activePrompt = isEditing ? editedPrompt : output?.fullPrompt || '';
   const currentAudit = React.useMemo(() => {
@@ -499,11 +541,23 @@ export default function App() {
   };
 
   // Trigger Gemini API to call h3-prompt-writing skill
+  const handleCancelGenerate = () => {
+    if (generateAbortRef.current) {
+      generateAbortRef.current.abort();
+    }
+  };
+
   const handleGenerate = async () => {
     if (!config.idea.trim()) {
       showToast('請先輸入創意思路或主題構想', 'info');
       return;
     }
+
+    if (generateAbortRef.current) {
+      generateAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    generateAbortRef.current = controller;
 
     setLoading(true);
     setIsEditing(false);
@@ -535,6 +589,7 @@ export default function App() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(sanitizedConfig),
+        signal: controller.signal,
       });
 
       const contentType = res.headers.get('content-type');
@@ -603,12 +658,19 @@ export default function App() {
         showToast(errStr, 'error', toastDuration);
       }
     } catch (err: any) {
+      if (err?.name === 'AbortError') {
+        showToast('已中止提示詞生成請求', 'info');
+        return;
+      }
       console.error('Generation Error:', err);
       const errStr = formatErrorMessage(err.message || '請稍後再試');
       const toastDuration = errStr.includes('安全性阻擋') ? 8000 : 6000;
       showToast(errStr, 'error', toastDuration);
     } finally {
-      setLoading(false);
+      if (generateAbortRef.current === controller) {
+        generateAbortRef.current = null;
+        setLoading(false);
+      }
     }
   };
 
@@ -678,6 +740,7 @@ export default function App() {
           suppressMusic: config.suppressMusic,
           assistantDirector: typeof config.assistantDirector === 'boolean' ? config.assistantDirector : config.creativityLevel !== 0,
           mode: config.mode,
+          choreographyMode: config.choreographyMode || 'auto',
           outputContract: config.outputContract,
           temperatureMode: config.temperatureMode,
           manualTemperature: config.manualTemperature,
@@ -846,7 +909,11 @@ ${ep.fullPrompt}`;
   };
 
   const handleSelectPreset = (preset: PresetTemplate) => {
-    const updated = { ...config, ...preset.config };
+    const updated = {
+      ...config,
+      ...preset.config,
+      choreographyMode: preset.config.choreographyMode || 'auto',
+    };
     setConfig(updated);
     showToast(`已載入預設模板：「${preset.titleZh}」`, 'info');
   };
@@ -920,8 +987,9 @@ ${ep.fullPrompt}`;
 
   // Quick prompt modifiers to enhance prompt directly
   const applyModifier = (tagText: string) => {
-    if (!editedPrompt) return;
-    const newText = `${editedPrompt}\n${tagText}`;
+    const base = isEditing ? editedPrompt : (output?.fullPrompt || editedPrompt);
+    if (!base) return;
+    const newText = insertQuickModifier(base, tagText);
     setEditedPrompt(newText);
     if (output) {
       setOutput({ ...output, fullPrompt: newText });
@@ -1024,7 +1092,7 @@ ${ep.fullPrompt}`;
                   </div>
                   <p className="text-[11px] text-slate-400 leading-relaxed">
                     {config.assistantDirector !== false
-                      ? '已啟用：AI 影視導演深度推演 — 自動推算前因後果、周遭環境動態事件、補足實體材質與生理微細節，大幅擴充文字量與畫面豐富度。'
+                      ? '已啟用：AI 影視導演推演 — 依物理慣性補全流暢動態軌跡、環境微動效與多人同步反應細節，避免雙人場景呆立排隊；字數保持精煉不強行湊字。'
                       : '已關閉：規格直譯模式 — 100% 嚴格忠於原始輸入，零額外情節與周遭事件增添。'}
                   </p>
                 </div>
@@ -1376,40 +1444,85 @@ ${ep.fullPrompt}`;
 
               if (allowCustomStyle) {
                 return (
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-xs font-medium text-slate-300 block">
-                        視覺畫風與渲染 (Style & Rendering)
+                  <div className="space-y-3">
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label
+                          htmlFor="style-preset-select"
+                          className="text-xs font-medium text-slate-300 block"
+                        >
+                          視覺畫風與渲染 (Style & Rendering)
+                        </label>
+                        {config.mode === 'Ref2VA' && (
+                          <span className="text-[10px] text-cyan-400 font-medium">
+                            無圖片自訂模式
+                          </span>
+                        )}
+                      </div>
+                      <select
+                        id="style-preset-select"
+                        value={config.style}
+                        onChange={(e) => setConfig({ ...config, style: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-purple-500 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-purple-400 mb-1.5"
+                      >
+                        {STYLE_PRESETS.map((st, i) => (
+                          <option key={i} value={st}>
+                            {st}
+                          </option>
+                        ))}
+                      </select>
+                      <label htmlFor="style-custom-input" className="sr-only">
+                        自訂畫風描述
                       </label>
+                      <input
+                        id="style-custom-input"
+                        type="text"
+                        value={config.style}
+                        onChange={(e) => setConfig({ ...config, style: e.target.value })}
+                        placeholder="自訂畫風描述..."
+                        className="w-full px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-purple-500 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-purple-400"
+                      />
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-1">
+                        <label
+                          htmlFor="lighting-preset-select"
+                          className="text-xs font-medium text-slate-300 block"
+                        >
+                          光影與氛圍 (Lighting & Mood)
+                        </label>
+                      </div>
+                      <select
+                        id="lighting-preset-select"
+                        value={LIGHTING_PRESETS.includes(config.lightingMood) ? config.lightingMood : ''}
+                        onChange={(e) => setConfig({ ...config, lightingMood: e.target.value })}
+                        className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-amber-500 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-amber-400 mb-1.5"
+                      >
+                        <option value="">預設光影 (由 AI 依場景配置)</option>
+                        {LIGHTING_PRESETS.map((lt, i) => (
+                          <option key={i} value={lt}>
+                            {lt}
+                          </option>
+                        ))}
+                      </select>
+                      <label htmlFor="lighting-custom-input" className="sr-only">
+                        自訂光影氛圍描述
+                      </label>
+                      <input
+                        id="lighting-custom-input"
+                        type="text"
+                        value={config.lightingMood}
+                        onChange={(e) => setConfig({ ...config, lightingMood: e.target.value })}
+                        placeholder="自訂光影氛圍（留空則由 AI 依場景決定）..."
+                        className="w-full px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-amber-500 focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-amber-400"
+                      />
                       {config.mode === 'Ref2VA' && (
-                        <span className="text-[10px] text-cyan-400 font-medium">
-                          無圖片自訂模式
-                        </span>
+                        <p className="text-[10px] text-cyan-400 mt-1">
+                          💡 提示：目前 Ref2VA 尚未上傳實體參考圖片（純文字主體宣告或音訊參考），已自動啟用畫風與光影自訂選項。
+                        </p>
                       )}
                     </div>
-                    <select
-                      value={config.style}
-                      onChange={(e) => setConfig({ ...config, style: e.target.value })}
-                      className="w-full px-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-200 focus:outline-none focus:border-purple-500 mb-1.5"
-                    >
-                      {STYLE_PRESETS.map((st, i) => (
-                        <option key={i} value={st}>
-                          {st}
-                        </option>
-                      ))}
-                    </select>
-                    <input
-                      type="text"
-                      value={config.style}
-                      onChange={(e) => setConfig({ ...config, style: e.target.value })}
-                      placeholder="自訂畫風描述..."
-                      className="w-full px-3 py-1 rounded-lg bg-slate-950 border border-slate-800 text-xs text-slate-300 placeholder-slate-600 focus:outline-none focus:border-purple-500"
-                    />
-                    {config.mode === 'Ref2VA' && (
-                      <p className="text-[10px] text-cyan-400 mt-1">
-                        💡 提示：目前 Ref2VA 尚未上傳實體參考圖片（純文字主體宣告或音訊參考），已自動啟用畫風與光影自訂選項。
-                      </p>
-                    )}
                   </div>
                 );
               }
@@ -1465,6 +1578,56 @@ ${ep.fullPrompt}`;
                   : '💡 Official 模式：輸出 100% 官方標準六段式/三段式完整規格提示詞。'}
               </p>
             </div>
+
+            {/* Choreography Mode Selector: Parallel Ensemble vs Fluid Action vs Subtle Acting */}
+            <fieldset className="pt-2 border-t border-slate-800/60">
+              <legend className="text-xs font-medium text-slate-300 mb-1.5 flex items-center gap-1.5 w-full">
+                <Compass className="w-3.5 h-3.5 text-amber-400 shrink-0" aria-hidden="true" />
+                <span>場面調度與動態節奏 (Choreography Mode)</span>
+                <span className="ml-auto text-[10px] text-amber-300 font-mono">
+                  {config.choreographyMode || 'auto'}
+                </span>
+              </legend>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                {CHOREOGRAPHY_OPTIONS.map((opt) => {
+                  const selected = (config.choreographyMode || 'auto') === opt.value;
+                  return (
+                    <label
+                      key={opt.value}
+                      className={`relative flex flex-col gap-0.5 p-2 rounded-xl border text-left cursor-pointer transition-all focus-within:ring-2 focus-within:ring-amber-400/80 focus-within:ring-offset-1 focus-within:ring-offset-slate-950 ${
+                        selected
+                          ? 'bg-amber-950/35 border-amber-500/60 text-amber-100 shadow-sm'
+                          : 'bg-slate-950/70 border-slate-800 text-slate-300 hover:border-slate-700 hover:text-slate-100'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="choreographyMode"
+                        value={opt.value}
+                        checked={selected}
+                        onChange={() => setConfig({ ...config, choreographyMode: opt.value })}
+                        className="sr-only"
+                      />
+                      <div className="flex items-center justify-between gap-1 text-[11px] font-semibold">
+                        <span>{opt.label}</span>
+                        <span
+                          className={`text-[9px] px-1.5 py-0.5 rounded-full ${
+                            selected
+                              ? 'bg-amber-500/20 text-amber-200 border border-amber-400/40'
+                              : 'bg-slate-800 text-slate-400'
+                          }`}
+                        >
+                          {opt.badge}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-slate-400 leading-snug">
+                        {opt.desc}
+                      </span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
 
             {/* Camera Motion Three-Dimension System */}
             <div className="space-y-3 pt-2 border-t border-slate-800/60">
@@ -1796,24 +1959,37 @@ ${ep.fullPrompt}`;
           </div>
 
           {/* Primary Action Button */}
-          <button
-            type="button"
-            onClick={handleGenerate}
-            disabled={loading}
-            className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:via-indigo-500 hover:to-cyan-400 text-white font-bold text-sm shadow-xl shadow-purple-900/30 flex items-center justify-center gap-2.5 transition-all transform active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed group"
-          >
-            {loading ? (
-              <>
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                <span>MiniMax-H3 AI 正在解析寫入技能標準...</span>
-              </>
-            ) : (
-              <>
-                <Zap className="w-5 h-5 text-amber-300 animate-bounce" />
-                <span>調用 Skill 生成 MiniMax-H3 完整提示詞</span>
-              </>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleGenerate}
+              disabled={loading}
+              className="flex-1 py-4 px-6 rounded-2xl bg-gradient-to-r from-purple-600 via-indigo-600 to-cyan-500 hover:from-purple-500 hover:via-indigo-500 hover:to-cyan-400 text-white font-bold text-sm shadow-xl shadow-purple-900/30 flex items-center justify-center gap-2.5 transition-all transform active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed group focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-cyan-400"
+            >
+              {loading ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>MiniMax-H3 AI 正在解析寫入技能標準...</span>
+                </>
+              ) : (
+                <>
+                  <Zap className="w-5 h-5 text-amber-300 animate-bounce" />
+                  <span>調用 Skill 生成 MiniMax-H3 完整提示詞</span>
+                </>
+              )}
+            </button>
+            {loading && (
+              <button
+                type="button"
+                onClick={handleCancelGenerate}
+                aria-label="中止生成提示詞"
+                className="py-4 px-4 rounded-2xl bg-rose-950/80 hover:bg-rose-900/90 border border-rose-500/50 text-rose-200 font-semibold text-sm flex items-center justify-center gap-1.5 transition-colors shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-rose-400"
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+                <span>中止生成</span>
+              </button>
             )}
-          </button>
+          </div>
         </section>
 
         {/* Column 3: 右邊提示詞輸出與檢視 (Right: Output Results & Inspector) */}
@@ -2347,6 +2523,7 @@ ${ep.fullPrompt}`;
                         { label: '+ 慢速微推', text: 'The camera pushes in with small amplitude at slow speed toward the subject.' },
                         { label: '+ 快速橫移', text: 'The camera trucks right with large amplitude at fast speed, revealing the environment.' },
                         { label: '+ 環繞鏡頭', text: 'The camera moves in an arc shot around the subject.' },
+                        { label: '+ 雙人同步反應', text: 'Simultaneously, the other character tracks the movement with their eyes, shifts their weight, and reacts mid-motion without waiting.' },
                         { label: '+ 畫外音閉嘴約定', text: 'says in an off-screen voiceover: <d>[English] ...</d> while his lips remain completely closed.' },
                         { label: '+ 禁用純音樂', text: 'non_diegetic_music: N/A' },
                       ].map((m, idx) => (
@@ -2390,7 +2567,7 @@ ${ep.fullPrompt}`;
         </section>
       </main>
 
-      {/* Studio Global Footer (v6.1.0) */}
+      {/* Studio Global Footer (v6.2.0) */}
       <footer className="mt-auto border-t border-slate-900 bg-slate-950/90 backdrop-blur-md px-4 lg:px-8 py-3.5 text-xs text-slate-500">
         <div className="max-w-[1800px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
           {/* Left: Brand, Version & Verification */}
@@ -2400,7 +2577,7 @@ ${ep.fullPrompt}`;
               MiniMax-H3 AI Prompt Studio
             </span>
             <span className="px-2 py-0.5 rounded-full bg-slate-900 border border-slate-800 text-[10px] font-mono font-bold text-purple-300">
-              v6.1.0 Flagship
+              v6.2.0 Flagship
             </span>
             <span className="inline-flex items-center gap-1 text-[11px] text-emerald-400 bg-emerald-950/40 border border-emerald-500/20 px-2 py-0.5 rounded-md">
               <ShieldCheck className="w-3 h-3 text-emerald-400" />
